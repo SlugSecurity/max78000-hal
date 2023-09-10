@@ -1,0 +1,14 @@
+[package]
+name = "max78000-hal"
+version = "0.1.0"
+edition = "2021"
+authors = ["Brian Mak"]
+categories = ["embedded", "no-std"]
+keywords = ["embedded-hal"]
+license = "MIT"
+
+[dependencies]
+max78000 = { version = "0.1.0", path = "../max78000", features = ["critical-section"] }
+
+[features]
+rt = ["max78000/rt"]
