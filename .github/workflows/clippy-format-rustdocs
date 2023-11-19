@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run format
-        run: cargo fmt
+        run: cargo fmt --check
 
   rustdoc:
     needs: [clippy, clippy-pedantic, format]
