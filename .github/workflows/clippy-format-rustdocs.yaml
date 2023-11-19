@@ -12,10 +12,9 @@ jobs:
     - uses: actions/checkout@v3
     - name: Run clippy
       env:
-        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         CARGO_NET_GIT_FETCH_WITH_CLI: true
       run: |
-          eval $(ssh-agent-s)
+          eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
           cargo clippy -- -D warnings
 
