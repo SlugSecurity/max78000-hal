@@ -1,0 +1,12 @@
+on:
+  workflow_call:
+jobs:
+    add_ssh_keys:
+      runs-on: ubuntu-latest
+      steps:
+      - name: Add ssh keys
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
