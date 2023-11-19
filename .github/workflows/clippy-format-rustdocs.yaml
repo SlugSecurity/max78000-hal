@@ -16,8 +16,7 @@ jobs:
         echo $SSH_AUTH_SOCK
         ssh-agent -a $SSH_AUTH_SOCK > /dev/null
         ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
-        ls /home/runner/.ssh/
-
+        ssh-add -l
   clippy:
     runs-on: ubuntu-latest
 
@@ -26,7 +25,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: |
+        ssh-add -l
+        cargo clippy -- -D warnings
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         CARGO_NET_GIT_FETCH_WITH_CLI: true
