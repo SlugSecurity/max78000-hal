@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Add ssh keys
       run: |
-        ssh-agent -a $SSH_AUTH_SOCK > /dev/nullA
+        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
         ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
 
   clippy:
