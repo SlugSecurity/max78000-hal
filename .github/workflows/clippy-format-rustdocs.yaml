@@ -6,31 +6,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  add_ssh_keys:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Add ssh keys
-      env:
-        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-      run: |
-        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-        ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
-        
   clippy:    
-    runs-on: ubuntu-latest
-
-    needs: [add_ssh_keys]
-    
+    runs-on: ubuntu-latest    
     steps:
     - uses: actions/checkout@v3
+    - uses: ./.github/workflows/ssh.yaml
     - name: Run clippy
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         CARGO_NET_GIT_FETCH_WITH_CLI: true
-      run: |
-        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-        ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}" 
-        cargo clippy -- -D warnings
+      run: cargo clippy -- -D warnings
 
 
   clippy-pedantic:
