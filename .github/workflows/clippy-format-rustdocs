@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Run clippy(non-pedantic)
+    - name: Run clippy (non-pedantic)
       run: cargo clippy -- -W clippy::pedantic
 
   format:
