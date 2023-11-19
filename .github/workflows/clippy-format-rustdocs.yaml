@@ -10,12 +10,14 @@ jobs:
     runs-on: ubuntu-latest    
     steps:
     - uses: actions/checkout@v3
-    - uses: ./.github/workflows/ssh.yaml
     - name: Run clippy
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         CARGO_NET_GIT_FETCH_WITH_CLI: true
-      run: cargo clippy -- -D warnings
+      run: |
+          eval $(ssh-agent-s)
+          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          cargo clippy -- -D warnings
 
 
   clippy-pedantic:
