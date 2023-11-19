@@ -7,14 +7,17 @@ env:
   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
 jobs:
-  runs-on: ubuntu-latest
   add_ssh_keys:
+    runs-on: ubuntu-latest
+    steps:
     - name: Add ssh keys
-    run: |
+      run: |
         ssh-agent -a $SSH_AUTH_SOCK > /dev/nullA
         ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
 
   clippy:
+    runs-on: ubuntu-latest
+
     needs: [add_ssh_keys]
 
     steps:
@@ -23,6 +26,8 @@ jobs:
       run: cargo clippy -- -D warnings
 
   clippy-pedantic:
+    runs-on: ubuntu-latest
+
     needs: clippy
 
     steps:
@@ -30,12 +35,16 @@ jobs:
       run: cargo clippy -- -W clippy::pedantic
 
   format:
+    runs-on: ubuntu-latest
+
     needs: [clippy, clippy-pedantic]
     steps:
       - name: Run format
         run: cargo fmt --check
 
   rustdoc:
+    runs-on: ubuntu-latest
+
     needs: [clippy, clippy-pedantic, format]
     steps:
       - name: Run rustdoc
