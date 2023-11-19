@@ -13,10 +13,8 @@ jobs:
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
-        echo $SSH_AUTH_SOCK
         ssh-agent -a $SSH_AUTH_SOCK > /dev/null
         ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
-        ssh-add -l
         
   clippy:    
     runs-on: ubuntu-latest
@@ -29,7 +27,10 @@ jobs:
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         CARGO_NET_GIT_FETCH_WITH_CLI: true
-      run: cargo clippy -- -D warnings
+      run: |
+        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+        ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}" 
+        cargo clippy -- -D warnings
 
 
   clippy-pedantic:
