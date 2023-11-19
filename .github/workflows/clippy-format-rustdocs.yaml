@@ -25,11 +25,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run clippy
+      env:
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
         ssh-add -l
         cargo clippy -- -D warnings
-      env:
-        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         CARGO_NET_GIT_FETCH_WITH_CLI: true
 
 
