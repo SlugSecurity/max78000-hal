@@ -4,16 +4,17 @@ on: push
 
 env:
   CARGO_TERM_COLOR: always
-  SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
 jobs:
   add_ssh_keys:
     runs-on: ubuntu-latest
     steps:
     - name: Add ssh keys
+      env:
+        SSH-AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
         ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-        ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+        ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
 
   clippy:
     runs-on: ubuntu-latest
