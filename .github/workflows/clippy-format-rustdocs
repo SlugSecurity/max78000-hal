@@ -1,0 +1,43 @@
+name: fmt, clippy, rustdocs
+
+on: push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+
+  clippy-pedantic:
+    needs: clippy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Run clippy (non-pedantic)
+      run: cargo clippy -- -W clippy::pedantic
+
+  format:
+    needs: [clippy, clippy-pedantic]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run format
+        run: cargo fmt --check
+
+  rustdoc:
+    needs: [clippy, clippy-pedantic, format]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run rustdoc
+        run: cargo doc --no-deps --document-private-items
+      - name : upload artifacts
+        uses: actions/upload-artifact@v3
+        with: 
+            name: rustdoc
+            path: target/doc
+            retention-days: 2
