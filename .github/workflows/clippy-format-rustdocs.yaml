@@ -24,6 +24,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.PRIVATE_SSH_KEY }}
     - name: Run clippy
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
