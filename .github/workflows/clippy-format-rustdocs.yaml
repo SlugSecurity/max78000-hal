@@ -4,10 +4,18 @@ on: push
 
 env:
   CARGO_TERM_COLOR: always
+  SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
 jobs:
+  runs-on: ubuntu-latest
+  add_ssh_keys:
+    - name: Add ssh keys
+    run: |
+        ssh-agent -a $SSH_AUTH_SOCK > /dev/nullA
+        ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+
   clippy:
-    runs-on: ubuntu-latest
+    needs: [add_ssh_keys]
 
     steps:
     - uses: actions/checkout@v3
@@ -16,7 +24,6 @@ jobs:
 
   clippy-pedantic:
     needs: clippy
-    runs-on: ubuntu-latest
 
     steps:
     - name: Run clippy (non-pedantic)
@@ -24,14 +31,12 @@ jobs:
 
   format:
     needs: [clippy, clippy-pedantic]
-    runs-on: ubuntu-latest
     steps:
       - name: Run format
         run: cargo fmt --check
 
   rustdoc:
     needs: [clippy, clippy-pedantic, format]
-    runs-on: ubuntu-latest
     steps:
       - name: Run rustdoc
         run: cargo doc --no-deps --document-private-items
