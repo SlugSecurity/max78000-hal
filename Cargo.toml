@@ -10,7 +10,7 @@ license = "MIT"
 [dependencies]
 embedded-hal = { version = "0.2.7", features = ["unproven"] }
 heapless = "0.7.16"
-max78000 = { version = "0.1.0", path = "../max78000", features = ["critical-section"] }
+max78000 = { git = "ssh://git@github.com/SlugSecurity/max78000.git" }
 
 [features]
 rt = ["max78000/rt"]

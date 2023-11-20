@@ -1,0 +1,55 @@
+name: fmt, clippy, rustdocs
+
+on: push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  clippy:    
+    runs-on: ubuntu-latest    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run clippy
+      env:
+        CARGO_NET_GIT_FETCH_WITH_CLI: true
+      run: |
+          eval $(ssh-agent -s)
+          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          cargo clippy -- -D warnings
+
+  clippy-pedantic:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run clippy (non-pedantic)
+      run: |
+        eval $(ssh-agent -s)
+        ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+        cargo clippy -- -W clippy::pedantic
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run format
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          cargo fmt --check
+
+  rustdoc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run rustdoc
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          cargo doc --no-deps --document-private-items
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with: 
+            name: rustdoc
+            path: target/doc
+            retention-days: 2
