@@ -18,7 +18,6 @@ jobs:
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
           cargo clippy -- -D warnings
 
-
   clippy-pedantic:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +40,6 @@ jobs:
 
   rustdoc:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
       - name: Run rustdoc
