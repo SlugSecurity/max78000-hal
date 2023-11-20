@@ -22,6 +22,7 @@ jobs:
   clippy-pedantic:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v3
     - name: Run clippy (non-pedantic)
       run: |
         eval $(ssh-agent -s)
@@ -31,6 +32,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Run format
         run: |
           eval $(ssh-agent -s)
@@ -42,6 +44,7 @@ jobs:
 
     needs: [clippy, clippy-pedantic, format]
     steps:
+      - uses: actions/checkout@v3
       - name: Run rustdoc
         run: |
           eval $(ssh-agent -s)
