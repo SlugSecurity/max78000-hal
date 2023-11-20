@@ -9,24 +9,24 @@ jobs:
   clippy:    
     runs-on: ubuntu-latest    
     steps:
-    - uses: actions/checkout@v3
-    - name: Run clippy
-      env:
-        CARGO_NET_GIT_FETCH_WITH_CLI: true
-      run: |
-          eval $(ssh-agent -s)
-          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
-          cargo clippy -- -D warnings
+      - uses: actions/checkout@v3
+      - name: Run clippy
+        run: |
+            eval $(ssh-agent -s)
+            ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+            rustup target add thumbv7em-none-eabihf
+            cargo clippy -- -D warnings
 
   clippy-pedantic:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Run clippy (non-pedantic)
-      run: |
-        eval $(ssh-agent -s)
-        ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
-        cargo clippy -- -W clippy::pedantic
+      - uses: actions/checkout@v3
+      - name: Run clippy (non-pedantic)
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          rustup target add thumbv7em-none-eabihf
+          cargo clippy -- -W clippy::pedantic
 
   format:
     runs-on: ubuntu-latest
@@ -36,6 +36,7 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          rustup target add thumbv7em-none-eabihf
           cargo fmt --check
 
   rustdoc:
@@ -46,6 +47,7 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          rustup target add thumbv7em-none-eabihf
           cargo doc --no-deps --document-private-items
       - name: upload artifacts
         uses: actions/upload-artifact@v3
