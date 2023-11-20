@@ -47,7 +47,7 @@ jobs:
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
           cargo doc --no-deps --document-private-items
-      - name : upload artifacts
+      - name: upload artifacts
         uses: actions/upload-artifact@v3
         with: 
             name: rustdoc
