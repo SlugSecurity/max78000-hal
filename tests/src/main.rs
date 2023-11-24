@@ -18,7 +18,7 @@ pub mod tests;
 /// Entry point for tests.
 #[entry]
 fn main() -> ! {
-    let mut stdout = hio::hstdout().map_err(|_| fmt::Error).unwrap();
+    let mut stdout = hio::hstdout().unwrap();
     writeln!(stdout, "Starting MAX78000 HAL tests...\n").unwrap();
 
     // TODO: Use peripheral API when available.
