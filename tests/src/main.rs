@@ -4,7 +4,7 @@
 #![no_main]
 #![no_std]
 
-use core::fmt::{self, Write};
+use core::fmt::Write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
