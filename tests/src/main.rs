@@ -23,7 +23,7 @@ fn main() -> ! {
 
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
-    trng_tests::run_trng_tests(peripherals.TRNG, &mut stdout);
+    trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
 
     #[allow(clippy::empty_loop)]
     loop {}
