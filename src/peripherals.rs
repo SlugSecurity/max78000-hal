@@ -4,9 +4,9 @@
 pub mod adc;
 pub mod delay;
 pub mod digital;
-pub mod rng;
 pub mod serial;
 pub mod timer;
+pub mod trng;
 pub mod watchdog;
 
 // Non embedded HAL peripherals.
