@@ -1,1 +1,1 @@
-
+//! Bit-banding module API.

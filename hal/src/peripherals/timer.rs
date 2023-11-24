@@ -1,1 +1,1 @@
-
+//! Timers peripheral API.
