@@ -1,0 +1,13 @@
+[package]
+name = "max78000-hal-tests"
+version = "0.1.0"
+edition = "2021"
+authors = ["2024 UCSC eCTF Team"]
+categories = ["embedded", "no-std"]
+license = "MIT"
+
+[dependencies]
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = { version = "0.7.3" }
+max78000-hal = { version = "0.1.0", path = "../hal", features = ["rt"] }
+panic-halt = "0.2.0"
