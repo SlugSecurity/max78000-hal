@@ -33,9 +33,9 @@ fn test_random_u32(trng: &Trng) {
 
 /// Tests the [`trng::Trng::fill_buffer()`] function.
 fn test_fill_buffer(trng: &Trng, stdout: &mut hio::HostStream) {
-    let mut buf = [0u8; 4];
+    let mut buf = [0u8; 15];
     trng.fill_buffer(&mut buf);
-    assert_ne!(buf, [0u8; 4]);
+    assert_ne!(buf, [0u8; 15]);
     writeln!(stdout, "TRNG buffer: {:?}", buf).unwrap();
 
     for _ in 0..100 {
