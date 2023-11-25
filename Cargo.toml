@@ -4,3 +4,14 @@ members = [
     "tests"
 ]
 resolver = "2"
+
+[profile.dev]
+opt-level = "z"
+lto = true
+codegen-units = 1
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
