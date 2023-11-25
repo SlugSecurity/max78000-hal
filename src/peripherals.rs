@@ -27,6 +27,8 @@ pub mod raw;
 pub mod rtc;
 pub mod synchronization;
 
+mod internals;
+
 // TODO: Create peripheral manager and traits.
 // TODO: Create a new pool for each peripheral? Use some attribute macro to do this?
 
@@ -44,43 +46,4 @@ pub enum PeripheralError {
     IllegalState,
 }
 
-pub trait Peripheral {
-    fn enable(&mut self) -> Result<(), PeripheralError>;
-    fn disable(&mut self) -> Result<(), PeripheralError>;
-    fn is_enabled(&self) -> bool;
-}
-
-#[derive(Clone, Debug)]
-pub struct PeripheralWrapper<Ph: Peripheral, Po: Pool<Data = Mutex<Ph>>>(Arc<Po>);
-
-impl<Ph: Peripheral, Po: Pool<Data = Mutex<Ph>>> PeripheralWrapper<Ph, Po> {
-    pub(crate) fn new(peripheral: Arc<Po>) -> Self {
-        Self { 0: peripheral }
-    }
-
-    // TODO: Create a with method to abstract away acquiring a critical section lock, have user pass in closure with &mut Ph
-    // as the arg? Need to expose the peripheral itself to allow access to the peripheral's methods.
-
-    /*
-    pub fn enable(&self) -> Result<(), PeripheralError> {
-        self.lock(|peripheral| peripheral.enable())
-    }*/
-}
-
-impl<Ph: Peripheral, Po: Pool<Data = Mutex<Ph>>> Deref for PeripheralWrapper<Ph, Po> {
-    type Target = Po::Data;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-/*
-pub trait PeripheralManager {
-    fn get_peripheral<P>(&mut self) -> Result<PeripheralWrapper<P>, PeripheralError>;
-    fn get_or_enable_peripheral<P>(&mut self) -> Result<PeripheralWrapper<P>, PeripheralError>;
-}*/
-
-// Array of boxed dyn peripherals.
-//
-// TODO: Impl deref trait for peripheral wrapper, target is mutex.
+// initialization of peripheral? do we need to enable power first and then initialize? that means we need to add more functions to the private peripheral right?
