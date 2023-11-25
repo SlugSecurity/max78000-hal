@@ -25,7 +25,7 @@ unsafe fn test_change_bit() {
     let mut control: u32 = 0;
 
     for i in 0u8..32 {
-        change_bit(&test, i, true);
+        change_bit(&test as *const _, i, true);
         control = control | (1 << i);
         assert_eq!(test, control);
     }
@@ -33,9 +33,9 @@ unsafe fn test_change_bit() {
     test = 0;
 
     for i in 0u8..32 {
-        change_bit(&test, i, true);
+        change_bit(&test as *const _, i, true);
         assert_eq!(test, 1 << i);
-        change_bit(&test, i, false);
+        change_bit(&test as *const _, i, false);
     }
 }
 
@@ -45,10 +45,10 @@ unsafe fn test_toggle_bit() {
     let mut control: u32 = 0;
 
     for i in 0u8..32 {
-        toggle_bit(&test, i);
+        toggle_bit(&test as *const _, i);
         control = control ^ (1 << i);
         assert_eq!(test, control);
-        toggle_bit(&test, i);
+        toggle_bit(&test as *const _, i);
         control = control ^ (1 << i);
         assert_eq!(test, control);
     }
@@ -58,10 +58,10 @@ unsafe fn test_toggle_bit() {
 fn test_read_bit() {
     let mut control = 0;
     for i in 0u8..32 {
-        let mut bit = read_bit(&control, i);
+        let mut bit = read_bit(&control as *const _, i);
         assert_eq!(bit, (control & (1 << i)) != 0);
         control = control | (1 << i);
-        bit = read_bit(&control, i);
+        bit = read_bit(&control as *const _, i);
         assert_eq!(bit, (control & (1 << i)) != 0);
     }
 }
