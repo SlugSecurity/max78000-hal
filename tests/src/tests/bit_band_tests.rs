@@ -12,8 +12,18 @@ use max78000_hal::peripherals::bit_banding::{change_bit, read_bit, toggle_bit};
 pub unsafe fn run_bit_band_tests(stdout: &mut hio::HostStream) {
     writeln!(stdout, "Starting bit band tests...").unwrap();
 
+    // sanity check
+    let test: u32 = 0;
+    change_bit(&test, 0, true);
+    writeln!(stdout, "{test}").unwrap();
+
+    writeln!(stdout, "Testing change_bit...").unwrap();
     test_change_bit();
+
+    writeln!(stdout, "Testing toggle_bit...").unwrap();
     test_toggle_bit();
+
+    writeln!(stdout, "Testing read_bit...").unwrap();
     test_read_bit();
 
     writeln!(stdout, "Bit band tests complete!").unwrap();
