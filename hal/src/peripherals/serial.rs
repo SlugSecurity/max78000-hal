@@ -1,1 +1,1 @@
-
+//! Serial API using UART.
