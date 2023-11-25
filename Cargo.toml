@@ -1,16 +1,16 @@
-[package]
-name = "max78000-hal"
-version = "0.1.0"
-edition = "2021"
-authors = ["Brian Mak"]
-categories = ["embedded", "no-std"]
-keywords = ["embedded-hal"]
-license = "MIT"
+[workspace]
+members = [
+    "hal",
+    "tests"
+]
+resolver = "2"
 
-[dependencies]
-embedded-hal = { version = "0.2.7", features = ["unproven"] }
-heapless = "0.7.16"
-max78000 = { git = "ssh://git@github.com/SlugSecurity/max78000.git" }
+[profile.dev]
+opt-level = "z"
+codegen-units = 1
 
-[features]
-rt = ["max78000/rt"]
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
