@@ -19,12 +19,15 @@ pub unsafe fn run_bit_band_tests(stdout: &mut hio::HostStream) {
 
     writeln!(stdout, "Testing change_bit...").unwrap();
     test_change_bit();
+    writeln!(stdout, "change_bit complete").unwrap();
 
     writeln!(stdout, "Testing toggle_bit...").unwrap();
     test_toggle_bit();
+    writeln!(stdout, "toggle_bit complete").unwrap();
 
     writeln!(stdout, "Testing read_bit...").unwrap();
     test_read_bit();
+    writeln!(stdout, "read_bit complete").unwrap();
 
     writeln!(stdout, "Bit band tests complete!").unwrap();
 }
