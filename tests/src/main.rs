@@ -25,10 +25,8 @@ fn main() -> ! {
     let peripherals = Peripherals::take().unwrap();
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
 
-    /// Bit band operations are unsafe, thus the unsafe block
-    unsafe {
-        bit_band_tests::run_bit_band_tests(&mut stdout)
-    };
+    // Bit band operations are unsafe, thus the unsafe block
+    unsafe { bit_band_tests::run_bit_band_tests(&mut stdout) };
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 

@@ -57,8 +57,8 @@ pub fn read_bit<T>(address: *const T, bit: u8) -> bool {
 /// Bit must be < 32.
 fn ref_to_bitband(address: u32, bit: u8) -> *mut u32 {
     debug_assert!(
-        (address >= 0x2000_0000 && address <= 0x2001_FFFF)
-            || (address >= 0x4000_0000 && address <= 0x400F_FFFF)
+        (0x2000_0000..=0x2001_FFFF).contains(&address)
+            || (0x4000_0000..=0x400F_FFFF).contains(&address)
     );
     debug_assert!(bit < 32);
     let prefix = address & 0xF000_0000;
