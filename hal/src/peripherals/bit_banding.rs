@@ -52,9 +52,14 @@ pub fn read_bit<T>(address: *const T, bit: u8) -> bool {
     unsafe { read_volatile(bit_word) != 0 }
 }
 
-/// Address must be >= 0x2000_0000 and <= 0x2001_FFFF. Bit must be < 32.
+/// Address must be >= 0x2000_0000 and <= 0x2001_FFFF if writing to SRAM.
+/// Address must be >= 0x4000_0000 and <= 0x400F_FFFF if writing to peripheral addr space.
+/// Bit must be < 32.
 fn ref_to_bitband(address: u32, bit: u8) -> *mut u32 {
-    debug_assert!(address >= 0x2000_0000 && address <= 0x2001_FFFF);
+    debug_assert!(
+        (address >= 0x2000_0000 && address <= 0x2001_FFFF)
+            || (address >= 0x4000_0000 && address <= 0x400F_FFFF)
+    );
     debug_assert!(bit < 32);
     let prefix = address & 0xF000_0000;
     let byte_offset = address & 0x0FFF_FFFF;
