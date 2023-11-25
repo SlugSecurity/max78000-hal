@@ -1,1 +1,1 @@
-
+//! Watchdog timer peripheral API.

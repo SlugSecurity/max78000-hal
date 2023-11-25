@@ -1,1 +1,1 @@
-
+//! Power control API.
