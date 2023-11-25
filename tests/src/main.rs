@@ -25,6 +25,8 @@ fn main() -> ! {
     let peripherals = Peripherals::take().unwrap();
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
 
+    writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
+
     #[allow(clippy::empty_loop)]
     loop {}
 }
