@@ -1,5 +1,7 @@
+//! Tests for the bit-banding API
+
+use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::peripherals::bit_banding;
 use max78000_hal::peripherals::bit_banding::{change_bit, read_bit, toggle_bit};
 
 /// Runs all bit band tests
@@ -17,7 +19,7 @@ pub unsafe fn run_bit_band_tests(stdout: &mut hio::HostStream) {
     writeln!(stdout, "Bit band tests complete!").unwrap();
 }
 
-/// Tests the [`bit_banding::change_bit`] function
+/// Tests the [`change_bit`] function
 unsafe fn test_change_bit() {
     let mut test: u32 = 0;
     let mut control: u32 = 0;
@@ -37,7 +39,7 @@ unsafe fn test_change_bit() {
     }
 }
 
-/// Tests the [`bit_banding::toggle_bit`] function
+/// Tests the [`toggle_bit`] function
 unsafe fn test_toggle_bit() {
     let test: u32 = 0;
     let mut control: u32 = 0;
@@ -52,7 +54,7 @@ unsafe fn test_toggle_bit() {
     }
 }
 
-/// Tests the [`bit_banding::read_bit`] function
+/// Tests the [`read_bit`] function
 fn test_read_bit() {
     let mut control = 0;
     for i in 0u8..32 {
