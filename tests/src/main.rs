@@ -9,7 +9,7 @@ use core::fmt::Write;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::Peripherals;
-use tests::trng_tests;
+use tests::{bit_band_tests, trng_tests};
 
 extern crate panic_halt;
 
@@ -24,6 +24,11 @@ fn main() -> ! {
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
+
+    /// Bit band operations are unsafe, thus the unsafe block
+    unsafe {
+        bit_band_tests::run_bit_band_tests(&mut stdout)
+    };
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
