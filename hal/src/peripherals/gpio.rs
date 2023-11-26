@@ -11,9 +11,9 @@
 
 // TODO: implement drop and deref for handles (force deref on trait)
 
-use core::{array, cell::Cell, ops::Deref};
+use core::{array, cell::Cell};
 
-pub use embedded_hal::digital::v2 as pin_traits;
+pub mod pin_traits;
 
 /// Contains implementations of traits defined in this module for the common
 /// GPIO ports (GPIO0 - GPIO2).
@@ -32,6 +32,9 @@ pub enum GpioError {
 
     /// Pin index provided is out of bounds.
     InvalidPinIndex,
+
+    /// GPIO pin was in the wrong I/O mode.
+    WrongIoMode,
 }
 
 /// This trait defines two associated types for a particular GPIO port.
@@ -46,7 +49,7 @@ pub trait GpioPortMetadata {
 
 /// This trait defines a pin handle. Dropping the pin handle should return it back.
 /// A pin handle must also implement IoPin.
-pub trait PinHandle<'a>: Drop {
+pub trait PinHandle<'a> {
     /// The type of the GPIO port struct.
     type Port;
 
@@ -94,4 +97,32 @@ impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Meta
 
         Ok(Metadata::PinHandleType::new(self, idx))
     }
+}
+
+/// Represents the I/O mode of a pin.
+pub enum PinIoMode {
+    /// Input mode (The default after power-on-reset).
+    Input,
+
+    /// Output mode.
+    Output,
+}
+
+/// Represents the operating mode of a pin. For a list of what each alternate function
+/// does for each pin, see page 28 of [chip datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf).
+pub enum PinOperatingMode {
+    /// This operating mode allows the pin to be used for general purpose I/O. This is
+    /// the default operating mode after power-on-reset for all pins except the pins
+    /// for SWDIO and SWCLK. (See page 28 of datasheet linked in the enum's doc comment)
+    DigitalIo,
+
+    /// This operating mode is to allow the pin to perform some designated alternate
+    /// function defined on page 28 of the datasheet linked in the enum's doc comment.
+    /// This is the default operating mode of the pins for SWDIO and SWCLK after power-on-reset.
+    AltFunction1,
+
+    /// This operating mode is to allow the pin to perform some designated alternate
+    /// function apart from [`PinOperatingMode::AltFunction1`]. The alternate functions
+    /// for each pin is defined on page 28 of the datasheet linked in the enum's doc comment.
+    AltFunction2,
 }

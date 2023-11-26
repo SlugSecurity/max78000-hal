@@ -1,6 +1,16 @@
 use max78000::mcr::GPIO3_CTRL;
 
+use super::pin_traits::IoPin;
 use super::{GpioPort, GpioPortMetadata, PinHandle};
+
+// TODO for arelyx:
+// - implement functions in traits that aren't complete below
+// - implement pullup resistor configuration (should be for just input mode, confirm this)
+// - add documentation
+//     - a module-level doc comment
+//     - public functions within this module that aren't trait impl functions
+//     - improve existing comments in entire driver to add more detail
+// - add unit tests for each public function in the low power pin API
 
 /// Marker struct implementing `GpioPortMetadata` for
 /// low power GPIO ports.
@@ -16,6 +26,9 @@ pub struct LowPowerPinHandle<'a, const PIN_CT: usize> {
     port: &'a GpioPort<LowPowerGpio, PIN_CT>,
     pin_idx: usize,
 }
+
+// TODO for me: implement the pins for this one and comment how they need to be newtypes
+//              so that the handles drop properly
 
 impl<'a, const PIN_CT: usize> LowPowerPinHandle<'a, PIN_CT> {
     // add pin state function to get whether the pin is in input or output mode
