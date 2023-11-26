@@ -22,13 +22,16 @@ where
     /// the target alternate function is for UART0 TX, [`GpioError::WrongIoMode`]
     /// is returned.
     ///
+    /// If the pin doesn't have the alternate function mode requested,
+    /// [`GpioError::BadOperatingMode``] is returned.
+    ///
     /// Other error variants can be returned too in case of another error.
-    fn set_operating_mode() -> Result<(), GpioError>;
+    fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError>;
 
     /// Gets the pins operating mode. This can be digital I/O mode
     /// or an alternate function mode.
-    fn get_operating_mode() -> PinOperatingMode;
+    fn get_operating_mode(&self) -> PinOperatingMode;
 
     /// Gets the pins I/O mode, which is either input or output mode.
-    fn get_io_mode() -> PinIoMode;
+    fn get_io_mode(&self) -> PinIoMode;
 }

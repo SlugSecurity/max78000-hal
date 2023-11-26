@@ -35,6 +35,9 @@ pub enum GpioError {
 
     /// GPIO pin was in the wrong I/O mode.
     WrongIoMode,
+
+    /// GPIO pin doesn't have the selected operating mode.
+    BadOperatingMode,
 }
 
 /// This trait defines two associated types for a particular GPIO port.
@@ -98,6 +101,8 @@ impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Meta
         Ok(Metadata::PinHandleType::new(self, idx))
     }
 }
+
+// TODO: impl new_gpio0 ... new_gpio3
 
 /// Represents the I/O mode of a pin.
 pub enum PinIoMode {

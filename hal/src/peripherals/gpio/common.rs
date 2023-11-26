@@ -2,11 +2,15 @@ use max78000::gpio0;
 
 use super::{GpioPort, GpioPortMetadata, PinHandle};
 
+// DO NOT IMPLEMENT THIS MODULE YET -- STILL NEED TI IRON OUT ISSUE WITH GpioRegs
+
 // TODO FOR ASTRA:
 // - make input pin and output pin structs
 //       - pin types should implement InputPin for input pin and StatefulOutputPin for output pin
 //       - these pins should be a newtype wrapping the pin handle so drop works on it properly
 //       - all pin types, including PinHandle, should implement GeneralIoPin<INPUT_PIN_TYPE, OUTPUT_PIN_TYPE>
+//       - note: to implement the error checking for alternate functions, get the address of RegisterBlock to determine which gpio port
+//         it is so you can look up whether or not there's a corresponding alternate function and such on the pin
 //
 // - after implementing above trait functionality
 //       - implement weak/strong pullup/pulldown resistor configuration (input mode only)
@@ -21,6 +25,7 @@ use super::{GpioPort, GpioPortMetadata, PinHandle};
 // - add documentation
 //     - a module-level doc comment
 //     - public functions within this module that aren't trait impl functions
+//     - other public items like structs
 //     - on the super module with examples of how to use the API (can tell user to see user guide and datasheet too)
 //     - improve existing comments in entire driver to add more detail
 // - add unit tests for acquiring handles, releasing handles and recaquiring
