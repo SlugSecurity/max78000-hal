@@ -1,70 +1,38 @@
 use crate::peripherals::bit_banding as bb;
-use max78000::gcr::CLKCTRL;
-use max78000::GCR;
-use max78000::TRIMSIR;
-
-/// Bits per second
-#[derive(Clone, Copy)]
-pub struct Bps(pub u32);
+use core::cell::RefCell;
+use max78000::{gcr::CLKCTRL, GCR, TRIMSIR};
 
 /// Hertz
 #[derive(Clone, Copy)]
 pub struct Hertz(pub u32);
 
+impl From<u32> for Hertz {
+    fn from(val: u32) -> Self {
+        Hertz(val)
+    }
+}
+
 /// KiloHertz
 #[derive(Clone, Copy)]
 pub struct KiloHertz(pub u32);
 
-/// MegaHertz
-#[derive(Clone, Copy)]
-pub struct MegaHertz(pub u32);
-
-/// Extension trait that adds convenience methods to the `u32` type
-pub trait U32Ext {
-    /// Wrap in `Bps`
-    fn bps(self) -> Bps;
-
-    /// Wrap in `Hertz`
-    fn hz(self) -> Hertz;
-
-    /// Wrap in `KiloHertz`
-    fn khz(self) -> KiloHertz;
-
-    /// Wrap in `MegaHertz`
-    fn mhz(self) -> MegaHertz;
-}
-
-impl U32Ext for u32 {
-    fn bps(self) -> Bps {
-        Bps(self)
-    }
-
-    fn hz(self) -> Hertz {
-        Hertz(self)
-    }
-
-    fn khz(self) -> KiloHertz {
-        KiloHertz(self)
-    }
-
-    fn mhz(self) -> MegaHertz {
-        MegaHertz(self)
-    }
-}
-
-impl from<Hertz> for KiloHertz {
+impl From<Hertz> for KiloHertz {
     fn from(h: Hertz) -> Self {
         KiloHertz(h.0 / 1_000)
     }
 }
 
-impl from<Hertz> for MegaHertz {
+/// MegaHertz
+#[derive(Clone, Copy)]
+pub struct MegaHertz(pub u32);
+
+impl From<Hertz> for MegaHertz {
     fn from(h: Hertz) -> Self {
         MegaHertz(h.0 / 1_000_000)
     }
 }
 
-impl from<KiloHertz> for MegaHertz {
+impl From<KiloHertz> for MegaHertz {
     fn from(kil: KiloHertz) -> Self {
         MegaHertz(kil.0 / 1_000)
     }
@@ -95,16 +63,16 @@ pub enum CrystalFrequency {
     _1000mHz,
 }
 
-impl from<Hertz> for CrystalFrequency {
-    fn from(h: Hertz) -> Self {
-        CrystalFrequency(match h {
-            8_000 => CrystalFrequency::_8kHz,
-            16_000 => CrystalFrequency::_16kHz,
-            30_000 => CrystalFrequency::_30kHz,
-            32_768 => CrystalFrequency::_32_768kHz,
-            7_372_800 => CrystalFrequency::_7_3728mHz,
-            60_000_000 => CrystalFrequency::_60mHz,
-            1_000_000_000 => CrystalFrequency::_1000mHz,
+impl Into<Hertz> for CrystalFrequency {
+    fn into(self) -> Hertz {
+        Hertz(match self {
+            CrystalFrequency::_8kHz => 8_000,
+            CrystalFrequency::_16kHz => 16_000,
+            CrystalFrequency::_30kHz => 30_000,
+            CrystalFrequency::_32_768kHz => 32_768,
+            CrystalFrequency::_7_3728mHz => 7_372_800,
+            CrystalFrequency::_60mHz => 60_000_000,
+            CrystalFrequency::_1000mHz => 1_000_000_000,
         })
     }
 }
@@ -128,26 +96,45 @@ pub enum Divider {
     _128 = 128,
 }
 
-#[derive(Clone, Copy)]
 pub struct SystemClock {
     osc: Oscillator,
     divider: Divider,
+    gcr_perf: RefCell<Gcr>,
+}
+
+/// GCR peripheral.
+pub struct Gcr {
+    gcr: GCR,
+}
+
+impl Gcr {
+    pub fn new(gcr: GCR) -> Self {
+        Self { gcr }
+    }
 }
 
 impl SystemClock {
+    pub fn new(osc: Oscillator, divider: Divider, gcr: GCR) -> Self {
+        Self {
+            osc,
+            divider,
+            gcr_perf: RefCell::new(Gcr { gcr }),
+        }
+    }
+
     pub fn set(&self) {
-        let gcr_ptr = unsafe { &*GCR::steal() };
-        gcr_ptr.clkctrl.write(|w| {
+        let gcr_ptr = self.gcr_perf.borrow();
+        gcr_ptr.gcr.clkctrl.write(|w| {
             match self.osc {
                 Oscillator::Primary(ClockType::SystemOscillator, _) => {
-                    w.ipo_en();
+                    w.ipo_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 27);
                     w.sysclk_sel().ipo();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
                 Oscillator::Secondary(ClockType::SystemOscillator, _) => {
-                    w.iso_en();
+                    w.iso_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 26);
                     w.sysclk_sel().iso();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
@@ -160,14 +147,14 @@ impl SystemClock {
                 }
 
                 Oscillator::BaudRate(ClockType::SystemOscillator, _) => {
-                    w.ibro_en();
+                    w.ibro_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 28);
                     w.sysclk_sel().ibro();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
                 Oscillator::RealTimeClock(ClockType::SystemOscillator, _) => {
-                    w.ertco_en();
+                    w.ertco_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 25);
                     w.sysclk_sel().ertco();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
