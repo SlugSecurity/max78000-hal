@@ -1,4 +1,4 @@
-//! GPIO peripherals API.
+//! GPIO peripherals API. Re-exports `embedded_hal` traits for GPIO pins in the `pin_traits` sub-module.
 
 // TODO:
 //      - add an assert if pin_idx is out of bounds
@@ -11,7 +11,9 @@
 
 // TODO: implement drop and deref for handles (force deref on trait)
 
-use core::{array, cell::Cell};
+use core::{array, cell::Cell, ops::Deref};
+
+pub use embedded_hal::digital as pin_traits;
 
 /// Contains implementations of traits defined in this module for the common
 /// GPIO ports (GPIO0 - GPIO2).
@@ -20,6 +22,17 @@ pub mod common;
 /// Contains implementations of traits defined in this module for the low power
 /// GPIO port (GPIO3).
 pub mod low_power;
+
+/// Error type for GPIO operations
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum GpioError {
+    /// Pin handle is already taken and so cannot be taken again
+    HandleAlreadyTaken,
+
+    /// Pin index provided is out of bounds.
+    InvalidPinIndex,
+}
 
 /// This trait defines two associated types for a particular GPIO port.
 /// These are the pin handle type and the GPIO register block type.
@@ -31,8 +44,9 @@ pub trait GpioPortMetadata {
     type GpioRegs;
 }
 
-/// This trait defines a pin handle.
-pub trait PinHandle<'a> {
+/// This trait defines a pin handle. Dropping the pin handle should return it back.
+/// A pin handle must also implement IoPin.
+pub trait PinHandle<'a>: Drop + Deref {
     /// The type of the GPIO port struct.
     type Port;
 
@@ -61,9 +75,19 @@ impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Meta
 
     /// Gets a pin handle based on the provided index. Returns an Err if the
     /// pin index is out of bounds or a pin handle has already been taken out.
-    pub fn get_pin_handle(&'t self, idx: usize) -> Metadata::PinHandleType<'t, PIN_CT> {
+    pub fn get_pin_handle(
+        &'t self,
+        idx: usize,
+    ) -> Result<Metadata::PinHandleType<'t, PIN_CT>, GpioError> {
+        let pin_taken_cell = self.pin_taken.get(idx).ok_or(GpioError::InvalidPinIndex)?;
+
+        // Pin was already taken and hasn't been returned yet.
+        if pin_taken_cell.get() {
+            return Err(GpioError::HandleAlreadyTaken);
+        }
+
         self.pin_taken[idx].set(true);
 
-        Metadata::PinHandleType::new(self, idx)
+        Ok(Metadata::PinHandleType::new(self, idx))
     }
 }
