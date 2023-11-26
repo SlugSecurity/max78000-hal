@@ -99,15 +99,11 @@ pub enum Divider {
 pub struct SystemClock {
     osc: Oscillator,
     divider: Divider,
-    gcr_clkctrl: &'static max78000::gcr::CLKCTRL,
+    gcr_clkctrl: max78000::gcr::CLKCTRL,
 }
 
 impl SystemClock {
-    pub fn new(
-        osc: Oscillator,
-        divider: Divider,
-        gcr_clkctrl: &'static max78000::gcr::CLKCTRL,
-    ) -> Self {
+    pub fn new(osc: Oscillator, divider: Divider, gcr_clkctrl: max78000::gcr::CLKCTRL) -> Self {
         Self {
             osc,
             divider,
@@ -116,7 +112,7 @@ impl SystemClock {
     }
 
     pub fn set(&self) {
-        let gcr_ptr = self.gcr_clkctrl;
+        let gcr_ptr = &self.gcr_clkctrl;
         gcr_ptr.write(|w| {
             match self.osc {
                 Oscillator::Primary(ClockType::SystemOscillator, _) => {
