@@ -76,7 +76,7 @@ pub struct GpioPort<Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> {
 
 impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Metadata, PIN_CT> {
     /// Creates a new GpioPort
-    pub fn new(regs: Metadata::GpioRegs) -> Self {
+    fn new(regs: Metadata::GpioRegs) -> Self {
         Self {
             regs,
             pin_taken: array::from_fn(|_| Default::default()),

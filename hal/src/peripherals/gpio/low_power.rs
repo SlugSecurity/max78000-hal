@@ -2,12 +2,14 @@ use core::convert::Infallible;
 
 use max78000::mcr::{GPIO3_CTRL, OUTEN};
 
-use super::pin_traits::{toggleable, GeneralIoPin, InputPin, IoPin, OutputPin, StatefulOutputPin};
+use super::pin_traits::{
+    toggleable, GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin,
+};
 
 use super::{GpioError, GpioPort, GpioPortMetadata, PinHandle, PinIoMode, PinOperatingMode};
 
 // TODO for arelyx:
-// - implement functions in traits that aren't complete below (see LowPowerPinHandle::set_operating_mode for example)
+// - implement functions with todo!() in them (see LowPowerPinHandle::set_operating_mode for example)
 // - implement pullup resistor configuration (should be for just input mode, confirm this)
 // - add documentation
 //     - a module-level doc comment
@@ -47,7 +49,7 @@ impl<'a, const PIN_CT: usize> IoPin<LowPowerInputPin<'a, PIN_CT>, LowPowerOutput
 
     fn into_output_pin(
         self,
-        state: embedded_hal::digital::v2::PinState,
+        state: PinState,
     ) -> Result<LowPowerOutputPin<'a, PIN_CT>, Self::Error> {
         todo!()
     }
@@ -134,7 +136,7 @@ impl<'a, const PIN_CT: usize> IoPin<LowPowerInputPin<'a, PIN_CT>, LowPowerOutput
 
     fn into_output_pin(
         self,
-        state: embedded_hal::digital::v2::PinState,
+        state: PinState,
     ) -> Result<LowPowerOutputPin<'a, PIN_CT>, Self::Error> {
         self.0.into_output_pin(state)
     }
@@ -181,7 +183,9 @@ impl<'a, const PIN_CT: usize> StatefulOutputPin for LowPowerOutputPin<'a, PIN_CT
     }
 }
 
-/// To implement ToggleableOutputPin from OutputPin + StatefulOutputPin.
+/// Provides [`ToggleableOutputPin`] as a blanket implementation from OutputPin + StatefulOutputPin.
+///
+/// [`ToggleableOutputPin`]: #impl-ToggleableOutputPin-for-LowPowerOutputPin<'a,+PIN_CT>
 impl<'a, const PIN_CT: usize> toggleable::Default for LowPowerOutputPin<'a, PIN_CT> {}
 
 impl<'a, const PIN_CT: usize> IoPin<LowPowerInputPin<'a, PIN_CT>, LowPowerOutputPin<'a, PIN_CT>>
@@ -195,7 +199,7 @@ impl<'a, const PIN_CT: usize> IoPin<LowPowerInputPin<'a, PIN_CT>, LowPowerOutput
 
     fn into_output_pin(
         self,
-        state: embedded_hal::digital::v2::PinState,
+        state: PinState,
     ) -> Result<LowPowerOutputPin<'a, PIN_CT>, Self::Error> {
         self.0.into_output_pin(state)
     }
