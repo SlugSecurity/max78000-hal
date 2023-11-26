@@ -1,5 +1,3 @@
-use core::iter::Cycle;
-
 use crate::peripherals::bit_banding as bb;
 use max78000::gcr::CLKCTRL;
 use max78000::GCR;
