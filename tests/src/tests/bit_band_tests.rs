@@ -22,12 +22,16 @@ pub unsafe fn run_bit_band_tests(stdout: &mut hio::HostStream) {
     writeln!(stdout, "change_bit complete").unwrap();
 
     writeln!(stdout, "Testing toggle_bit...").unwrap();
-    test_toggle_bit();
+    test_toggle_bit(stdout);
     writeln!(stdout, "toggle_bit complete").unwrap();
 
     writeln!(stdout, "Testing read_bit...").unwrap();
     test_read_bit();
     writeln!(stdout, "read_bit complete").unwrap();
+
+    writeln!(stdout, "Testing spin_bit...").unwrap();
+    test_spin_bit(stdout);
+    writeln!(stdout, "spin_bit complete").unwrap();
 
     writeln!(stdout, "Bit band tests complete!").unwrap();
 }
@@ -53,8 +57,10 @@ unsafe fn test_change_bit() {
 }
 
 /// Tests the [`toggle_bit`] function
-unsafe fn test_toggle_bit() {
-    // TODO: write proper test with timings
+unsafe fn test_toggle_bit(stdout: &mut hio::HostStream) {
+    // TODO: implement test for toggle_bit
+    writeln!(stdout, "toggle_bit tests unimplemented").unwrap();
+
     /*let test: u32 = 0;
     let mut control: u32 = 0;
 
@@ -80,4 +86,7 @@ fn test_read_bit() {
     }
 }
 
-// TODO: test [`bit_banding::spin_bit`]
+fn test_spin_bit(stdout: &mut hio::HostStream) {
+    // TODO: implement test for spin_bit
+    writeln!(stdout, "spin_bit tests unimplemented").unwrap();
+}
