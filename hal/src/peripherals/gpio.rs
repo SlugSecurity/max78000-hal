@@ -13,7 +13,7 @@
 
 use core::{array, cell::Cell, ops::Deref};
 
-pub use embedded_hal::digital as pin_traits;
+pub use embedded_hal::digital::v2 as pin_traits;
 
 /// Contains implementations of traits defined in this module for the common
 /// GPIO ports (GPIO0 - GPIO2).
@@ -46,11 +46,15 @@ pub trait GpioPortMetadata {
 
 /// This trait defines a pin handle. Dropping the pin handle should return it back.
 /// A pin handle must also implement IoPin.
-pub trait PinHandle<'a>: Drop + Deref {
+pub trait PinHandle<'a>: Drop {
     /// The type of the GPIO port struct.
     type Port;
 
-    /// Creates a new `PinHandle`.
+    /// Creates a new `PinHandle.
+    /// # Panics
+    ///
+    /// This function panics if pin_idx is less than the number of pins
+    /// of the port.
     fn new(port_ref: &'a Self::Port, pin_idx: usize) -> Self;
 }
 
@@ -86,7 +90,7 @@ impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Meta
             return Err(GpioError::HandleAlreadyTaken);
         }
 
-        self.pin_taken[idx].set(true);
+        pin_taken_cell.set(true);
 
         Ok(Metadata::PinHandleType::new(self, idx))
     }

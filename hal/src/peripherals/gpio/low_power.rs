@@ -21,8 +21,12 @@ impl<'a, const PIN_CT: usize> LowPowerPinHandle<'a, PIN_CT> {
     // add pin state function to get whether the pin is in input or output mode
 }
 
-// TODO: impl IoPin
-// TODO: impl Drop
+impl<'a, const PIN_CT: usize> Drop for LowPowerPinHandle<'a, PIN_CT> {
+    fn drop(&mut self) {
+        // When handle is dropped, allow the pin to be taken again.
+        self.port.pin_taken[self.pin_idx].set(false);
+    }
+}
 
 impl<'a, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, PIN_CT> {
     type Port = GpioPort<LowPowerGpio, PIN_CT>;
