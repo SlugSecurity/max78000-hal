@@ -30,36 +30,7 @@ pub struct LowPowerGpio<'mcr>(PhantomData<&'mcr ()>);
 
 #[sealed]
 impl<'mcr> GpioPortMetadata<'mcr> for LowPowerGpio<'mcr> {
-    type PinHandleType<'a, const PIN_CT: usize> = LowPowerPinHandle<'a, 'mcr, PIN_CT>    where
-    'mcr: 'a;
-    // How do we prove to the compiler that this is always true in the lifetimes we provide PinHandleType?
-
-    // basically the lifetime provided into here is used for the lifetime of &MCR in LowPowerGpioRegs.
-    // that way, the lifetime doesnt need to be specified inside GpioPort
-    // but b/c LowPowerPinHandle has a reference to GpioPort, it also needs to specify &MCR's lifetime
-    // but we know that whatever lifetime is provided into there already will outlive 'a
-    // but coming back to LowPowerGpio, we need to express that the 'mcr lifetime provided into there outlives the lifetime
-    // provided to PinHandleType which is 'a (this lifetime is the lifetime of the struct in GpioPort so it always does).
-    // but the compiler doesnt know that so we need to enforce that bound here but how?
-
-    // can we bound PinHandleType's 'a lifetime to the lifetime of the struct, perhaps by making GpioPortMetadata generic over some lifetime?
-
-    // if we make gpioportmetadata generic over <'b> and constrain PinHandleType to <'b: 'a> where LowPowerGpio<'mcr> implements GpioPortMetadata<'mcr>
-    // then CommonGpio can implement GpioPortMetadata<'static>?
-
-    // then GpioPort will need to use GpioPortMetadata
-
-    // alternativly, can we selectively implement GpioPortMetadata only if 'mcr is constrained to 'a? probs not b/c any 'a can be chosen unless we can somehow defer that error to later?
-
-    // is there a way to express below that idgaf about the 'mcr lifetime in LowPowerPinHandle as long as I get smth?
-
-    // maybe there is, what if i make low power pin handle generic over GpioPortMetadata rather than LowPowerGpio<'mcr>??
-    // but then how do i do things specific to GpioPort<LowPowerGpio<'_>, PIN_CT>?? like peripheral access
-    // u can get the GpioRegs type but it'll be an unknown type, not LowPowerGpioRegs
-
-    // i think the main issue is that we need to know 'mcr's lifetime in case we give it out but in this case
-    // we're never giving it out so we dont care about mcr's lifetime b/c we're always using it within LowPowerPinHandle
-
+    type PinHandleType<'a, const PIN_CT: usize> = LowPowerPinHandle<'a, 'mcr, PIN_CT> where 'mcr: 'a;
     type GpioRegs = &'mcr MCR;
 }
 
