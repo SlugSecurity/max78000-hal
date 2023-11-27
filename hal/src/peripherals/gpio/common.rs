@@ -14,7 +14,7 @@ pub mod port_num_types;
 //       - these pins should be a newtype wrapping the pin handle so drop works on it properly
 //       - all pin types, including PinHandle, should implement GeneralIoPin<INPUT_PIN_TYPE, OUTPUT_PIN_TYPE>
 //       - note: to implement the error checking for alternate functions,
-//               implement it based on the port_num given back with get_port_num
+//               implement it based on the port num given back with GpioPortNum::PORT_NUM
 //
 // - after implementing above trait functionality
 //       - implement weak/strong pullup/pulldown resistor configuration (input mode only)

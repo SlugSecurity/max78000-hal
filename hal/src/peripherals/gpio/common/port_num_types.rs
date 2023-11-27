@@ -16,9 +16,8 @@ pub trait GpioPortNum {
     /// eg: GPIO0, GPIO1, GPIO2
     type Peripheral;
 
-    /// Gets the associated port number as an integer.
-    /// eg: GpioZero would return 0.
-    fn get_port_num(&self) -> usize;
+    /// The associated port number as an integer.
+    const PORT_NUM: usize;
 }
 
 macro_rules! generate_gpio_port_num {
@@ -30,10 +29,7 @@ macro_rules! generate_gpio_port_num {
 
         impl GpioPortNum for $port_num_type {
             type Peripheral = $port_periph;
-
-            fn get_port_num(&self) -> usize {
-                $port_num
-            }
+            const PORT_NUM: usize = $port_num;
         }
     };
 }
