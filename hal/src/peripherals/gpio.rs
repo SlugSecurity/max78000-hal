@@ -58,9 +58,12 @@ pub trait GpioPortMetadata<'b> {
 }
 
 /// This trait defines a pin handle. Dropping the pin handle should return it back.
+///
+/// # Note:
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+#[sealed(pub(crate))]
 pub trait PinHandle<'a> {
-    // TODO: seal PinHandle and privatize PinHandle::new so only the associated type is publicly visible?
-
     /// The type of the GPIO port struct.
     type Port;
 
@@ -70,6 +73,7 @@ pub trait PinHandle<'a> {
     /// This function panics if pin_idx is less than the number of pins
     /// of the port. It can also panic in cases where an invalid type
     /// is about to be constructed.
+    #[doc(hidden)]
     fn new(port_ref: &'a Self::Port, pin_idx: usize) -> Self;
 }
 

@@ -10,7 +10,7 @@ use super::pin_traits::{
 
 use super::{
     GpioError, GpioPort, GpioPortMetadata, PinHandle, PinIoMode, PinOperatingMode,
-    __seal_gpio_port_metadata,
+    __seal_gpio_port_metadata, __seal_pin_handle,
 };
 
 // TODO for arelyx:
@@ -105,6 +105,7 @@ impl<'a, 'mcr, const PIN_CT: usize> Drop for LowPowerPinHandle<'a, 'mcr, PIN_CT>
     }
 }
 
+#[sealed]
 impl<'a, 'mcr, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, 'mcr, PIN_CT> {
     type Port = GpioPort<'mcr, LowPowerGpio<'mcr>, PIN_CT>;
 

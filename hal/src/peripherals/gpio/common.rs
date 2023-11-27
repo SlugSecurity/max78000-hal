@@ -4,7 +4,7 @@ use sealed::sealed;
 
 use self::port_num_types::GpioPortNum;
 
-use super::{GpioPort, GpioPortMetadata, PinHandle, __seal_gpio_port_metadata};
+use super::{GpioPort, GpioPortMetadata, PinHandle, __seal_gpio_port_metadata, __seal_pin_handle};
 
 pub mod port_num_types;
 
@@ -67,6 +67,7 @@ where
     }
 }
 
+#[sealed]
 impl<'a, Port, const PIN_CT: usize> PinHandle<'a> for CommonPinHandle<'a, Port, PIN_CT>
 where
     for<'ah> Port: GpioPortNum + 'ah,
