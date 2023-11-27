@@ -76,10 +76,8 @@ pub trait PinHandle<'a> {
 /// to be taken again.
 #[derive(Debug)]
 pub struct GpioPort<'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize> {
-    // Implementation note:
-    //
-    // The const generic `PIN_CT` can be removed once more complex expressions are allowed
-    // within const generics like associated constants from generic types
+    // TODO for implementor: The const generic `PIN_CT` can be removed once more complex
+    // expressions are allowed within const generics like associated constants from generic types
     pub(crate) regs: Metadata::GpioRegs,
     pub(crate) pin_taken: [Cell<bool>; PIN_CT],
 }
