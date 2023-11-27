@@ -11,6 +11,7 @@ use self::{
         CommonGpio,
     },
     low_power::LowPowerGpio,
+    private::NonConstructible,
 };
 
 pub mod pin_traits;
@@ -57,6 +58,10 @@ pub trait GpioPortMetadata<'b> {
     type GpioRegs;
 }
 
+mod private {
+    pub struct NonConstructible;
+}
+
 /// This trait defines a pin handle. Dropping the pin handle should return it back.
 ///
 /// # Note:
@@ -74,7 +79,10 @@ pub trait PinHandle<'a> {
     /// of the port. It can also panic in cases where an invalid type
     /// is about to be constructed.
     #[doc(hidden)]
-    fn new(port_ref: &'a Self::Port, pin_idx: usize) -> Self;
+    fn new(_private: NonConstructible, port_ref: &'a Self::Port, pin_idx: usize) -> Self;
+
+    /// Gets the pin index associated with this handle.
+    fn get_pin_idx(&self) -> usize;
 }
 
 /// This struct is responsible for managing handles to GPIO pins within
@@ -115,7 +123,7 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
 
         pin_taken_cell.set(true);
 
-        Ok(Metadata::PinHandleType::new(self, idx))
+        Ok(Metadata::PinHandleType::new(NonConstructible, self, idx))
     }
 }
 

@@ -4,7 +4,10 @@ use sealed::sealed;
 
 use self::port_num_types::GpioPortNum;
 
-use super::{GpioPort, GpioPortMetadata, PinHandle, __seal_gpio_port_metadata, __seal_pin_handle};
+use super::{
+    GpioPort, GpioPortMetadata, PinHandle, __seal_gpio_port_metadata, __seal_pin_handle,
+    private::NonConstructible,
+};
 
 pub mod port_num_types;
 
@@ -74,7 +77,7 @@ where
 {
     type Port = GpioPort<'static, CommonGpio<Port>, PIN_CT>;
 
-    fn new(port: &'a Self::Port, pin_idx: usize) -> Self {
+    fn new(_private: NonConstructible, port: &'a Self::Port, pin_idx: usize) -> Self {
         // We can't get rid of the const generic here or otherwise prevent a bad pin count
         // from being entered until more complex exprs can be evaluated in const generics stably.
         // So there are asserts here to ensure they can't be constructed. The construction of these
@@ -83,5 +86,9 @@ where
         assert!(pin_idx < PIN_CT);
 
         Self { port, pin_idx }
+    }
+
+    fn get_pin_idx(&self) -> usize {
+        self.pin_idx
     }
 }

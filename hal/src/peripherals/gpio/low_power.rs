@@ -8,6 +8,7 @@ use super::pin_traits::{
     toggleable, GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin,
 };
 
+use super::private::NonConstructible;
 use super::{
     GpioError, GpioPort, GpioPortMetadata, PinHandle, PinIoMode, PinOperatingMode,
     __seal_gpio_port_metadata, __seal_pin_handle,
@@ -109,7 +110,7 @@ impl<'a, 'mcr, const PIN_CT: usize> Drop for LowPowerPinHandle<'a, 'mcr, PIN_CT>
 impl<'a, 'mcr, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, 'mcr, PIN_CT> {
     type Port = GpioPort<'mcr, LowPowerGpio<'mcr>, PIN_CT>;
 
-    fn new(port: &'a Self::Port, pin_idx: usize) -> Self {
+    fn new(_private: NonConstructible, port: &'a Self::Port, pin_idx: usize) -> Self {
         // We can't get rid of the const generic here or otherwise prevent a bad pin count
         // from being entered until more complex exprs can be evaluated in const generics stably.
         // So there are asserts here to ensure they can't be constructed. The construction of these
@@ -118,6 +119,10 @@ impl<'a, 'mcr, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, 'mcr
         assert!(pin_idx < PIN_CT);
 
         Self { port, pin_idx }
+    }
+
+    fn get_pin_idx(&self) -> usize {
+        self.pin_idx
     }
 }
 
