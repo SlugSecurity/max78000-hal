@@ -1,6 +1,4 @@
 use crate::peripherals::bit_banding as bb;
-use core::cell::RefCell;
-use max78000::{gcr::CLKCTRL, GCR, TRIMSIR};
 
 /// Hertz
 #[derive(Clone, Copy)]
@@ -39,6 +37,7 @@ impl From<KiloHertz> for MegaHertz {
 }
 
 #[derive(Clone, Copy)]
+/// All acceptable oscillators
 pub enum Oscillator {
     /// 1000 mHz
     Primary(ClockType, CrystalFrequency),
@@ -53,6 +52,7 @@ pub enum Oscillator {
 }
 
 #[derive(Clone, Copy)]
+/// All acceptable frequencies
 pub enum CrystalFrequency {
     _8kHz,
     _16kHz,
@@ -78,6 +78,7 @@ impl Into<Hertz> for CrystalFrequency {
 }
 
 #[derive(Clone, Copy)]
+/// All acceptable clocks
 pub enum ClockType {
     SystemOscillator,
     RealTimeClock,
@@ -85,6 +86,7 @@ pub enum ClockType {
 }
 
 #[derive(Clone, Copy)]
+/// All acceptable dividors
 pub enum Divider {
     _1 = 1,
     _2 = 2,
@@ -96,23 +98,30 @@ pub enum Divider {
     _128 = 128,
 }
 
-pub struct SystemClock {
+/// SystemClock struct, owns gcr::CLKCTRL
+pub struct SystemClock<'a> {
     osc: Oscillator,
     divider: Divider,
-    gcr_clkctrl: max78000::gcr::CLKCTRL,
+    gcr_clkctrl: &'a max78000::gcr::CLKCTRL,
 }
 
-impl SystemClock {
-    pub fn new(osc: Oscillator, divider: Divider, gcr_clkctrl: max78000::gcr::CLKCTRL) -> Self {
+impl<'a> SystemClock<'a> {
+    /// takes owner ship of gcr::CLKCTRL registers
+    pub fn new(
+        osc: Oscillator,
+        divider: Divider,
+        gcr_peripheral: &'a mut max78000::gcr::CLKCTRL,
+    ) -> Self {
         Self {
             osc,
             divider,
-            gcr_clkctrl,
+            gcr_clkctrl: &*gcr_peripheral,
         }
     }
 
+    /// Configures the system clock
     pub fn set(&self) {
-        let gcr_ptr = &self.gcr_clkctrl;
+        let gcr_ptr = self.gcr_clkctrl;
         gcr_ptr.write(|w| {
             match self.osc {
                 Oscillator::Primary(ClockType::SystemOscillator, _) => {
