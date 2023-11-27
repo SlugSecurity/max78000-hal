@@ -40,7 +40,7 @@ pub mod port_num_types;
 pub struct CommonGpio<Port: GpioPortNum>(PhantomData<Port>);
 
 #[sealed]
-impl<Port> GpioPortMetadata for CommonGpio<Port>
+impl<Port> GpioPortMetadata<'static> for CommonGpio<Port>
 where
     for<'ah> Port: GpioPortNum + 'ah,
 {
@@ -57,7 +57,7 @@ pub struct CommonPinHandle<'a, Port, const PIN_CT: usize>
 where
     for<'ah> Port: GpioPortNum + 'ah,
 {
-    port: &'a GpioPort<CommonGpio<Port>, PIN_CT>,
+    port: &'a GpioPort<'static, CommonGpio<Port>, PIN_CT>,
     pin_idx: usize,
 }
 
@@ -75,7 +75,7 @@ impl<'a, Port, const PIN_CT: usize> PinHandle<'a> for CommonPinHandle<'a, Port, 
 where
     for<'ah> Port: GpioPortNum + 'ah,
 {
-    type Port = GpioPort<CommonGpio<Port>, PIN_CT>;
+    type Port = GpioPort<'static, CommonGpio<Port>, PIN_CT>;
 
     fn new(port: &'a Self::Port, pin_idx: usize) -> Self {
         assert!(pin_idx < PIN_CT);

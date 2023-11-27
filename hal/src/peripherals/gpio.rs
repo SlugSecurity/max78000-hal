@@ -1,13 +1,13 @@
 //! GPIO peripherals API. Re-exports `embedded_hal` traits for GPIO pins in the `pin_traits` sub-module.
 
-use core::{array, cell::Cell};
+use core::{array, cell::Cell, marker::PhantomData};
 
-use max78000::{Peripherals, GPIO0};
+use max78000::{Peripherals, GPIO0, MCR};
 use sealed::sealed;
 
 use self::{
     common::{port_num_types::GpioZero, CommonGpio},
-    low_power::{LowPowerGpio, LowPowerGpioRegs},
+    low_power::LowPowerGpio,
 };
 
 pub mod pin_traits;
@@ -44,9 +44,11 @@ pub enum GpioError {
 ///
 /// This trait is sealed and cannot be implemented outside this crate.
 #[sealed(pub(crate))]
-pub trait GpioPortMetadata {
+pub trait GpioPortMetadata<'b> {
     /// The type of the pin handle.
-    type PinHandleType<'a, const PIN_CT: usize>: PinHandle<'a, Port = GpioPort<Self, PIN_CT>>;
+    type PinHandleType<'a, const PIN_CT: usize>: PinHandle<'a, Port = GpioPort<'b, Self, PIN_CT>>
+    where
+        'b: 'a;
 
     /// The type of the struct to access the GPIO port registers.
     type GpioRegs;
@@ -70,12 +72,14 @@ pub trait PinHandle<'a> {
 /// a particular pin. Dropping a pin handle will allow for it to be able
 /// to be taken again.
 #[derive(Debug)]
-pub struct GpioPort<Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> {
+pub struct GpioPort<'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize> {
     pub(crate) regs: Metadata::GpioRegs,
     pub(crate) pin_taken: [Cell<bool>; PIN_CT],
 }
 
-impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Metadata, PIN_CT> {
+impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
+    GpioPort<'regs, Metadata, PIN_CT>
+{
     /// Creates a new GpioPort
     fn new(regs: Metadata::GpioRegs) -> Self {
         Self {
@@ -103,19 +107,33 @@ impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Meta
     }
 }
 
-pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<CommonGpio<GpioZero>, 31> {
+pub(crate) fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, CommonGpio<GpioZero>, 31> {
     GpioPort::<CommonGpio<GpioZero>, 31>::new(gpio0)
 }
 
-// pub fn new_gpio3(gpio3: LowPowerGpioRegs) -> GpioPort<LowPowerGpio, 2> {
-//     GpioPort::<LowPowerGpio, 2>::new(gpio3)
-// }
+// TODO: get rid of const generics here -- interanlize one above and hard-set one below
+
+pub(crate) fn new_gpio3<'a>(gpio3: &'a MCR) -> GpioPort<'a, LowPowerGpio<'a>, 2> {
+    GpioPort::<LowPowerGpio<'a>, 2>::new(gpio3)
+}
 
 pub fn test() {
-    let ahhh = Peripherals::take().unwrap().MCR;
-    // let gpio0 = new_gpio3(LowPowerGpioRegs::new(ahhh.gpio3_ctrl, ahhh.outen));
+    let p = Peripherals::take().unwrap();
 
-    // let ahh = gpio0.get_pin_handle(7).unwrap();
+    let f = p.GPIO0;
+
+    let gpio0 = new_gpio0(f);
+
+    {
+        let ahh = gpio0.get_pin_handle(3).unwrap();
+    }
+
+    let ahhh = &p.MCR;
+    let gpio3 = new_gpio3(ahhh);
+
+    {
+        let ahh = gpio3.get_pin_handle(7).unwrap();
+    }
 }
 
 // TODO: impl new_gpio0 ... new_gpio3
