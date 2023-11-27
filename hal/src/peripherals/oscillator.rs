@@ -1,4 +1,4 @@
-use crate::peripherals::bit_banding as bb;
+Nuse crate::peripherals::bit_banding as bb;
 
 /// Hertz
 #[derive(Clone, Copy)]
@@ -39,7 +39,7 @@ impl From<KiloHertz> for MegaHertz {
 #[derive(Clone, Copy)]
 /// All acceptable oscillators
 pub enum Oscillator {
-    /// 1000 mHz
+    /// 100 mHz
     Primary(ClockType, CrystalFrequency),
     /// 60 mHz
     Secondary(ClockType, CrystalFrequency),
@@ -60,7 +60,7 @@ pub enum CrystalFrequency {
     _32_768kHz,
     _7_3728mHz,
     _60mHz,
-    _1000mHz,
+    _100mHz,
 }
 
 impl Into<Hertz> for CrystalFrequency {
@@ -72,7 +72,7 @@ impl Into<Hertz> for CrystalFrequency {
             CrystalFrequency::_32_768kHz => 32_768,
             CrystalFrequency::_7_3728mHz => 7_372_800,
             CrystalFrequency::_60mHz => 60_000_000,
-            CrystalFrequency::_1000mHz => 1_000_000_000,
+            CrystalFrequency::_100mHz => 1_000_000_000,
         })
     }
 }
