@@ -2,11 +2,14 @@
 
 use core::{array, cell::Cell, marker::PhantomData};
 
-use max78000::{Peripherals, GPIO0, MCR};
+use max78000::{Peripherals, GPIO0, GPIO1, GPIO2, MCR};
 use sealed::sealed;
 
 use self::{
-    common::{port_num_types::GpioZero, CommonGpio},
+    common::{
+        port_num_types::{GpioOne, GpioTwo, GpioZero},
+        CommonGpio,
+    },
     low_power::LowPowerGpio,
 };
 
@@ -73,6 +76,10 @@ pub trait PinHandle<'a> {
 /// to be taken again.
 #[derive(Debug)]
 pub struct GpioPort<'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize> {
+    // Implementation note:
+    //
+    // The const generic `PIN_CT` can be removed once more complex expressions are allowed
+    // within const generics like associated constants from generic types
     pub(crate) regs: Metadata::GpioRegs,
     pub(crate) pin_taken: [Cell<bool>; PIN_CT],
 }
@@ -111,32 +118,17 @@ pub(crate) fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, CommonGpio<GpioZero>,
     GpioPort::<CommonGpio<GpioZero>, 31>::new(gpio0)
 }
 
-// TODO: get rid of const generics here -- interanlize one above and hard-set one below
+pub(crate) fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, CommonGpio<GpioOne>, 10> {
+    GpioPort::<CommonGpio<GpioOne>, 10>::new(gpio1)
+}
+
+pub(crate) fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, CommonGpio<GpioTwo>, 8> {
+    GpioPort::<CommonGpio<GpioTwo>, 8>::new(gpio2)
+}
 
 pub(crate) fn new_gpio3<'a>(gpio3: &'a MCR) -> GpioPort<'a, LowPowerGpio<'a>, 2> {
     GpioPort::<LowPowerGpio<'a>, 2>::new(gpio3)
 }
-
-pub fn test() {
-    let p = Peripherals::take().unwrap();
-
-    let f = p.GPIO0;
-
-    let gpio0 = new_gpio0(f);
-
-    {
-        let ahh = gpio0.get_pin_handle(3).unwrap();
-    }
-
-    let ahhh = &p.MCR;
-    let gpio3 = new_gpio3(ahhh);
-
-    {
-        let ahh = gpio3.get_pin_handle(7).unwrap();
-    }
-}
-
-// TODO: impl new_gpio0 ... new_gpio3
 
 /// Represents the I/O mode of a pin.
 pub enum PinIoMode {

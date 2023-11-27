@@ -36,7 +36,7 @@ impl<'mcr> GpioPortMetadata<'mcr> for LowPowerGpio<'mcr> {
 
 /// `PinHandle` implementation for low power GPIO ports.
 pub struct LowPowerPinHandle<'a, 'mcr, const PIN_CT: usize> {
-    port: &'a GpioPort<'mcr, LowPowerGpio<'mcr>, PIN_CT>, // 'mcr here shouldnt be determined by LowPOwerPinHandle
+    port: &'a GpioPort<'mcr, LowPowerGpio<'mcr>, PIN_CT>,
     pin_idx: usize,
 }
 
