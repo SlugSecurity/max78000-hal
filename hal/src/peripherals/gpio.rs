@@ -1,17 +1,14 @@
 //! GPIO peripherals API. Re-exports `embedded_hal` traits for GPIO pins in the `pin_traits` sub-module.
 
-// TODO:
-//      - add an assert if pin_idx is out of bounds
-//      - make GpioPort::get_handle fallible if already taken or idx is out of bounds
-//      - make sure everything has the proper privacy so nothing can be constructed, even through associated types
-//      - implement embedded_hal traits -- PinHandle should imply `IoPin`
-//      - make newtypes for input pins and output pins
-//      - describe this module and give example
-//      - improve docs and add examples for each public item
-
-// TODO: implement drop and deref for handles (force deref on trait)
-
 use core::{array, cell::Cell};
+
+use max78000::{Peripherals, GPIO0};
+use sealed::sealed;
+
+use self::{
+    common::{port_num_types::GpioZero, CommonGpio},
+    low_power::{LowPowerGpio, LowPowerGpioRegs},
+};
 
 pub mod pin_traits;
 
@@ -42,6 +39,11 @@ pub enum GpioError {
 
 /// This trait defines two associated types for a particular GPIO port.
 /// These are the pin handle type and the GPIO register block type.
+///
+/// # Note:
+///
+/// This trait is sealed and cannot be implemented outside this crate.
+#[sealed(pub(crate))]
 pub trait GpioPortMetadata {
     /// The type of the pin handle.
     type PinHandleType<'a, const PIN_CT: usize>: PinHandle<'a, Port = GpioPort<Self, PIN_CT>>;
@@ -51,12 +53,11 @@ pub trait GpioPortMetadata {
 }
 
 /// This trait defines a pin handle. Dropping the pin handle should return it back.
-/// A pin handle must also implement IoPin.
 pub trait PinHandle<'a> {
     /// The type of the GPIO port struct.
     type Port;
 
-    /// Creates a new `PinHandle.
+    /// Creates a new `PinHandle``.
     /// # Panics
     ///
     /// This function panics if pin_idx is less than the number of pins
@@ -100,6 +101,21 @@ impl<'t, Metadata: GpioPortMetadata + ?Sized, const PIN_CT: usize> GpioPort<Meta
 
         Ok(Metadata::PinHandleType::new(self, idx))
     }
+}
+
+pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<CommonGpio<GpioZero>, 31> {
+    GpioPort::<CommonGpio<GpioZero>, 31>::new(gpio0)
+}
+
+// pub fn new_gpio3(gpio3: LowPowerGpioRegs) -> GpioPort<LowPowerGpio, 2> {
+//     GpioPort::<LowPowerGpio, 2>::new(gpio3)
+// }
+
+pub fn test() {
+    let ahhh = Peripherals::take().unwrap().MCR;
+    // let gpio0 = new_gpio3(LowPowerGpioRegs::new(ahhh.gpio3_ctrl, ahhh.outen));
+
+    // let ahh = gpio0.get_pin_handle(7).unwrap();
 }
 
 // TODO: impl new_gpio0 ... new_gpio3

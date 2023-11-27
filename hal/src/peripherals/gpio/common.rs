@@ -1,16 +1,20 @@
-use max78000::gpio0;
+use core::marker::PhantomData;
 
-use super::{GpioPort, GpioPortMetadata, PinHandle};
+use sealed::sealed;
 
-// DO NOT IMPLEMENT THIS MODULE YET -- STILL NEED TI IRON OUT ISSUE WITH GpioRegs
+use self::port_num_types::GpioPortNum;
+
+use super::{GpioPort, GpioPortMetadata, PinHandle, __seal_gpio_port_metadata};
+
+pub mod port_num_types;
 
 // TODO FOR ASTRA:
 // - make input pin and output pin structs
 //       - pin types should implement InputPin for input pin and StatefulOutputPin for output pin
 //       - these pins should be a newtype wrapping the pin handle so drop works on it properly
 //       - all pin types, including PinHandle, should implement GeneralIoPin<INPUT_PIN_TYPE, OUTPUT_PIN_TYPE>
-//       - note: to implement the error checking for alternate functions, get the address of RegisterBlock to determine which gpio port
-//         it is so you can look up whether or not there's a corresponding alternate function and such on the pin
+//       - note: to implement the error checking for alternate functions,
+//               implement it based on the port_num given back with get_port_num
 //
 // - after implementing above trait functionality
 //       - implement weak/strong pullup/pulldown resistor configuration (input mode only)
@@ -33,28 +37,45 @@ use super::{GpioPort, GpioPortMetadata, PinHandle};
 
 /// Marker struct implementing `GpioPortMetadata` for
 /// common GPIO ports.
-pub struct CommonGpio;
+pub struct CommonGpio<Port: GpioPortNum>(PhantomData<Port>);
 
-impl GpioPortMetadata for CommonGpio {
-    type PinHandleType<'a, const PIN_CT: usize> = CommonPinHandle<'a, PIN_CT>;
-    type GpioRegs = gpio0::RegisterBlock;
+#[sealed]
+impl<Port> GpioPortMetadata for CommonGpio<Port>
+where
+    for<'ah> Port: GpioPortNum + 'ah,
+{
+    type PinHandleType<'a, const PIN_CT: usize> = CommonPinHandle<'a, Port, PIN_CT>;
+    type GpioRegs = Port::Peripheral;
 }
 
+// TODO: we could move the const generic into GpioPortNum as associated constant and def should
+
+// TODO: seal PinHandle and privatize PinHandle::new so only the associated type is publicly visible?
+
 /// `PinHandle` implementation for common GPIO ports.
-pub struct CommonPinHandle<'a, const PIN_CT: usize> {
-    port: &'a GpioPort<CommonGpio, PIN_CT>,
+pub struct CommonPinHandle<'a, Port, const PIN_CT: usize>
+where
+    for<'ah> Port: GpioPortNum + 'ah,
+{
+    port: &'a GpioPort<CommonGpio<Port>, PIN_CT>,
     pin_idx: usize,
 }
 
-impl<'a, const PIN_CT: usize> Drop for CommonPinHandle<'a, PIN_CT> {
+impl<'a, Port, const PIN_CT: usize> Drop for CommonPinHandle<'a, Port, PIN_CT>
+where
+    for<'ah> Port: GpioPortNum + 'ah,
+{
     fn drop(&mut self) {
         // When handle is dropped, allow the pin to be taken again.
         self.port.pin_taken[self.pin_idx].set(false);
     }
 }
 
-impl<'a, const PIN_CT: usize> PinHandle<'a> for CommonPinHandle<'a, PIN_CT> {
-    type Port = GpioPort<CommonGpio, PIN_CT>;
+impl<'a, Port, const PIN_CT: usize> PinHandle<'a> for CommonPinHandle<'a, Port, PIN_CT>
+where
+    for<'ah> Port: GpioPortNum + 'ah,
+{
+    type Port = GpioPort<CommonGpio<Port>, PIN_CT>;
 
     fn new(port: &'a Self::Port, pin_idx: usize) -> Self {
         assert!(pin_idx < PIN_CT);
