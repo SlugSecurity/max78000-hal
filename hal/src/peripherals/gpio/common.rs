@@ -48,10 +48,6 @@ where
     type GpioRegs = Port::Peripheral;
 }
 
-// TODO: we could move the const generic into GpioPortNum as associated constant and def should
-
-// TODO: seal PinHandle and privatize PinHandle::new so only the associated type is publicly visible?
-
 /// `PinHandle` implementation for common GPIO ports.
 pub struct CommonPinHandle<'a, Port, const PIN_CT: usize>
 where
@@ -78,6 +74,11 @@ where
     type Port = GpioPort<'static, CommonGpio<Port>, PIN_CT>;
 
     fn new(port: &'a Self::Port, pin_idx: usize) -> Self {
+        // We can't get rid of the const generic here or otherwise prevent a bad pin count
+        // from being entered until more complex exprs can be evaluated in const generics stably.
+        // So there are asserts here to ensure they can't be constructed. The construction of these
+        // handles are done privately and not able to be done externally so this is fine.
+        assert!(PIN_CT <= 32); // Any common port can have up to 32 pins based on the registers
         assert!(pin_idx < PIN_CT);
 
         Self { port, pin_idx }

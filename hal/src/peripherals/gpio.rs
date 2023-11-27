@@ -1,8 +1,8 @@
 //! GPIO peripherals API. Re-exports `embedded_hal` traits for GPIO pins in the `pin_traits` sub-module.
 
-use core::{array, cell::Cell, marker::PhantomData};
+use core::{array, cell::Cell};
 
-use max78000::{Peripherals, GPIO0, GPIO1, GPIO2, MCR};
+use max78000::{GPIO0, GPIO1, GPIO2, MCR};
 use sealed::sealed;
 
 use self::{
@@ -59,6 +59,8 @@ pub trait GpioPortMetadata<'b> {
 
 /// This trait defines a pin handle. Dropping the pin handle should return it back.
 pub trait PinHandle<'a> {
+    // TODO: seal PinHandle and privatize PinHandle::new so only the associated type is publicly visible?
+
     /// The type of the GPIO port struct.
     type Port;
 
@@ -66,7 +68,8 @@ pub trait PinHandle<'a> {
     /// # Panics
     ///
     /// This function panics if pin_idx is less than the number of pins
-    /// of the port.
+    /// of the port. It can also panic in cases where an invalid type
+    /// is about to be constructed.
     fn new(port_ref: &'a Self::Port, pin_idx: usize) -> Self;
 }
 
