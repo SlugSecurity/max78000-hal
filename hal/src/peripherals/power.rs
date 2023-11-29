@@ -9,8 +9,9 @@ pub struct PowerControl<'r> {
 }
 
 impl<'r> PowerControl<'r> {
+    // TODO: Make pub(crate)
     /// Creates a new PowerControl instance that holds references to the GCR and LPGCR registers.
-    pub(crate) fn new(gcr: &'r GCR, lpgcr: &'r LPGCR) -> Self {
+    pub fn new(gcr: &'r GCR, lpgcr: &'r LPGCR) -> Self {
         Self { gcr, lpgcr }
     }
 
