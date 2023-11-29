@@ -18,266 +18,266 @@ impl<'r> PowerControl<'r> {
 
     /// Enable Low Power Comparators Clock
     pub fn enable_lpcomp(&self) {
-        self.lpgcr.pclkdis.write(|w| w.lpcomp().bit(false));
+        self.lpgcr.pclkdis.write(|w| w.lpcomp().en());
     }
 
     /// Disable Low Power Comparators Clock
     pub fn disable_lpcomp(&self) {
-        self.lpgcr.pclkdis.write(|w| w.lpcomp().bit(true));
+        self.lpgcr.pclkdis.write(|w| w.lpcomp().dis());
     }
 
     /// Enable UART3 (LPUART0) Clock
     pub fn enable_uart3(&self) {
-        self.lpgcr.pclkdis.write(|w| w.uart3().bit(false));
+        self.lpgcr.pclkdis.write(|w| w.uart3().en());
     }
 
     /// Disable UART3 (LPUART0) Clock
     pub fn disable_uart3(&self) {
-        self.lpgcr.pclkdis.write(|w| w.uart3().bit(true));
+        self.lpgcr.pclkdis.write(|w| w.uart3().dis());
     }
 
     /// Enable TMR5 (LPTMR1) Clock
     pub fn enable_tmr5(&self) {
-        self.lpgcr.pclkdis.write(|w| w.tmr5().bit(false));
+        self.lpgcr.pclkdis.write(|w| w.tmr5().en());
     }
 
     /// Disable TMR5 (LPTMR1) Clock
     pub fn disable_tmr5(&self) {
-        self.lpgcr.pclkdis.write(|w| w.tmr5().bit(true));
+        self.lpgcr.pclkdis.write(|w| w.tmr5().dis());
     }
 
     /// Enable TMR4 (LPTMR0) Clock
     pub fn enable_tmr4(&self) {
-        self.lpgcr.pclkdis.write(|w| w.tmr4().bit(false));
+        self.lpgcr.pclkdis.write(|w| w.tmr4().en());
     }
 
     /// Disable TMR4 (LPTMR0) Clock
     pub fn disable_tmr4(&self) {
-        self.lpgcr.pclkdis.write(|w| w.tmr4().bit(true));
+        self.lpgcr.pclkdis.write(|w| w.tmr4().dis());
     }
 
     /// Enable WDT1 (LPWDT0) Clock
     pub fn enable_wdt1(&self) {
-        self.lpgcr.pclkdis.write(|w| w.wdt1().bit(false));
+        self.lpgcr.pclkdis.write(|w| w.wdt1().en());
     }
 
     /// Disable WDT1 (LPWDT0) Clock
     pub fn disable_wdt1(&self) {
-        self.lpgcr.pclkdis.write(|w| w.wdt1().bit(true));
+        self.lpgcr.pclkdis.write(|w| w.wdt1().dis());
     }
 
     /// Enable GPIO2 Clock
     pub fn enable_gpio2(&self) {
-        self.lpgcr.pclkdis.write(|w| w.gpio2().bit(false));
+        self.lpgcr.pclkdis.write(|w| w.gpio2().en());
     }
 
     /// Disable GPIO2 Clock
     pub fn disable_gpio2(&self) {
-        self.lpgcr.pclkdis.write(|w| w.gpio2().bit(true));
+        self.lpgcr.pclkdis.write(|w| w.gpio2().dis());
     }
 
     // GCR_PCLKDIS0
 
     /// Enable Pulse Train Clock
     pub fn enable_pt(&self) {
-        self.gcr.pclkdis0.write(|w| w.pt().bit(false));
+        self.gcr.pclkdis0.write(|w| w.pt().en());
     }
 
     /// Disable Pulse Train Clock
     pub fn disable_pt(&self) {
-        self.gcr.pclkdis0.write(|w| w.pt().bit(true));
+        self.gcr.pclkdis0.write(|w| w.pt().dis());
     }
 
     /// Enable I2C1 Clock
     pub fn enable_i2c1(&self) {
-        self.gcr.pclkdis0.write(|w| w.i2c1().bit(false));
+        self.gcr.pclkdis0.write(|w| w.i2c1().en());
     }
 
     /// Disable I2C1 Clock
     pub fn disable_i2c1(&self) {
-        self.gcr.pclkdis0.write(|w| w.i2c1().bit(true));
+        self.gcr.pclkdis0.write(|w| w.i2c1().dis());
     }
 
     /// Enable CNN Clock
     pub fn enable_cnn(&self) {
-        self.gcr.pclkdis0.write(|w| w.cnn().bit(false));
+        self.gcr.pclkdis0.write(|w| w.cnn().en());
     }
 
     /// Disable CNN Clock
     pub fn disable_cnn(&self) {
-        self.gcr.pclkdis0.write(|w| w.cnn().bit(true));
+        self.gcr.pclkdis0.write(|w| w.cnn().dis());
     }
 
     /// Enable ADC Clock
     pub fn enable_adc(&self) {
-        self.gcr.pclkdis0.write(|w| w.adc().bit(false));
+        self.gcr.pclkdis0.write(|w| w.adc().en());
     }
 
     /// Disable ADC Clock
     pub fn disable_adc(&self) {
-        self.gcr.pclkdis0.write(|w| w.adc().bit(true));
+        self.gcr.pclkdis0.write(|w| w.adc().dis());
     }
 
     /// Enable TMR3 Clock
     pub fn enable_tmr3(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr3().bit(false));
+        self.gcr.pclkdis0.write(|w| w.tmr3().en());
     }
 
     /// Disable TMR3 Clock
     pub fn disable_tmr3(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr3().bit(true));
+        self.gcr.pclkdis0.write(|w| w.tmr3().dis());
     }
 
     /// Enable TMR2 Clock
     pub fn enable_tmr2(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr2().bit(false));
+        self.gcr.pclkdis0.write(|w| w.tmr2().en());
     }
 
     /// Disable TMR2 Clock
     pub fn disable_tmr2(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr2().bit(true));
+        self.gcr.pclkdis0.write(|w| w.tmr2().dis());
     }
 
     /// Enable TMR1 Clock
     pub fn enable_tmr1(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr1().bit(false));
+        self.gcr.pclkdis0.write(|w| w.tmr1().en());
     }
 
     /// Disable TMR1 Clock
     pub fn disable_tmr1(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr1().bit(true));
+        self.gcr.pclkdis0.write(|w| w.tmr1().dis());
     }
 
     /// Enable TMR0 Clock
     pub fn enable_tmr0(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr0().bit(false));
+        self.gcr.pclkdis0.write(|w| w.tmr0().en());
     }
 
     /// Disable TMR0 Clock
     pub fn disable_tmr0(&self) {
-        self.gcr.pclkdis0.write(|w| w.tmr0().bit(true));
+        self.gcr.pclkdis0.write(|w| w.tmr0().dis());
     }
 
     /// Enable I2C0 Clock
     pub fn enable_i2c0(&self) {
-        self.gcr.pclkdis0.write(|w| w.i2c0().bit(false));
+        self.gcr.pclkdis0.write(|w| w.i2c0().en());
     }
 
     /// Disable I2C0 Clock
     pub fn disable_i2c0(&self) {
-        self.gcr.pclkdis0.write(|w| w.i2c0().bit(true));
+        self.gcr.pclkdis0.write(|w| w.i2c0().dis());
     }
 
     /// Enable UART1 Clock
     pub fn enable_uart1(&self) {
-        self.gcr.pclkdis0.write(|w| w.uart1().bit(false));
+        self.gcr.pclkdis0.write(|w| w.uart1().en());
     }
 
     /// Disable UART1 Clock
     pub fn disable_uart1(&self) {
-        self.gcr.pclkdis0.write(|w| w.uart1().bit(true));
+        self.gcr.pclkdis0.write(|w| w.uart1().dis());
     }
 
     /// Enable UART0 Clock
     pub fn enable_uart0(&self) {
-        self.gcr.pclkdis0.write(|w| w.uart0().bit(false));
+        self.gcr.pclkdis0.write(|w| w.uart0().en());
     }
 
     /// Disable UART0 Clock
     pub fn disable_uart0(&self) {
-        self.gcr.pclkdis0.write(|w| w.uart0().bit(true));
+        self.gcr.pclkdis0.write(|w| w.uart0().dis());
     }
 
     /// Enable SPI1 Clock
     pub fn enable_spi1(&self) {
-        self.gcr.pclkdis0.write(|w| w.spi1().bit(false));
+        self.gcr.pclkdis0.write(|w| w.spi1().en());
     }
 
     /// Disable SPI1 Clock
     pub fn disable_spi1(&self) {
-        self.gcr.pclkdis0.write(|w| w.spi1().bit(true));
+        self.gcr.pclkdis0.write(|w| w.spi1().dis());
     }
 
     /// Enable DMA Clock
     pub fn enable_dma(&self) {
-        self.gcr.pclkdis0.write(|w| w.dma().bit(false));
+        self.gcr.pclkdis0.write(|w| w.dma().en());
     }
 
     /// Disable DMA Clock
     pub fn disable_dma(&self) {
-        self.gcr.pclkdis0.write(|w| w.dma().bit(true));
+        self.gcr.pclkdis0.write(|w| w.dma().dis());
     }
 
     /// Enable GPIO1 Port and Pad Logic Clock
     pub fn enable_gpio1(&self) {
-        self.gcr.pclkdis0.write(|w| w.gpio1().bit(false));
+        self.gcr.pclkdis0.write(|w| w.gpio1().en());
     }
 
     /// Disable GPIO1 Port and Pad Logic Clock
     pub fn disable_gpio1(&self) {
-        self.gcr.pclkdis0.write(|w| w.gpio1().bit(true));
+        self.gcr.pclkdis0.write(|w| w.gpio1().dis());
     }
 
     /// Enable GPIO0 Port and Pad Logic Clock
     pub fn enable_gpio0(&self) {
-        self.gcr.pclkdis0.write(|w| w.gpio0().bit(false));
+        self.gcr.pclkdis0.write(|w| w.gpio0().en());
     }
 
     /// Disable GPIO0 Port and Pad Logic Clock
     pub fn disable_gpio0(&self) {
-        self.gcr.pclkdis0.write(|w| w.gpio0().bit(true));
+        self.gcr.pclkdis0.write(|w| w.gpio0().dis());
     }
 
     // GCR_PCLKDIS1
 
     /// Enable CRC Clock
     pub fn enable_crc(&self) {
-        self.gcr.pclkdis1.write(|w| w.crc().bit(false));
+        self.gcr.pclkdis1.write(|w| w.crc().en());
     }
 
     /// Disable CRC Clock
     pub fn disable_crc(&self) {
-        self.gcr.pclkdis1.write(|w| w.crc().bit(true));
+        self.gcr.pclkdis1.write(|w| w.crc().dis());
     }
 
     /// Enable 1-Wire Clock
     pub fn enable_owm(&self) {
-        self.gcr.pclkdis1.write(|w| w.owm().bit(false));
+        self.gcr.pclkdis1.write(|w| w.owm().en());
     }
 
     /// Disable 1-Wire Clock
     pub fn disable_owm(&self) {
-        self.gcr.pclkdis1.write(|w| w.owm().bit(true));
+        self.gcr.pclkdis1.write(|w| w.owm().dis());
     }
 
     /// Enable Semaphore Block Clock
     pub fn enable_smphr(&self) {
-        self.gcr.pclkdis1.write(|w| w.smphr().bit(false));
+        self.gcr.pclkdis1.write(|w| w.smphr().en());
     }
 
     /// Disable Semaphore Block Clock
     pub fn disable_smphr(&self) {
-        self.gcr.pclkdis1.write(|w| w.smphr().bit(true));
+        self.gcr.pclkdis1.write(|w| w.smphr().dis());
     }
 
     /// Enable TRNG Clock
     pub fn enable_trng(&self) {
-        self.gcr.pclkdis1.write(|w| w.trng().bit(false));
+        self.gcr.pclkdis1.write(|w| w.trng().en());
     }
 
     /// Disable TRNG Clock
     pub fn disable_trng(&self) {
-        self.gcr.pclkdis1.write(|w| w.trng().bit(true));
+        self.gcr.pclkdis1.write(|w| w.trng().dis());
     }
 
     /// Enable UART2 Clock
     pub fn enable_uart2(&self) {
-        self.gcr.pclkdis1.write(|w| w.uart2().bit(false));
+        self.gcr.pclkdis1.write(|w| w.uart2().en());
     }
 
     /// Disable UART2 Clock
     pub fn disable_uart2(&self) {
-        self.gcr.pclkdis1.write(|w| w.uart2().bit(true));
+        self.gcr.pclkdis1.write(|w| w.uart2().dis());
     }
 
     // LPGCR_RST
