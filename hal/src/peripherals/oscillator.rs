@@ -1,7 +1,6 @@
 use crate::peripherals::bit_banding as bb;
 use max78000::gcr::CLKCTRL;
 use max78000::trimsir::INRO;
-use max78000::trimsir::RTC;
 
 /// Hertz
 #[derive(Clone, Copy)]
@@ -89,8 +88,8 @@ pub enum Divider {
 pub struct SystemClock<'a> {
     osc: Oscillator,
     divider: Divider,
-    gcr_clkctrl: &'a max78000::gcr::CLKCTRL,
-    trimsir_inro: &'a max78000::trimsir::INRO,
+    gcr_clkctrl: &'a CLKCTRL,
+    trimsir_inro: &'a INRO,
 }
 
 impl<'a> SystemClock<'a> {
@@ -98,8 +97,8 @@ impl<'a> SystemClock<'a> {
     pub fn new(
         osc: Oscillator,
         divider: Divider,
-        gcr_peripheral: &'a mut max78000::gcr::CLKCTRL,
-        trimsir_inro: &'a mut max78000::trimsir::INRO,
+        gcr_peripheral: &'a mut CLKCTRL,
+        trimsir_inro: &'a mut INRO,
     ) -> Self {
         Self {
             osc,
