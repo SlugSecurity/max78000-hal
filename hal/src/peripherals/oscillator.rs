@@ -163,13 +163,6 @@ impl<'a> SystemClock<'a> {
                     w.sysclk_sel().ertco();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
-
-                _ => {
-                    // TODO:
-                    // need to handle cases of ibro being used as UART rate
-                    // clock, ertco used as RTC input clock, and inro used as
-                    // RTC input clock
-                }
             }
 
             match self.divider {
