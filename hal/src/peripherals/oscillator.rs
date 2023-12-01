@@ -1,4 +1,7 @@
-Nuse crate::peripherals::bit_banding as bb;
+use crate::peripherals::bit_banding as bb;
+use max78000::gcr::CLKCTRL;
+use max78000::trimsir::INRO;
+use max78000::trimsir::RTC;
 
 /// Hertz
 #[derive(Clone, Copy)]
@@ -40,49 +43,33 @@ impl From<KiloHertz> for MegaHertz {
 /// All acceptable oscillators
 pub enum Oscillator {
     /// 100 mHz
-    Primary(ClockType, CrystalFrequency),
+    Primary,
     /// 60 mHz
-    Secondary(ClockType, CrystalFrequency),
+    Secondary,
     /// 8kHz, 16kHz, or 30kHz
-    NanoRing(ClockType, CrystalFrequency),
+    NanoRing(INRO_Frequency),
     /// 7.3728 mHz
-    BaudRate(ClockType, CrystalFrequency),
-    /// 32.768 kHz, 8kH
-    RealTimeClock(ClockType, CrystalFrequency),
+    BaudRate,
+    /// 32.768 kHz
+    RealTimeClock,
 }
 
 #[derive(Clone, Copy)]
-/// All acceptable frequencies
-pub enum CrystalFrequency {
+/// All acceptable frequencies for the internal Nano-Ring Oscillator
+pub enum INRO_Frequency {
     _8kHz,
     _16kHz,
     _30kHz,
-    _32_768kHz,
-    _7_3728mHz,
-    _60mHz,
-    _100mHz,
 }
 
-impl Into<Hertz> for CrystalFrequency {
+impl Into<Hertz> for INRO_Frequency {
     fn into(self) -> Hertz {
         Hertz(match self {
-            CrystalFrequency::_8kHz => 8_000,
-            CrystalFrequency::_16kHz => 16_000,
-            CrystalFrequency::_30kHz => 30_000,
-            CrystalFrequency::_32_768kHz => 32_768,
-            CrystalFrequency::_7_3728mHz => 7_372_800,
-            CrystalFrequency::_60mHz => 60_000_000,
-            CrystalFrequency::_100mHz => 1_000_000_000,
+            INRO_Frequency::_8kHz => 8_000,
+            INRO_Frequency::_16kHz => 16_000,
+            INRO_Frequency::_30kHz => 30_000,
         })
     }
-}
-
-#[derive(Clone, Copy)]
-/// All acceptable clocks
-pub enum ClockType {
-    SystemOscillator,
-    RealTimeClock,
-    UartClock,
 }
 
 #[derive(Clone, Copy)]
@@ -103,6 +90,7 @@ pub struct SystemClock<'a> {
     osc: Oscillator,
     divider: Divider,
     gcr_clkctrl: &'a max78000::gcr::CLKCTRL,
+    trimsir_inro: &'a max78000::trimsir::INRO,
 }
 
 impl<'a> SystemClock<'a> {
@@ -111,11 +99,13 @@ impl<'a> SystemClock<'a> {
         osc: Oscillator,
         divider: Divider,
         gcr_peripheral: &'a mut max78000::gcr::CLKCTRL,
+        trimsir_inro: &'a mut max78000::trimsir::INRO,
     ) -> Self {
         Self {
             osc,
             divider,
             gcr_clkctrl: &*gcr_peripheral,
+            trimsir_inro: &*trimsir_inro,
         }
     }
 
@@ -124,34 +114,50 @@ impl<'a> SystemClock<'a> {
         let gcr_ptr = self.gcr_clkctrl;
         gcr_ptr.write(|w| {
             match self.osc {
-                Oscillator::Primary(ClockType::SystemOscillator, _) => {
+                Oscillator::Primary => {
                     w.ipo_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 27);
                     w.sysclk_sel().ipo();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
-                Oscillator::Secondary(ClockType::SystemOscillator, _) => {
+                Oscillator::Secondary => {
                     w.iso_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 26);
                     w.sysclk_sel().iso();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
-                Oscillator::NanoRing(ClockType::SystemOscillator, _) => {
+                Oscillator::NanoRing(freq) => {
                     // bb::spin_bit(&gcr_ptr.clkctrl, 29);
                     w.sysclk_sel().inro();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+
+                    self.trimsir_inro.write(|w| {
+                        match freq {
+                            INRO_Frequency::_8kHz => {
+                                w.lpclksel()._8khz();
+                            }
+                            INRO_Frequency::_16kHz => {
+                                w.lpclksel()._16khz();
+                            }
+                            INRO_Frequency::_30kHz => {
+                                w.lpclksel()._30khz();
+                            }
+                        }
+
+                        w
+                    });
                 }
 
-                Oscillator::BaudRate(ClockType::SystemOscillator, _) => {
+                Oscillator::BaudRate => {
                     w.ibro_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 28);
                     w.sysclk_sel().ibro();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
-                Oscillator::RealTimeClock(ClockType::SystemOscillator, _) => {
+                Oscillator::RealTimeClock => {
                     w.ertco_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 25);
                     w.sysclk_sel().ertco();
@@ -166,11 +172,39 @@ impl<'a> SystemClock<'a> {
                 }
             }
 
-            // TODO:
-            // set frequency later
+            match self.divider {
+                Divider::_1 => {
+                    w.sysclk_div().div1();
+                }
 
-            // TODO:
-            // handle oscillator dividor later
+                Divider::_2 => {
+                    w.sysclk_div().div2();
+                }
+
+                Divider::_4 => {
+                    w.sysclk_div().div4();
+                }
+
+                Divider::_8 => {
+                    w.sysclk_div().div8();
+                }
+
+                Divider::_16 => {
+                    w.sysclk_div().div16();
+                }
+
+                Divider::_32 => {
+                    w.sysclk_div().div16();
+                }
+
+                Divider::_64 => {
+                    w.sysclk_div().div16();
+                }
+
+                Divider::_128 => {
+                    w.sysclk_div().div16();
+                }
+            }
 
             w
         });
