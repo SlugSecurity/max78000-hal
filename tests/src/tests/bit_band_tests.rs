@@ -2,9 +2,8 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::max78000::tmr::ctrl0::MODE_A_A::ONE_SHOT;
-use max78000_hal::max78000::tmr1::ctrl0::CLKDIV_A_A::DIV_BY_4096;
-use max78000_hal::max78000::TMR1;
+use max78000_hal::max78000::rtc::ctrl::{EN_A, RDY_A, WR_EN_A};
+use max78000_hal::max78000::RTC;
 use max78000_hal::peripherals::bit_banding::{change_bit, read_bit, spin_bit};
 
 /// Runs all bit band tests
@@ -88,44 +87,33 @@ fn test_read_bit() {
 unsafe fn test_spin_bit(stdout: &mut hio::HostStream) {
     // TODO: implement test for spin_bit
     // TODO: use timer peripheral API once implemented
-    let tmr = TMR1::ptr();
-
-    writeln!(stdout, "test_spin_bit: disabling TMR1 timerA").unwrap();
-    // Disable the timer peripheral
-    (*tmr).ctrl0.write(|w| w.en_a().variant(false));
-    // wait for timer to be disabled
-    spin_bit((*tmr).ctrl1.as_ptr(), 2, false);
-    writeln!(stdout, "test_spin_bit: TMR1 timerA has been disabled").unwrap();
-
-    // Select PCLK as the clock source
-    (*tmr).ctrl1.write(|w| w.clksel_a().variant(0));
-    // Select one-shot mode and set prescaler to 4096
-    (*tmr)
-        .ctrl0
-        .write(|w| w.mode_a().variant(ONE_SHOT).clkdiv_a().variant(DIV_BY_4096));
-
-    // Set the compare value
-    (*tmr).cmp.write(|w| w.compare().variant(48828));
-
-    writeln!(stdout, "test_spin_bit: enabling TMR1 clock").unwrap();
-
-    (*tmr).ctrl0.write(|w| w.clken_a().variant(true));
-
-    spin_bit((*tmr).ctrl1.as_ptr(), 3, true);
-
-    writeln!(stdout, "test_spin_bit: enabling TMR1 timer").unwrap();
-
-    (*tmr).ctrl0.write(|w| w.en_a().variant(true));
-
-    spin_bit((*tmr).ctrl0.as_ptr(), 14, true);
-
-    writeln!(stdout, "test_spin_bit: timer has been enabled. the next output should display after roughly 2 seconds").unwrap();
-
-    spin_bit((*tmr).intfl.as_ptr(), 0, true);
 
     writeln!(
         stdout,
-        "test_spin_bit: timer has finished. spin_bit tests complete!"
+        "Running sanity check on spin_bit. The program should NOT stall."
     )
     .unwrap();
+    // Sanity check tests:
+    let mut control = 0;
+    for i in 0u8..32 {
+        spin_bit(&control as *const _, i, false);
+        control |= 1 << i;
+        spin_bit(&control as *const _, i, true);
+    }
+
+    let clock = RTC::steal();
+
+    writeln!(
+        stdout,
+        "Testing spin_bit on RTC peripheral to test if clock is ready to read."
+    )
+    .unwrap();
+    clock.ctrl.write(|w| w.wr_en().variant(WR_EN_A::PENDING));
+    spin_bit(clock.ctrl.as_ptr(), 3, false);
+    clock.ctrl.write(|w| w.en().variant(EN_A::EN));
+
+    clock.ctrl.write(|w| w.rdy().variant(RDY_A::BUSY));
+    spin_bit(clock.ctrl.as_ptr(), 4, true);
+
+    writeln!(stdout, "Caught the clock ready bit!").unwrap();
 }
