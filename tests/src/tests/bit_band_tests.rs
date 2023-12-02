@@ -107,19 +107,17 @@ unsafe fn test_spin_bit(stdout: &mut hio::HostStream) {
     // Set the compare value
     (*tmr).cmp.write(|w| w.compare().variant(48828));
 
-    writeln!(
-        stdout,
-        "test_spin_bit: enabling TMR1 timerA for about 2 seconds"
-    )
-    .unwrap();
+    writeln!(stdout, "test_spin_bit: enabling TMR1 clock").unwrap();
 
     (*tmr).ctrl0.write(|w| w.clken_a().variant(true));
 
     spin_bit((*tmr).ctrl1.as_ptr(), 3, true);
 
+    writeln!(stdout, "test_spin_bit: enabling TMR1 timer").unwrap();
+
     (*tmr).ctrl0.write(|w| w.en_a().variant(true));
 
-    spin_bit((*tmr).ctrl1.as_ptr(), 2, true);
+    spin_bit((*tmr).ctrl0.as_ptr(), 14, true);
 
     writeln!(stdout, "test_spin_bit: timer has been enabled. the next output should display after roughly 2 seconds").unwrap();
 
