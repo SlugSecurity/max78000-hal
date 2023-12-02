@@ -113,6 +113,10 @@ unsafe fn test_spin_bit(stdout: &mut hio::HostStream) {
     )
     .unwrap();
 
+    (*tmr).ctrl0.write(|w| w.clken_a().variant(true));
+
+    spin_bit((*tmr).ctrl1.as_ptr(), 3, true);
+
     (*tmr).ctrl0.write(|w| w.en_a().variant(true));
 
     spin_bit((*tmr).ctrl1.as_ptr(), 2, true);
