@@ -35,7 +35,7 @@ impl Crc {
     // shutdown crc
     // might be unsafe since we're changing register values
     pub unsafe fn crc_shutdown(&self) -> () {
-        self.crc.ctrl.write(|w| unsafe {self.crc.ctrl.read(). }); 
+        // self.crc.ctrl.write(|w| unsafe {self.crc.ctrl.read(). }); 
         
     }
 
