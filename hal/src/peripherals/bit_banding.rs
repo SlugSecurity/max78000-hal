@@ -38,8 +38,12 @@ pub unsafe fn toggle_bit<T>(address: *const T, bit: u8) {
 
 /// Continually reads bit until it is equal to value passed in `state`.
 pub fn spin_bit<T>(address: *const T, bit: u8, state: bool) {
-    while read_bit(address, bit) != state {
-        nop();
+    let address = address as u32;
+    let bit_word = ref_to_bitband(address, bit);
+    unsafe {
+        while (read_volatile(bit_word) != 0) != state {
+            nop();
+        }
     }
 }
 
