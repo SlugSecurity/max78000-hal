@@ -21,6 +21,7 @@ pub unsafe fn change_bit<T>(address: *const T, bit: u8, value: bool) {
     write_volatile(bit_word, if value { 0x01 } else { 0x00 });
 }
 
+/*
 /// Sets and then Clears a bit at the given address atomically, using the bit-
 /// banding feature.
 ///
@@ -33,13 +34,11 @@ pub unsafe fn toggle_bit<T>(address: *const T, bit: u8) {
     let bit_word = ref_to_bitband(address, bit);
     write_volatile(bit_word, 0x01);
     write_volatile(bit_word, 0x00);
-}
+}*/
 
-/// Spins while reading a bit at the given address atomically, using the bit-
-/// banding feature. We take a const pointer and mutate it, but that's because
-/// the svd2rust crate will only give us const pointers.
-pub fn spin_bit<T>(address: *const T, bit: u8) {
-    while !read_bit(address, bit) {
+/// Continually reads bit until it is equal to value passed in `state`.
+pub fn spin_bit<T>(address: *const T, bit: u8, state: bool) {
+    while read_bit(address, bit) != state {
         nop();
     }
 }
