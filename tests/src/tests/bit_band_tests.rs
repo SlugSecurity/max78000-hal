@@ -65,8 +65,6 @@ fn test_read_bit() {
 }
 
 fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
-    // TODO: use timer peripheral API once implemented
-
     writeln!(
         stdout,
         "Running sanity check on spin_bit. The program should NOT stall."
@@ -88,20 +86,15 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
     clock.ctrl.write(|w| w.wr_en().variant(WR_EN_A::PENDING));
     spin_bit(clock.ctrl.as_ptr(), 3, false);
     clock.ctrl.write(|w| w.en().variant(EN_A::EN));
-
     clock.ctrl.write(|w| w.rdy().variant(RDY_A::BUSY));
-
     writeln!(
         stdout,
         "set clock ready bit to BUSY, waiting for it to become ready again..."
     )
     .unwrap();
-
     spin_bit(clock.ctrl.as_ptr(), 4, true);
 
     writeln!(stdout, "Caught the clock ready bit!").unwrap();
-
     writeln!(stdout, "Disabling RTC write enable").unwrap();
-
     clock.ctrl.write(|w| w.wr_en().variant(WR_EN_A::INACTIVE));
 }
