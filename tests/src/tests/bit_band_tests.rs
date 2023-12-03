@@ -32,6 +32,7 @@ fn test_change_bit() {
     let mut control: u32 = 0;
 
     for i in 0u8..32 {
+        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
         unsafe {
             change_bit(&test as *const _, i, true);
         }
@@ -42,10 +43,12 @@ fn test_change_bit() {
     test = 0;
 
     for i in 0u8..32 {
+        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
         unsafe {
             change_bit(&test as *const _, i, true);
         }
         assert_eq!(test, 1 << i);
+        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
         unsafe {
             change_bit(&test as *const _, i, false);
         }
@@ -56,10 +59,12 @@ fn test_change_bit() {
 fn test_read_bit() {
     let mut control = 0;
     for i in 0u8..32 {
-        let mut bit = read_bit(&control as *const _, i);
+        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
+        let mut bit = unsafe { read_bit(&control as *const _, i) };
         assert_eq!(bit, (control & (1 << i)) != 0);
         control |= 1 << i;
-        bit = read_bit(&control as *const _, i);
+        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
+        bit = unsafe { read_bit(&control as *const _, i) };
         assert_eq!(bit, (control & (1 << i)) != 0);
     }
 }
@@ -73,9 +78,12 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
     // Sanity check tests:
     let mut control = 0;
     for i in 0u8..32 {
-        spin_bit(&control as *const _, i, false);
-        control |= 1 << i;
-        spin_bit(&control as *const _, i, true);
+        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
+        unsafe {
+            spin_bit(&control as *const _, i, false);
+            control |= 1 << i;
+            spin_bit(&control as *const _, i, true);
+        }
     }
 
     writeln!(
@@ -84,7 +92,12 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
     )
     .unwrap();
     clock.ctrl.write(|w| w.wr_en().variant(WR_EN_A::PENDING));
-    spin_bit(clock.ctrl.as_ptr(), 3, false);
+    // Safety: safe as we are passing in a peripheral address in bit-banding space
+    // (0x4000_6010), said bit RTC_CTRL.busy (3) will be made 0 automatically by the peripheral
+    // when it is no longer busy writing to registers. (Page 288 of user guide)
+    unsafe {
+        spin_bit(clock.ctrl.as_ptr(), 3, false);
+    }
     clock.ctrl.write(|w| w.en().variant(EN_A::EN));
     clock.ctrl.write(|w| w.rdy().variant(RDY_A::BUSY));
     writeln!(
@@ -92,7 +105,12 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
         "set clock ready bit to BUSY, waiting for it to become ready again..."
     )
     .unwrap();
-    spin_bit(clock.ctrl.as_ptr(), 4, true);
+    // Safety: safe as we are passing in a peripheral address in bit-banding space
+    // (0x4000_6010), said bit RTC_CTRL.rdy (4) will be made 1 automatically by the peripheral
+    // when it is no longer busy writing to registers. (Page 287 of user guide)
+    unsafe {
+        spin_bit(clock.ctrl.as_ptr(), 4, true);
+    }
 
     writeln!(stdout, "Caught the clock ready bit!").unwrap();
     writeln!(stdout, "Disabling RTC write enable").unwrap();

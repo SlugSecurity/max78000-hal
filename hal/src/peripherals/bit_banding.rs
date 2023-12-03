@@ -7,47 +7,56 @@
 
 use core::ptr::{read_volatile, write_volatile};
 
-/// Sets/Clears a bit at the given address atomically, using the bit-banding
+/// Sets/clears a bit at the given address atomically, using the bit-banding
 /// feature.
 ///
 /// # Safety
 ///
-/// We take a const pointer and mutate it, but that's because the
-/// svd2rust crate will only give us const pointers.
+/// This function is unsafe as it modifies any arbitrary memory address. Ensure the memory address
+/// passed is within the bit-banding range: address must be `>= 0x2000_0000` and `<= 0x2001_FFFF`
+/// if writing to SRAM, and `>= 0x4000_0000` and <= `0x400F_FFFF` if writing to peripheral address
+/// space. If writing to peripherals, make sure you are writing to the correct bit in the intended
+/// register. Make sure you are writing to an initialized memory address.
 pub unsafe fn change_bit<T>(address: *const T, bit: u8, value: bool) {
     let address = address as u32;
     let bit_word = ref_to_bitband(address, bit);
+    // Call to write_volatile is safe assuming caller passes in an initialized address in
+    // bit-banding region of memory.
     write_volatile(bit_word, if value { 0x01 } else { 0x00 });
 }
 
-/*
-/// Sets and then Clears a bit at the given address atomically, using the bit-
-/// banding feature.
+/// Continually reads bit at the given address until it is equal to value passed in `state`.
 ///
 /// # Safety
 ///
-/// We take a const pointer and mutate it, but that's because
-/// the svd2rust crate will only give us const pointers.
-pub unsafe fn toggle_bit<T>(address: *const T, bit: u8) {
+/// This function is unsafe as it reads any arbitrary memory address. Ensure the memory address
+/// passed is within the bit-banding range: address must be `>= 0x2000_0000` and `<= 0x2001_FFFF`
+/// if reading SRAM, and `>= 0x4000_0000` and <= `0x400F_FFFF` if reading peripheral address
+/// space. Ensure that the bit you're reading *will eventually* become the value you expect,
+/// otherwise the program will hang. Make sure you are reading an initialized memory address.
+pub unsafe fn spin_bit<T>(address: *const T, bit: u8, state: bool) {
     let address = address as u32;
     let bit_word = ref_to_bitband(address, bit);
-    write_volatile(bit_word, 0x01);
-    write_volatile(bit_word, 0x00);
-}*/
-
-/// Continually reads bit until it is equal to value passed in `state`.
-pub fn spin_bit<T>(address: *const T, bit: u8, state: bool) {
-    let address = address as u32;
-    let bit_word = ref_to_bitband(address, bit);
-    unsafe { while (read_volatile(bit_word) != 0) != state {} }
+    // Call to read_volatile is safe assuming caller passes in an initialized address in
+    // bit-banding region of memory; and the said bit in address will be changed to `state`
+    // eventually.
+    while (read_volatile(bit_word) != 0) != state {}
 }
 
-/// Reads a bit at the given address atomically, using the bit-banding
-/// feature.
-pub fn read_bit<T>(address: *const T, bit: u8) -> bool {
+/// Reads a bit at the given address atomically, using the bit-banding feature.
+///
+/// # Safety
+///
+/// This function is unsafe as it reads any arbitrary memory address. Ensure the memory address
+/// passed is within the bit-banding range: address must be `>= 0x2000_0000` and `<= 0x2001_FFFF`
+/// if reading SRAM, and `>= 0x4000_0000` and <= `0x400F_FFFF` if reading peripheral address
+/// space. Make sure you are reading an initialized memory address.
+pub unsafe fn read_bit<T>(address: *const T, bit: u8) -> bool {
     let address = address as u32;
     let bit_word = ref_to_bitband(address, bit);
-    unsafe { read_volatile(bit_word) != 0 }
+    // Call to read_volatile is safe assuming caller passes in an initialized address in
+    // bit-banding region of memory.
+    read_volatile(bit_word) != 0
 }
 
 /// Address must be >= 0x2000_0000 and <= 0x2001_FFFF if writing to SRAM.
