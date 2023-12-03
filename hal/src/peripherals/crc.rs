@@ -26,7 +26,7 @@ pub unsafe fn set_field<T>(reg : max78000::generic::Reg<T>, mask : u32, value : 
 }
 
 
-impl Crc {
+impl Crc<REG> {
     
     // new
     // creates a new crc object
