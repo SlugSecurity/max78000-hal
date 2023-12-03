@@ -4,7 +4,7 @@
 
 use max78000::CRC;
 
-pub struct Crc<REG> {
+pub struct Crc {
     crc: CRC,
 }
 
@@ -23,7 +23,7 @@ pub unsafe fn set_field<T>(reg: max78000::generic::Reg<T>, mask: u32, value: u32
     reg.modify(|r, w| unsafe { w.bits((r.bits() & !mask) | (value & mask)) })
 }
 
-impl<REG> Crc<REG> {
+impl<REG> Crc {
     // new
     // creates a new crc object
     pub fn new(crc: CRC) -> Self {
@@ -76,7 +76,7 @@ impl<REG> Crc<REG> {
     }
 
     pub unsafe fn crc_swap_out(&self, bitorder: BitOrder) {
-        set_field(self.crc.ctrl, (0x1 as u32) << 4, (BitOrder as u32) << 4);
+        set_field(self.crc.ctrl, (0x1 as u32) << 4, (bitorder as u32) << 4);
     }
 
     pub unsafe fn crc_compute(&self, crc_req: CrcReq) {
