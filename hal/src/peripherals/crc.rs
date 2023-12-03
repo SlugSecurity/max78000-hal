@@ -8,8 +8,8 @@ pub struct Crc<REG> {
     crc: CRC,
 }
 
-pub struct CrcReq {
-    data_buffer: &[u32],
+pub struct CrcReq<'a> {
+    data_buffer: &'a[u32],
     // no need for data len because array length is known at compile timew
     result_crc: u32,
 }
@@ -23,7 +23,7 @@ pub unsafe fn set_field<T>(reg: max78000::generic::Reg<T>, mask: u32, value: u32
     reg.modify(|r, w| unsafe { w.bits((r.bits() & !mask) | (value & mask)) })
 }
 
-impl Crc<REG> {
+impl<REG> Crc<REG> {
     // new
     // creates a new crc object
     pub fn new(crc: CRC) -> Self {
