@@ -2,16 +2,16 @@
 
 
 use core::mem;
-use std::io::SeekFrom;
+
 
 use max78000::CRC;
 
-pub struct Crc {
+pub struct Crc <REG>{
     crc: CRC,
 }
 
 pub struct CrcReq {
-    data_buffer : [u32],
+    data_buffer : &[u32],
     // no need for data len because array length is known at compile timew
     result_crc :  u32,
 }
@@ -21,7 +21,7 @@ enum BitOrder {
     MSB
 }
 
-pub unsafe fn set_field(reg : max78000::generic::Reg<T>, mask : u32, value : u32 ){
+pub unsafe fn set_field<T>(reg : max78000::generic::Reg<T>, mask : u32, value : u32 ){
     reg.modify(|r,w| unsafe {w.bits((r.bits() & !mask) | (value & mask) )})
 }
 
@@ -40,10 +40,10 @@ impl Crc {
     // crc_init
     /// initialize control and val
     /// this is unsafe because we're writing to regs
-    pub unsafe fn crc_init(&self) -> () {
+    pub unsafe fn crc_init(&self) {
 
         // TODO : test with clock once its available
-        self.crc.ctrl.write_with_zero(f);
+        self.crc.ctrl.write(|w| unsafe {w.bits(0)});
         // this is just from the docls
         self.crc.val.write(|w| unsafe {w.bits(0xFFFFFFFF)});
 
@@ -53,8 +53,8 @@ impl Crc {
     // shutdown crc
     // might be unsafe since we're changing register values
     // use a result, is this mut
-    pub unsafe fn crc_shutdown(&self) -> () {
-        self.crc.ctrl.modify(|r, w| unsafe {w.bits(r.bits() & 0x1UL << 0)}); 
+    pub unsafe fn crc_shutdown(&self) {
+        self.crc.ctrl.modify(|r, w| unsafe {w.bits(r.bits() & (0x1 as u32) << 0)}); 
         
     }
 
@@ -68,13 +68,13 @@ impl Crc {
 
 
     pub fn crc_get_direction(&self) -> u32{
-       self.crc.ctrl.read().bits() & (0x1UL << 2)
+       self.crc.ctrl.read().bits() & ((0x1 as u32) << 2)
         
     }
 
     pub unsafe fn crc_set_direction(&self, bitorder : BitOrder){
 
-        set_field(self.crc.ctrl, 0x1UL << 2, (BitOrder as u32) << 2);
+        set_field(self.crc.ctrl, (0x1 as u32) << 2, (bitorder as u32) << 2);
         
     }
    
@@ -83,24 +83,24 @@ impl Crc {
     }
 
     pub unsafe fn crc_swap_in(&self, bitorder : BitOrder){
-        set_field(self.crc.ctrl, 0x1UL << 3, (BitOrder as u32) << 3);
+        set_field(self.crc.ctrl, (0x1 as u32) << 3, (bitorder as u32) << 3);
     }
 
     pub unsafe fn crc_swap_out(&self, bitorder : BitOrder){
-        set_field(self.crc.ctrl, 0x1UL << 4, (BitOrder as u32) << 4);
+        set_field(self.crc.ctrl, (0x1 as u32) << 4, (BitOrder as u32) << 4);
     }
 
 
     pub unsafe fn crc_compute(&self, crc_req: CrcReq){
         let mut i = 0;
-        self.crc.ctrl.modify(|r, w| unsafe {r.bits() | 0x1UL } );
+        self.crc.ctrl.modify(|r, w| unsafe {r.bits() | 0x1 as u32 } );
 
         let mut len_counter = crc_req.data_buffer.len();
 
         while len_counter > 0{
             self.crc.datain32().write(|w| unsafe {crc_req.data_buffer[i]});
             i += 1;
-            while self.crc.ctrl.read().bits() & (0x1UL << 16) {};
+            while self.crc.ctrl.read().bits() & ((0x1 as u32) << 16) {};
 
         }
 
