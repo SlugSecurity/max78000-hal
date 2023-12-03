@@ -6,7 +6,6 @@
 //! without a read-modify-write.
 
 use core::ptr::{read_volatile, write_volatile};
-use cortex_m::asm::nop;
 
 /// Sets/Clears a bit at the given address atomically, using the bit-banding
 /// feature.
@@ -40,11 +39,7 @@ pub unsafe fn toggle_bit<T>(address: *const T, bit: u8) {
 pub fn spin_bit<T>(address: *const T, bit: u8, state: bool) {
     let address = address as u32;
     let bit_word = ref_to_bitband(address, bit);
-    unsafe {
-        while (read_volatile(bit_word) != 0) != state {
-            nop();
-        }
-    }
+    unsafe { while (read_volatile(bit_word) != 0) != state {} }
 }
 
 /// Reads a bit at the given address atomically, using the bit-banding
