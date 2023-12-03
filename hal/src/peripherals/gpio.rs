@@ -127,19 +127,31 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
     }
 }
 
-pub(crate) fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, CommonGpio<GpioZero>, 31> {
+/// Creates a new [`GpioPort`] representing GPIO0.
+///
+/// Note: should be made pub(crate) when peripheral manager is made
+pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, CommonGpio<GpioZero>, 31> {
     GpioPort::<CommonGpio<GpioZero>, 31>::new(gpio0)
 }
 
-pub(crate) fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, CommonGpio<GpioOne>, 10> {
+/// Creates a new [`GpioPort`] representing GPIO1.
+///
+/// Note: should be made pub(crate) when peripheral manager is made
+pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, CommonGpio<GpioOne>, 10> {
     GpioPort::<CommonGpio<GpioOne>, 10>::new(gpio1)
 }
 
-pub(crate) fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, CommonGpio<GpioTwo>, 8> {
+/// Creates a new [`GpioPort`] representing GPIO2.
+///
+/// Note: should be made pub(crate) when peripheral manager is made
+pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, CommonGpio<GpioTwo>, 8> {
     GpioPort::<CommonGpio<GpioTwo>, 8>::new(gpio2)
 }
 
-pub(crate) fn new_gpio3<'a>(gpio3: &'a MCR) -> GpioPort<'a, LowPowerGpio<'a>, 2> {
+/// Creates a new [`GpioPort`] representing GPIO3.
+///
+/// Note: should be made pub(crate) when peripheral manager is made
+pub fn new_gpio3<'a>(gpio3: &'a MCR) -> GpioPort<'a, LowPowerGpio<'a>, 2> {
     GpioPort::<LowPowerGpio<'a>, 2>::new(gpio3)
 }
 
