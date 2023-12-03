@@ -2,21 +2,21 @@
 
 // use core::mem;
 
+use max78000::adc::ctrl::R;
 use max78000::CRC;
-
 pub struct Crc {
     crc: CRC,
 }
 
 pub struct CrcReq<'a> {
-    data_buffer: &'a[u32],
+    data_buffer: &'a [u32],
     // no need for data len because array length is known at compile timew
     result_crc: u32,
 }
 
 enum BitOrder {
-    LSB,
-    MSB,
+    LSB = 0,
+    MSB = 1,
 }
 
 pub unsafe fn set_field<T>(reg: max78000::generic::Reg<T>, mask: u32, value: u32) {
