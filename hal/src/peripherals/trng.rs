@@ -20,8 +20,8 @@ impl Trng {
 
     /// Returns a random number.
     pub fn random_u32(&self) -> u32 {
-        while self.trng.status.read().rdy().is_busy() {}
-        self.trng.data.read().bits()
+        while self.trng.status().read().rdy().is_busy() {}
+        self.trng.data().read().bits()
     }
 
     /// Fills a buffer with random bytes.
