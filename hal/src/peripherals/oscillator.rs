@@ -2,77 +2,63 @@ use crate::peripherals::bit_banding as bb;
 use max78000::gcr::CLKCTRL;
 use max78000::trimsir::INRO;
 
-/// Hertz
 #[derive(Clone, Copy)]
-pub struct Hertz(pub u32);
-
-impl From<u32> for Hertz {
-    fn from(val: u32) -> Self {
-        Hertz(val)
-    }
-}
-
-/// KiloHertz
-#[derive(Clone, Copy)]
-pub struct KiloHertz(pub u32);
-
-impl From<Hertz> for KiloHertz {
-    fn from(h: Hertz) -> Self {
-        KiloHertz(h.0 / 1_000)
-    }
-}
-
-/// MegaHertz
-#[derive(Clone, Copy)]
-pub struct MegaHertz(pub u32);
-
-impl From<Hertz> for MegaHertz {
-    fn from(h: Hertz) -> Self {
-        MegaHertz(h.0 / 1_000_000)
-    }
-}
-
-impl From<KiloHertz> for MegaHertz {
-    fn from(kil: KiloHertz) -> Self {
-        MegaHertz(kil.0 / 1_000)
-    }
-}
-
-#[derive(Clone, Copy)]
-/// All acceptable oscillators
+/// All acceptable oscillators configurations
 pub enum Oscillator {
     /// 100 mHz
-    Primary,
+    Primary(IpoFrequency),
     /// 60 mHz
-    Secondary,
+    Secondary(IsoFrequency),
     /// 8kHz, 16kHz, or 30kHz
-    NanoRing(INRO_Frequency),
+    NanoRing(InroFrequency),
     /// 7.3728 mHz
-    BaudRate,
+    BaudRate(IbroFrequency),
     /// 32.768 kHz
-    RealTimeClock,
+    RealTimeClock(ErtcoFrequency),
 }
 
+/// Acceptable Internal Primary Oscillator frequency
 #[derive(Clone, Copy)]
-/// All acceptable frequencies for the internal Nano-Ring Oscillator
-pub enum INRO_Frequency {
+pub enum IpoFrequency {
+    /// 100 megahertz
+    _100MHz,
+}
+
+/// Acceptable Internal Secondary Oscillator frequency
+#[derive(Clone, Copy)]
+pub enum IsoFrequency {
+    /// 60 megahertz
+    _60MHz,
+}
+
+/// Acceptable Internal Nano-Ring Oscillator frequencies
+#[derive(Clone, Copy)]
+pub enum InroFrequency {
+    /// 9 kilohertz
     _8kHz,
+    /// 16 kilohertz
     _16kHz,
+    /// 30 kilohertz
     _30kHz,
 }
 
-impl Into<Hertz> for INRO_Frequency {
-    fn into(self) -> Hertz {
-        Hertz(match self {
-            INRO_Frequency::_8kHz => 8_000,
-            INRO_Frequency::_16kHz => 16_000,
-            INRO_Frequency::_30kHz => 30_000,
-        })
-    }
+/// Acceptable Internal Baud Rate Oscillator frequency
+#[derive(Clone, Copy)]
+pub enum IbroFrequency {
+    /// 7.3728 megahertz
+    _7_3728MHz,
 }
 
+/// Acceptable External Real-Time Clock Oscillator frequency
 #[derive(Clone, Copy)]
-/// All acceptable dividors
+pub enum ErtcoFrequency {
+    /// 32.768 kilohertz
+    _32_768kHz,
+}
+
+#[allow(missing_docs)]
+#[derive(Clone, Copy)]
+/// All acceptable oscillator dividors
 pub enum Divider {
     _1 = 1,
     _2 = 2,
@@ -97,14 +83,14 @@ impl<'a> SystemClock<'a> {
     pub fn new(
         osc: Oscillator,
         divider: Divider,
-        gcr_peripheral: &'a mut CLKCTRL,
-        trimsir_inro: &'a mut INRO,
+        gcr_peripheral: &'a CLKCTRL,
+        trimsir_inro: &'a INRO,
     ) -> Self {
         Self {
             osc,
             divider,
-            gcr_clkctrl: &*gcr_peripheral,
-            trimsir_inro: &*trimsir_inro,
+            gcr_clkctrl: &gcr_peripheral,
+            trimsir_inro: &trimsir_inro,
         }
     }
 
@@ -113,14 +99,14 @@ impl<'a> SystemClock<'a> {
         let gcr_ptr = self.gcr_clkctrl;
         gcr_ptr.write(|w| {
             match self.osc {
-                Oscillator::Primary => {
+                Oscillator::Primary(_) => {
                     w.ipo_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 27);
                     w.sysclk_sel().ipo();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
-                Oscillator::Secondary => {
+                Oscillator::Secondary(_) => {
                     w.iso_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 26);
                     w.sysclk_sel().iso();
@@ -134,13 +120,13 @@ impl<'a> SystemClock<'a> {
 
                     self.trimsir_inro.write(|w| {
                         match freq {
-                            INRO_Frequency::_8kHz => {
+                            InroFrequency::_8kHz => {
                                 w.lpclksel()._8khz();
                             }
-                            INRO_Frequency::_16kHz => {
+                            InroFrequency::_16kHz => {
                                 w.lpclksel()._16khz();
                             }
-                            INRO_Frequency::_30kHz => {
+                            InroFrequency::_30kHz => {
                                 w.lpclksel()._30khz();
                             }
                         }
@@ -149,14 +135,14 @@ impl<'a> SystemClock<'a> {
                     });
                 }
 
-                Oscillator::BaudRate => {
+                Oscillator::BaudRate(_) => {
                     w.ibro_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 28);
                     w.sysclk_sel().ibro();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
-                Oscillator::RealTimeClock => {
+                Oscillator::RealTimeClock(_) => {
                     w.ertco_en().set_bit();
                     // bb::spin_bit(&gcr_ptr.clkctrl, 25);
                     w.sysclk_sel().ertco();
