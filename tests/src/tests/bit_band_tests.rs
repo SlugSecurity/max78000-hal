@@ -78,10 +78,15 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
     // Sanity check tests:
     let mut control = 0;
     for i in 0u8..32 {
-        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
+        // SAFETY: Safe as we are passing in a valid memory address in the bit-banded SRAM space, initialized in the `control` variable.
         unsafe {
             spin_bit(&control as *const _, i, false);
+        }
+
             control |= 1 << i;
+
+        // SAFETY: Safe as we are passing in a valid memory address in the bit-banded SRAM space, initialized in the `control` variable.
+        unsafe {
             spin_bit(&control as *const _, i, true);
         }
     }
