@@ -159,6 +159,7 @@ impl<'a> SystemClock<'a> {
 
                 Oscillator::Secondary(_) => {
                     w.iso_en().set_bit();
+
                     unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 26, true); }
                     w.sysclk_sel().iso();
                     unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
@@ -199,6 +200,7 @@ impl<'a> SystemClock<'a> {
                     unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 28, true); }
                     w.sysclk_sel().ibro();
                     unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
+
                 }
 
                 Oscillator::RealTimeClock(_) => {
@@ -206,6 +208,7 @@ impl<'a> SystemClock<'a> {
                     unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 25, true); }
                     w.sysclk_sel().ertco();
                     unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
+
                 }
             }
 
