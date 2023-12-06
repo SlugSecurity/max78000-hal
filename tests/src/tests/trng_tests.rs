@@ -15,7 +15,7 @@ pub fn run_trng_tests(trng_regs: TRNG, gcr_regs: &GCR, stdout: &mut hio::HostStr
 
     // Enable TRNG clock. This will be done by the peripheral API when available.
     // TODO: Remove this when the peripheral API is available.
-    gcr_regs.pclkdis1.write(|w| w.trng().en());
+    gcr_regs.pclkdis1().write(|w| w.trng().en());
 
     // Run tests.
     let trng = Trng::new(trng_regs);
