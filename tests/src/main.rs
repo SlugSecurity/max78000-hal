@@ -28,8 +28,8 @@ fn main() -> ! {
 
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
     oscillator_tests::run_oscillator_tests(
-        &peripherals.GCR.clkctrl,
-        &peripherals.TRIMSIR.inro,
+        &peripherals.GCR.clkctrl(),
+        &peripherals.TRIMSIR.inro(),
         &mut stdout,
     );
 

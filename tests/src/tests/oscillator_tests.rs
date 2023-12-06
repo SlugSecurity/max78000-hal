@@ -2,7 +2,6 @@ use core::fmt::Write;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::gcr::CLKCTRL;
 use max78000_hal::max78000::trimsir::INRO;
-use max78000_hal::peripherals::bit_banding as bb;
 use max78000_hal::peripherals::oscillator::Divider;
 use max78000_hal::peripherals::oscillator::InroFrequency;
 use max78000_hal::peripherals::oscillator::SystemClock;

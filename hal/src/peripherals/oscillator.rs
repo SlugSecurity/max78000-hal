@@ -56,8 +56,8 @@ pub enum ErtcoFrequency {
     _32_768kHz,
 }
 
-#[allow(missing_docs)]
 #[derive(Clone, Copy)]
+#[allow(missing_docs)]
 /// All acceptable oscillator dividors
 pub enum Divider {
     _1 = 1,
@@ -152,22 +152,22 @@ impl<'a> SystemClock<'a> {
             match self.osc {
                 Oscillator::Primary(_) => {
                     w.ipo_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 27);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 27, true); }
                     w.sysclk_sel().ipo();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
                 }
 
                 Oscillator::Secondary(_) => {
                     w.iso_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 26);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 26, true); }
                     w.sysclk_sel().iso();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
                 }
 
                 Oscillator::NanoRing(freq) => {
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 29);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 29, true); }
                     w.sysclk_sel().inro();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
 
                     match self.freq_perf {
                         FrequencyPeripheral::TrimsirInro(trimsir_perf) => {
@@ -189,23 +189,23 @@ impl<'a> SystemClock<'a> {
                         }
 
                         FrequencyPeripheral::None => {
-                            unreachable!("You need to give access to the trimsir peripheral")
+                            unreachable!("You need to give access to the trimsir peripheral when using the irno")
                         }
                     }
                 }
 
                 Oscillator::BaudRate(_) => {
                     w.ibro_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 28);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 28, true); }
                     w.sysclk_sel().ibro();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
                 }
 
                 Oscillator::RealTimeClock(_) => {
                     w.ertco_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 25);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 25, true); }
                     w.sysclk_sel().ertco();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
                 }
             }
 
