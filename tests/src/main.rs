@@ -24,6 +24,11 @@ fn main() -> ! {
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
+    oscillator_tests::run_oscillator_tests(
+        &peripherals.GCR.clkctrl,
+        &peripherals.TRIMSIR.inro,
+        &mut stdout,
+    );
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
