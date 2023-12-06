@@ -20,7 +20,7 @@ use core::ptr::{read_volatile, write_volatile};
 pub unsafe fn change_bit<T>(address: *const T, bit: u8, value: bool) {
     let address = address as u32;
     let bit_word = ref_to_bitband(address, bit);
-    // Call to write_volatile is safe assuming caller passes in an initialized address in
+    // SAFETY: Call to write_volatile is safe assuming caller passes in an initialized address in
     // bit-banding region of memory.
     write_volatile(bit_word, if value { 0x01 } else { 0x00 });
 }
