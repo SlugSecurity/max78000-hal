@@ -92,9 +92,9 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
     )
     .unwrap();
     clock.ctrl.write(|w| w.wr_en().variant(WR_EN_A::PENDING));
-    // Safety: safe as we are passing in a peripheral address in bit-banding space
-    // (0x4000_6010), said bit RTC_CTRL.busy (3) will be made 0 automatically by the peripheral
-    // when it is no longer busy writing to registers. (Page 288 of user guide)
+    // SAFETY: Safe as we are passing in a peripheral address in bit-banding space
+    // (0x4000_6010), bit 3 (RTC_CTRL.busy) is a writable bit of a valid register
+    // (page 288 of user guide).
     unsafe {
         spin_bit(clock.ctrl.as_ptr(), 3, false);
     }
