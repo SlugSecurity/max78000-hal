@@ -15,8 +15,8 @@ use core::ptr::{read_volatile, write_volatile};
 /// This function is unsafe as it modifies any arbitrary memory address. Ensure the memory address
 /// passed is within the bit-banding range: address must be `>= 0x2000_0000` and `<= 0x2001_FFFF`
 /// if writing to SRAM, and `>= 0x4000_0000` and <= `0x400F_FFFF` if writing to peripheral address
-/// space. If writing to peripherals, make sure you are writing to the correct bit in the intended
-/// register. Make sure you are writing to an initialized memory address.
+/// space. If writing to peripherals, make sure you are writing to a writable bit in a valid
+/// register. If writing to SRAM, make sure you are writing to a valid memory address.
 pub unsafe fn change_bit<T>(address: *const T, bit: u8, value: bool) {
     let address = address as u32;
     let bit_word = ref_to_bitband(address, bit);
