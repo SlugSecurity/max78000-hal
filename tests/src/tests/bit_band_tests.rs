@@ -32,7 +32,7 @@ fn test_change_bit() {
     let mut control: u32 = 0;
 
     for i in 0u8..32 {
-        // Safety: safe as we are passing in an SRAM address which is initialized (on stack).
+        // SAFETY: Safe as we are passing in a valid memory address in the bit-banded SRAM space, initialized in the `test` variable.
         unsafe {
             change_bit(&test as *const _, i, true);
         }
