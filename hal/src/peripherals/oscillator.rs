@@ -152,22 +152,22 @@ impl<'a> SystemClock<'a> {
             match self.osc {
                 Oscillator::Primary(_) => {
                     w.ipo_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 27);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 27);
                     w.sysclk_sel().ipo();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
                 Oscillator::Secondary(_) => {
                     w.iso_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 26);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 26);
                     w.sysclk_sel().iso();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
                 Oscillator::NanoRing(freq) => {
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 29);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 29);
                     w.sysclk_sel().inro();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 13);
 
                     match self.freq_perf {
                         FrequencyPeripheral::TrimsirInro(trimsir_perf) => {
@@ -196,16 +196,16 @@ impl<'a> SystemClock<'a> {
 
                 Oscillator::BaudRate(_) => {
                     w.ibro_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 28);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 28);
                     w.sysclk_sel().ibro();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
 
                 Oscillator::RealTimeClock(_) => {
                     w.ertco_en().set_bit();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 25);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 25);
                     w.sysclk_sel().ertco();
-                    // bb::spin_bit(&gcr_ptr.clkctrl, 13);
+                    bb::spin_bit(&gcr_ptr.clkctrl, 13);
                 }
             }
 
