@@ -21,11 +21,7 @@ enum BitOrder {
     MSB = 1,
 }
 
-// TODO : REEVAL DESIGN
 
-pub fn set_field<T>(reg: max78000::generic::Reg<T>, mask: u32, value: u32) {
-    reg.modify(|r, w| unsafe { w.bits((r.bits() & !mask) | (value & mask)) })
-}
 
 impl Crc {
     // new
@@ -92,7 +88,7 @@ impl Crc {
         
         // configure input and output data format fields
         // TODO: follow the instructions in the manual
-        
+
 
        for i in 0..crc_buffer.len(){
         let j = i as u32;
