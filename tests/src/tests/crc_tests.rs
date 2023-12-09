@@ -7,7 +7,7 @@ use max78000_hal::{
     peripherals::crc::Crc,
 };
 
-pub unsafe fn run_crc_tests(crc_regs : CRC, stdout : &mut hio::HostStream) {
+pub fn run_crc_tests(crc_regs : CRC, stdout : &mut hio::HostStream) {
     writeln!(stdout, "Starting CRC peripheral tests...").unwrap();
 
     let crc_n = Crc::new(crc_regs); // TODO test on plantmachine

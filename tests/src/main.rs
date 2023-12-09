@@ -24,7 +24,7 @@ fn main() -> ! {
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
-    // crc_tests::run_crc_tests(peripherals.CRC, &mut stdout);
+    crc_tests::run_crc_tests(peripherals.CRC, &mut stdout);
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
     #[allow(clippy::empty_loop)]

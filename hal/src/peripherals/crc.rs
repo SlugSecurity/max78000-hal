@@ -2,12 +2,14 @@
 
 // use core::mem;
 
-use max78000::adc::ctrl::R;
+
 use max78000::CRC;
 pub struct Crc {
     crc: CRC,
 }
 
+
+// TODO is this right?
 pub struct CrcReq<'a> {
     data_buffer: &'a [u32],
     // no need for data len because array length is known at compile timew
@@ -19,11 +21,13 @@ enum BitOrder {
     MSB = 1,
 }
 
-pub unsafe fn set_field<T>(reg: max78000::generic::Reg<T>, mask: u32, value: u32) {
+// TODO : REEVAL DESIGN
+
+pub fn set_field<T>(reg: max78000::generic::Reg<T>, mask: u32, value: u32) {
     reg.modify(|r, w| unsafe { w.bits((r.bits() & !mask) | (value & mask)) })
 }
 
-impl<REG> Crc {
+impl Crc {
     // new
     // creates a new crc object
     pub fn new(crc: CRC) -> Self {
@@ -33,69 +37,67 @@ impl<REG> Crc {
     // crc_init
     /// initialize control and val
     /// this is unsafe because we're writing to regs
-    pub unsafe fn crc_init(&self) {
-        // TODO : test with clock once its available
-        self.crc.ctrl.write(|w| unsafe { w.bits(0) });
-        // this is just from the docls
-        self.crc.val.write(|w| unsafe { w.bits(0xFFFFFFFF) });
-
-        // 0 ignore?
+    pub fn crc_init(&self) {
+               
+        self.crc.ctrl.write(|w| { w.en().bit(true) });
+        
     }
 
     // shutdown crc
-    // might be unsafe since we're changing register values
-    // use a result, is this mut
-    pub unsafe fn crc_shutdown(&self) {
+    
+    pub fn crc_shutdown(&self) {
         self.crc
             .ctrl
-            .modify(|r, w| unsafe { w.bits(r.bits() & (0x1 as u32) << 0) });
+            .write(|w| w.en().bit(false))
     }
 
-    pub fn crc_get_result(&self) -> R<REG> {
-        self.crc.val.read()
+    pub fn crc_result(&self) -> u32 {
+        self.crc.val.read().value()
     }
 
-    pub fn crc_get_poly(&self) -> R<REG> {
-        self.crc.poly.read()
+    pub fn crc_get_poly(&self) -> u32 {
+        self.crc.poly.read().value()
     }
 
     pub fn crc_get_direction(&self) -> u32 {
-        self.crc.ctrl.read().bits() & ((0x1 as u32) << 2)
+        self.crc.ctrl.read().msb()
     }
 
-    pub unsafe fn crc_set_direction(&self, bitorder: BitOrder) {
-        set_field(self.crc.ctrl, (0x1 as u32) << 2, (bitorder as u32) << 2);
+    pub fn crc_set_direction(&self, bitorder: BitOrder) {
+        self.crc.ctrl.write(|w| w.msb().bit(bitorder as bool))
     }
 
-    pub unsafe fn crc_set_poly(&self, poly: u32) {
-        self.crc.poly.write(|w| unsafe { w.bits(poly) });
+    pub fn crc_set_poly(&self, poly: u32) {
+        // # SAFETY
+        // This requires an unsafe block, to the best of my knowledge because there does not seem to exist a way to write to fields of the
+        // register bit-by-bit, unless the HAL poly spec is modified
+        self.crc.poly.write(|w| w.poly().variant(poly));
+        
     }
 
-    pub unsafe fn crc_swap_in(&self, bitorder: BitOrder) {
-        set_field(self.crc.ctrl, (0x1 as u32) << 3, (bitorder as u32) << 3);
+    pub fn crc_swap_in(&self, bitorder: BitOrder) {
+        self.crc.ctrl.write(|w| w.byte_swap_in().bit(bitorder as bool));
+        
+    }
+    
+    pub fn crc_swap_out(&self, bitorder: BitOrder) {
+        self.crc.ctrl.write(|w| w.byte_swap_out().bit(bitorder as bool));
+ 
     }
 
-    pub unsafe fn crc_swap_out(&self, bitorder: BitOrder) {
-        set_field(self.crc.ctrl, (0x1 as u32) << 4, (bitorder as u32) << 4);
-    }
+    pub fn crc_compute(&self, crc_buffer : [u32], result : u32, ) {
+       
+        // always disable the crc peripheral 
+        self.crc_shutdown();
+        
+        // configure input and output data format fields
+        // TODO: follow the instructions in the manual
+        
 
-    pub unsafe fn crc_compute(&self, crc_req: CrcReq) {
-        let mut i = 0;
-        self.crc
-            .ctrl
-            .modify(|r, w| unsafe { r.bits() | 0x1 as u32 });
-
-        let mut len_counter = crc_req.data_buffer.len();
-
-        while len_counter > 0 {
-            self.crc
-                .datain32()
-                .write(|w| unsafe { crc_req.data_buffer[i] });
-            i += 1;
-            while self.crc.ctrl.read().bits() & ((0x1 as u32) << 16) {}
-        }
-
-        crc_req.result_crc = self.crc_get_result();
+       for i in 0..crc_buffer.len(){
+        let j = i as u32;
+        self.crc.datain32().write(|w| w.data().variant(crc_buffer[j]));
+       }
     }
 
     // todo: async, confirm with brian
