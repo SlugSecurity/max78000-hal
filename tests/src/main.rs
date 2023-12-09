@@ -20,7 +20,7 @@ pub mod tests;
 fn main() -> ! {
     let mut stdout = hio::hstdout().unwrap();
     writeln!(stdout, "Starting MAX78000 HAL tests...\n").unwrap();
-
+   
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
     // trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
