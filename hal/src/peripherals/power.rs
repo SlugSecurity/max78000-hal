@@ -123,39 +123,31 @@ impl<'r> PowerControl<'r> {
             WDT1 => self.lpgcr.rst.write(|w| w.wdt1().bit(true)),
             GPIO2 => self.lpgcr.rst.write(|w| w.gpio2().bit(true)),
             
-            PT=> self.gcr.rst0.write(|w| w.pt().bit(true)),
-            IC21=> self.gcr.rst0.write(|w| w.i2c0().bit(true)),
-            -CNN => self.gcr.rst0.write(|w| w.cnn().bit(true)),
-            -ADC => self.gcr.rst0.write(|w| w.adc().bit(true)),
-            -TMR3 => self.gcr.rst0.write(|w| w.adc().bit(true)),
-            -TMR2 => self.gcr.rst0.write(|w| w.tmr2().bit(true)),
-            -TMR1 => self.gcr.rst0.write(|w| w.tmr1().bit(true)),
-            -TMR0 => self.gcr.rst0.write(|w| w.tmr0().bit(true)),
-            -I2C0 => self.gcr.rst0.write(|w| w.i2c0().bit(true)),
-            -UART1 => self.gcr.rst0.write(|w| w.uart1().bit(true)),
-            -UART0 => self.gcr.rst0.write(|w| w.uart0().bit(true)),
-            -SPI1 => self.gcr.rst0.write(|w| w.spi1().bit(true)),
-            -DMA => self.gcr.rst0.write(|w| w.dma().bit(true)),
-            -GPIO1 => self.gcr.rst0.write(|w| w.gpio1().bit(true)),
-            -GPIO0 => self.gcr.rst0.write(|w| w.gpio0().bit(true)),
+            PT=> self.gcr.rst1.write(|w| w.pt().bit(true)),
+            IC21=> self.gcr.rst1.write(|w| w.i2c0().bit(true)),
+            CNN => self.gcr.rst0.write(|w| w.cnn().bit(true)),
+            ADC => self.gcr.rst0.write(|w| w.adc().bit(true)),
+            TMR3 => self.gcr.rst0.write(|w| w.adc().bit(true)),
+            TMR2 => self.gcr.rst0.write(|w| w.tmr2().bit(true)),
+            TMR1 => self.gcr.rst0.write(|w| w.tmr1().bit(true)),
+            TMR0 => self.gcr.rst0.write(|w| w.tmr0().bit(true)),
+            I2C0 => self.gcr.rst0.write(|w| w.i2c0().bit(true)),
+            UART1 => self.gcr.rst0.write(|w| w.uart1().bit(true)),
+            UART0 => self.gcr.rst0.write(|w| w.uart0().bit(true)),
+            SPI1 => self.gcr.rst0.write(|w| w.spi1().bit(true)),
+            DMA => self.gcr.rst0.write(|w| w.dma().bit(true)),
+            GPIO1 => self.gcr.rst0.write(|w| w.gpio1().bit(true)),
+            GPIO0 => self.gcr.rst0.write(|w| w.gpio0().bit(true)),
 
             CRC => self.gcr.rst1.write(|w| w.crc().bit(true)),
             OWM => self.gcr.rst1.write(|w| w.owm().bit(true)),
             SMPHR => self.gcr.rst1.write(|w| w.smphr().bit(true)),
-            //TRNG => self.gcr.rst1.write(|w| w.trng().bit(true)),
-            //UART2 => self.gcr.rst1.write(|w| w.uart2().bit(true)),
+            TRNG => self.gcr.rst0.write(|w| w.trng().bit(true)),
+            UART2 => self.gcr.rst0.write(|w| w.uart2().bit(true)),
 
         }
-    }
-    // LPGCR_RST
-
-
-    // GCR_RST0
-
-    /// System Reset
+    }    /// System Reset
     ///
-    /// A system reset is the same as a soft reset, except it also resets all GCR, resetting the clocks to their
-    /// POR default state. The CPU state is reset, as well as the watchdog timers. The AoD and RAM are unaffected.
     pub fn reset_sys(&self) {
         self.gcr.rst0.write(|w| w.sys().bit(true));
     }
@@ -170,35 +162,16 @@ impl<'r> PowerControl<'r> {
         self.gcr.rst0.write(|w| w.soft().bit(true));
     }
 
-    /// UART2 Reset
-    pub fn reset_uart2(&self) {
-        self.gcr.rst0.write(|w| w.uart2().bit(true));
-    }
-
-
-    /// TRNG Reset
-    pub fn reset_trng(&self) {
-        self.gcr.rst0.write(|w| w.trng().bit(true));
-    }
-
     /// RTC Reset
     pub fn reset_rtc(&self) {
         self.gcr.rst0.write(|w| w.rtc().bit(true));
     }
 
-
-
     /// Watchdog Timer 0 Reset
     pub fn reset_wdt0(&self) {
         self.gcr.rst0.write(|w| w.wdt0().bit(true));
     }
-
-
-        self.gcr.rst0.write(|w| w.dma().bit(true));
-    }
-
-    // GCR_RST1
-
+    
     /// Single Inductor Multiple Output Block Reset
     pub fn reset_simo(&self) {
         self.gcr.rst1.write(|w| w.simo().bit(true));
@@ -234,23 +207,4 @@ impl<'r> PowerControl<'r> {
         self.gcr.rst1.write(|w| w.aes().bit(true));
     }
 
-    /// CRC Reset
-    pub fn reset_crc(&self) {
-        self.gcr.rst1.write(|w| w.crc().bit(true));
-    }
-
-    /// 1-Wire Reset
-    pub fn reset_owm(&self) {
-        self.gcr.rst1.write(|w| w.owm().bit(true));
-    }
-
-    /// Pulse Train Reset
-    pub fn reset_pt(&self) {
-        self.gcr.rst1.write(|w| w.pt().bit(true));
-    }
-
-    /// I2C1 Reset
-    pub fn reset_i2c1(&self) {
-        self.gcr.rst1.write(|w| w.i2c1().bit(true));
-    }
 }
