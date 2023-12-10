@@ -190,6 +190,67 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
     for CommonPinHandle<'a, Port, PIN_CT>
 {
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
+        let (alt1_in, alt1_out, alt2_in, alt2_out) = match (Port::PORT_NUM, self.pin_idx) {
+            (0, 0) => (true, false, false, false), //    UART0A_RX                -
+            (0, 1) => (false, true, false, false), //    UART0A_TX                -
+            (0, 2) => (false, false, false, false), //   TMR0A__IOA               UART0B_CTS
+            (0, 3) => (false, false, false, false), //   EXT_CLK/TMR0A_IOB        UART0B_RTS
+            (0, 4) => (false, false, false, false), //   SPI0_SS0                 TMR0B_IOAN
+            (0, 5) => (false, false, false, false), //   SPI0_MOSI                TMR0B_IOBN
+            (0, 6) => (false, false, false, false), //   SPI0_MISO                OWM_IO
+            (0, 7) => (false, false, false, false), //   SPI0_SCK                 OWM_PE
+            (0, 8) => (false, false, false, false), //   SPI0_SDIO2               TMR0B_IOA
+            (0, 9) => (false, false, false, false), //   SPI0_SDIO3               TMR0B_IOB
+            (0, 10) => (false, false, false, false), //  I2C0_SCL                 SPI0_SS2
+            (0, 11) => (false, false, false, false), //  I2C0_SDA                 SPI0_SS1
+            (0, 12) => (true, false, false, false), //   UART1A_RX                TMR1B_IOAN
+            (0, 13) => (false, true, false, false), //   UART1A_TX                TMR1B_IOBN
+            (0, 14) => (false, false, false, false), //  TMR1A_IOA                I2S_CLKEXT
+            (0, 15) => (false, false, false, false), //  TMR1A_IOB                PCIF_VSYNC
+            (0, 16) => (false, false, false, false), //  I2C1_SCL                 PT2
+            (0, 17) => (false, false, false, false), //  I2C1_SDA                 PT3
+            (0, 18) => (false, false, false, false), //  PT0                      OWM_IO
+            (0, 19) => (false, false, false, false), //  PT1                      OWM_PE
+            (0, 20) => (false, false, false, false), //  SPI1_SS0                 PCIF_D0
+            (0, 21) => (false, false, false, false), //  SPI1_MOSI                PCIF_D1
+            (0, 22) => (false, false, false, false), //  SPI1_MISO                PCIF_D2
+            (0, 23) => (false, false, false, false), //  SPI1_SCK                 PCIF_D3
+            (0, 24) => (false, false, false, false), //  SPI1_SDIO2               PCIF_D4
+            (0, 25) => (false, false, false, false), //  SPI1_SDIO3               PCIF_D5
+            (0, 26) => (false, false, false, false), //  TMR2A_IOA                PCIF_D6
+            (0, 27) => (false, false, false, false), //  TMR2A_IOB                PCIF_D7
+            (0, 28) => (false, false, false, false), //  SWDIO                    -
+            (0, 29) => (false, false, false, false), //  SWCLK                    -
+            (0, 30) => (false, false, false, false), //  I2C2_SCL                 PCIF_D8
+            (0, 31) => (false, false, false, false), //  I2C2_SDA                 PCIF_D9
+            (1, 0) => (true, false, false, false), //    UART2A_RX                RV_TCK
+            (1, 1) => (false, true, false, false), //    UART2A_TX                RV_TMS
+            (1, 2) => (false, false, false, false), //   I2S_SCK                  RV_TDI
+            (1, 3) => (false, false, false, false), //   I2S_WS                   RV_TDO
+            (1, 4) => (false, false, false, false), //   I2S_SDI                  TMR3B_IOA
+            (1, 5) => (false, false, false, false), //   I2S_SDO                  TMR3B_IOB
+            (1, 6) => (false, false, false, false), //   TMR3A_IOA                PCIF_D10
+            (1, 7) => (false, false, false, false), //   TMR3A_IOB                PCIF_D11
+            (1, 8) => (false, false, false, false), //   PCIF_HSYNC               RXEV0
+            (1, 9) => (false, false, false, false), //   PCIF_PCLK                TXEV0
+            (2, 0) => (false, false, false, false), //   AIN0/AINON               -
+            (2, 1) => (false, false, false, false), //   AIN1/AIN0P               -
+            (2, 2) => (false, false, false, false), //   AIN2/AIN1N               -
+            (2, 3) => (false, false, false, false), //   AIN3/AIN1P               -
+            (2, 4) => (false, false, false, false), //   AIN4/AIN2N               LPTMR0B_IOA
+            (2, 5) => (false, false, false, false), //   AIN5/AIN2P               LPTMR1_IOA
+            (2, 6) => (false, false, false, false), //   LPTMR0_CLK/AIN6/AIN3N    LPUARTB_RX
+            (2, 7) => (false, false, false, false), //   LPTMR1_CLK/AIN7/AIN3P    LPUARTB_TX
+            (3, 0) => (false, false, false, false), //   PDOWN                    WAKEUP
+            (3, 1) => (false, false, false, false), //   SQWOUT                   WAKEUP
+            _ => (false, false, false, false),
+        };
+
+        let (alt1, alt2) = match self.get_io_mode() {
+            PinIoMode::Input => (alt1_in, alt2_in),
+            PinIoMode::Output => (alt1_out, alt2_out),
+        };
+
         match mode {
             PinOperatingMode::DigitalIo => {
                 self.port
@@ -197,7 +258,7 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
                     .en0_set()
                     .write(|w| w.all().variant(1 << self.pin_idx));
             }
-            PinOperatingMode::AltFunction1 => {
+            PinOperatingMode::AltFunction1 if alt1 => {
                 self.port
                     .regs
                     .en1_clr()
@@ -207,7 +268,7 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
                     .en0_clr()
                     .write(|w| w.all().variant(1 << self.pin_idx));
             }
-            PinOperatingMode::AltFunction2 => {
+            PinOperatingMode::AltFunction2 if alt2 => {
                 self.port
                     .regs
                     .en1_set()
@@ -217,6 +278,7 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
                     .en0_clr()
                     .write(|w| w.all().variant(1 << self.pin_idx));
             }
+            _ => return Err(GpioError::BadOperatingMode),
         }
         Ok(())
     }
