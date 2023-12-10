@@ -120,7 +120,7 @@ impl<Port: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
             .port
             .regs
             .out_set()
-            .write(|w| unsafe { w.bits(1 << self.0.pin_idx) });
+            .write(|w| w.gpio_out_set().variant(1 << self.0.pin_idx));
         Ok(())
     }
 
@@ -129,7 +129,7 @@ impl<Port: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
             .port
             .regs
             .out_clr()
-            .write(|w| unsafe { w.bits(1 << self.0.pin_idx) });
+            .write(|w| w.gpio_out_clr().variant(1 << self.0.pin_idx));
         Ok(())
     }
 }
@@ -156,11 +156,11 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
         self.port
             .regs
             .outen_clr()
-            .write(|w| unsafe { w.bits(1 << self.pin_idx) });
+            .write(|w| w.all().variant(1 << self.pin_idx));
         self.port
             .regs
             .inen()
-            .modify(|r, w| unsafe { w.bits(r.bits() | (1 << self.pin_idx)) });
+            .modify(|r, w| w.gpio_inen().variant(r.bits() | (1 << self.pin_idx)));
         Ok(CommonInputPin(self))
     }
 
@@ -171,11 +171,11 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
         self.port
             .regs
             .inen()
-            .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << self.pin_idx)) });
+            .modify(|r, w| w.gpio_inen().variant(r.bits() & !(1 << self.pin_idx)));
         self.port
             .regs
             .outen_set()
-            .write(|w| unsafe { w.bits(1 << self.pin_idx) });
+            .write(|w| w.all().variant(1 << self.pin_idx));
         let mut pin = CommonOutputPin(self);
         match state {
             PinState::Low => pin.set_low()?,
