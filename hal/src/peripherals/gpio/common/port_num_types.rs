@@ -1,5 +1,8 @@
 //! Contains types used to enumerate the common GPIO ports.
 
+use core::ops::Deref;
+
+use max78000::gpio0::RegisterBlock;
 use max78000::{GPIO0, GPIO1, GPIO2};
 use sealed::sealed;
 
@@ -14,7 +17,7 @@ use sealed::sealed;
 pub trait GpioPortNum {
     /// The type of the peripheral associated with the port number.
     /// eg: GPIO0, GPIO1, GPIO2
-    type Peripheral;
+    type Peripheral: Deref<Target = RegisterBlock>;
 
     /// The associated port number as an integer.
     const PORT_NUM: usize;
