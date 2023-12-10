@@ -190,65 +190,83 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
     for CommonPinHandle<'a, Port, PIN_CT>
 {
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
-        let (alt1_in, alt1_out, alt2_in, alt2_out) = match (Port::PORT_NUM, self.pin_idx) {
-            (0, 0) => (true, false, false, false), //    UART0A_RX                -
-            (0, 1) => (false, true, false, false), //    UART0A_TX                -
-            (0, 2) => (false, false, false, false), //   TMR0A__IOA               UART0B_CTS
-            (0, 3) => (false, false, false, false), //   EXT_CLK/TMR0A_IOB        UART0B_RTS
-            (0, 4) => (false, false, false, false), //   SPI0_SS0                 TMR0B_IOAN
-            (0, 5) => (false, false, false, false), //   SPI0_MOSI                TMR0B_IOBN
-            (0, 6) => (false, false, false, false), //   SPI0_MISO                OWM_IO
-            (0, 7) => (false, false, false, false), //   SPI0_SCK                 OWM_PE
-            (0, 8) => (false, false, false, false), //   SPI0_SDIO2               TMR0B_IOA
-            (0, 9) => (false, false, false, false), //   SPI0_SDIO3               TMR0B_IOB
-            (0, 10) => (false, false, false, false), //  I2C0_SCL                 SPI0_SS2
-            (0, 11) => (false, false, false, false), //  I2C0_SDA                 SPI0_SS1
-            (0, 12) => (true, false, false, false), //   UART1A_RX                TMR1B_IOAN
-            (0, 13) => (false, true, false, false), //   UART1A_TX                TMR1B_IOBN
-            (0, 14) => (false, false, false, false), //  TMR1A_IOA                I2S_CLKEXT
-            (0, 15) => (false, false, false, false), //  TMR1A_IOB                PCIF_VSYNC
-            (0, 16) => (false, false, false, false), //  I2C1_SCL                 PT2
-            (0, 17) => (false, false, false, false), //  I2C1_SDA                 PT3
-            (0, 18) => (false, false, false, false), //  PT0                      OWM_IO
-            (0, 19) => (false, false, false, false), //  PT1                      OWM_PE
-            (0, 20) => (false, false, false, false), //  SPI1_SS0                 PCIF_D0
-            (0, 21) => (false, false, false, false), //  SPI1_MOSI                PCIF_D1
-            (0, 22) => (false, false, false, false), //  SPI1_MISO                PCIF_D2
-            (0, 23) => (false, false, false, false), //  SPI1_SCK                 PCIF_D3
-            (0, 24) => (false, false, false, false), //  SPI1_SDIO2               PCIF_D4
-            (0, 25) => (false, false, false, false), //  SPI1_SDIO3               PCIF_D5
-            (0, 26) => (false, false, false, false), //  TMR2A_IOA                PCIF_D6
-            (0, 27) => (false, false, false, false), //  TMR2A_IOB                PCIF_D7
-            (0, 28) => (false, false, false, false), //  SWDIO                    -
-            (0, 29) => (false, false, false, false), //  SWCLK                    -
-            (0, 30) => (false, false, false, false), //  I2C2_SCL                 PCIF_D8
-            (0, 31) => (false, false, false, false), //  I2C2_SDA                 PCIF_D9
-            (1, 0) => (true, false, false, false), //    UART2A_RX                RV_TCK
-            (1, 1) => (false, true, false, false), //    UART2A_TX                RV_TMS
-            (1, 2) => (false, false, false, false), //   I2S_SCK                  RV_TDI
-            (1, 3) => (false, false, false, false), //   I2S_WS                   RV_TDO
-            (1, 4) => (false, false, false, false), //   I2S_SDI                  TMR3B_IOA
-            (1, 5) => (false, false, false, false), //   I2S_SDO                  TMR3B_IOB
-            (1, 6) => (false, false, false, false), //   TMR3A_IOA                PCIF_D10
-            (1, 7) => (false, false, false, false), //   TMR3A_IOB                PCIF_D11
-            (1, 8) => (false, false, false, false), //   PCIF_HSYNC               RXEV0
-            (1, 9) => (false, false, false, false), //   PCIF_PCLK                TXEV0
-            (2, 0) => (false, false, false, false), //   AIN0/AINON               -
-            (2, 1) => (false, false, false, false), //   AIN1/AIN0P               -
-            (2, 2) => (false, false, false, false), //   AIN2/AIN1N               -
-            (2, 3) => (false, false, false, false), //   AIN3/AIN1P               -
-            (2, 4) => (false, false, false, false), //   AIN4/AIN2N               LPTMR0B_IOA
-            (2, 5) => (false, false, false, false), //   AIN5/AIN2P               LPTMR1_IOA
-            (2, 6) => (false, false, false, false), //   LPTMR0_CLK/AIN6/AIN3N    LPUARTB_RX
-            (2, 7) => (false, false, false, false), //   LPTMR1_CLK/AIN7/AIN3P    LPUARTB_TX
-            (3, 0) => (false, false, false, false), //   PDOWN                    WAKEUP
-            (3, 1) => (false, false, false, false), //   SQWOUT                   WAKEUP
-            _ => (false, false, false, false),
+        const A1_RX: u8 = 0b0001;
+        const A1_TX: u8 = 0b0010;
+        const A1_AX: u8 = 0b0011;
+        const A2_RX: u8 = 0b0100;
+        const A2_TX: u8 = 0b1000;
+        const A2_AX: u8 = 0b1100;
+        const A2_NA: u8 = 0;
+
+        const P0_TABLE: &[u8] = &[
+            A1_RX | A2_NA, // P0.0    UART0A_RX           -
+            A1_TX | A2_NA, // P0.1    UART0A_TX           -
+            A1_AX | A2_AX, // P0.2    TMR0A__IOA          UART0B_CTS
+            A1_AX | A2_AX, // P0.3    EXT_CLK/TMR0A_IOB   UART0B_RTS
+            A1_AX | A2_AX, // P0.4    SPI0_SS0            TMR0B_IOAN
+            A1_AX | A2_AX, // P0.5    SPI0_MOSI           TMR0B_IOBN
+            A1_AX | A2_AX, // P0.6    SPI0_MISO           OWM_IO
+            A1_AX | A2_AX, // P0.7    SPI0_SCK            OWM_PE
+            A1_AX | A2_AX, // P0.8    SPI0_SDIO2          TMR0B_IOA
+            A1_AX | A2_AX, // P0.9    SPI0_SDIO3          TMR0B_IOB
+            A1_AX | A2_AX, // P0.10   I2C0_SCL            SPI0_SS2
+            A1_AX | A2_AX, // P0.11   I2C0_SDA            SPI0_SS1
+            A1_RX | A2_AX, // P0.12   UART1A_RX           TMR1B_IOAN
+            A1_TX | A2_AX, // P0.13   UART1A_TX           TMR1B_IOBN
+            A1_AX | A2_AX, // P0.14   TMR1A_IOA           I2S_CLKEXT
+            A1_AX | A2_AX, // P0.15   TMR1A_IOB           PCIF_VSYNC
+            A1_AX | A2_AX, // P0.16   I2C1_SCL            PT2
+            A1_AX | A2_AX, // P0.17   I2C1_SDA            PT3
+            A1_AX | A2_AX, // P0.18   PT0                 OWM_IO
+            A1_AX | A2_AX, // P0.19   PT1                 OWM_PE
+            A1_AX | A2_AX, // P0.20   SPI1_SS0            PCIF_D0
+            A1_AX | A2_AX, // P0.21   SPI1_MOSI           PCIF_D1
+            A1_AX | A2_AX, // P0.22   SPI1_MISO           PCIF_D2
+            A1_AX | A2_AX, // P0.23   SPI1_SCK            PCIF_D3
+            A1_AX | A2_AX, // P0.24   SPI1_SDIO2          PCIF_D4
+            A1_AX | A2_AX, // P0.25   SPI1_SDIO3          PCIF_D5
+            A1_AX | A2_AX, // P0.26   TMR2A_IOA           PCIF_D6
+            A1_AX | A2_AX, // P0.27   TMR2A_IOB           PCIF_D7
+            A1_AX | A2_NA, // P0.28   SWDIO               -
+            A1_AX | A2_NA, // P0.29   SWCLK               -
+            A1_AX | A2_AX, // P0.30   I2C2_SCL            PCIF_D8
+            A1_AX | A2_AX, // P0.31   I2C2_SDA            PCIF_D9
+        ];
+        const P1_TABLE: &[u8] = &[
+            A1_RX | A2_AX, // P1.0   UART2A_RX    RV_TCK
+            A1_TX | A2_AX, // P1.1   UART2A_TX    RV_TMS
+            A1_AX | A2_AX, // P1.2   I2S_SCK      RV_TDI
+            A1_AX | A2_AX, // P1.3   I2S_WS       RV_TDO
+            A1_AX | A2_AX, // P1.4   I2S_SDI      TMR3B_IOA
+            A1_AX | A2_AX, // P1.5   I2S_SDO      TMR3B_IOB
+            A1_AX | A2_AX, // P1.6   TMR3A_IOA    PCIF_D10
+            A1_AX | A2_AX, // P1.7   TMR3A_IOB    PCIF_D11
+            A1_AX | A2_AX, // P1.8   PCIF_HSYNC   RXEV0
+            A1_AX | A2_AX, // P1.9   PCIF_PCLK    TXEV0
+        ];
+        const P2_TABLE: &[u8] = &[
+            A1_AX | A2_NA, // P2.0   AIN0/AINON              -
+            A1_AX | A2_NA, // P2.1   AIN1/AIN0P              -
+            A1_AX | A2_NA, // P2.2   AIN2/AIN1N              -
+            A1_AX | A2_NA, // P2.3   AIN3/AIN1P              -
+            A1_AX | A2_AX, // P2.4   AIN4/AIN2N              LPTMR0B_IOA
+            A1_AX | A2_AX, // P2.5   AIN5/AIN2P              LPTMR1_IOA
+            A1_AX | A2_RX, // P2.6   LPTMR0_CLK/AIN6/AIN3N   LPUARTB_RX
+            A1_AX | A2_TX, // P2.7   LPTMR1_CLK/AIN7/AIN3P   LPUARTB_TX
+        ];
+
+        let table = match Port::PORT_NUM {
+            0 => P0_TABLE,
+            1 => P1_TABLE,
+            2 => P2_TABLE,
+            _ => &[]
         };
 
+        let entry = table.get(self.pin_idx).copied().unwrap_or_default();
+
         let (alt1, alt2) = match self.get_io_mode() {
-            PinIoMode::Input => (alt1_in, alt2_in),
-            PinIoMode::Output => (alt1_out, alt2_out),
+            PinIoMode::Input => (entry & A1_RX != 0, entry & A2_RX != 0),
+            PinIoMode::Output => (entry & A1_TX != 0, entry & A2_TX != 0),
         };
 
         match mode {
