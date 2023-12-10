@@ -21,8 +21,8 @@ pub fn run_gpio_tests(
 
     // Enable GPIO port clocks. This will be done by the peripheral API when available.
     // TODO: Remove this when the peripheral API is available.
-    gcr.pclkdis0.write(|w| w.gpio0().en().gpio1().en());
-    lpgcr.pclkdis.write(|w| w.gpio2().en());
+    gcr.pclkdis0().write(|w| w.gpio0().en().gpio1().en());
+    lpgcr.pclkdis().write(|w| w.gpio2().en());
 
     // Run tests.
     let gpio0_port = new_gpio0(gpio0);

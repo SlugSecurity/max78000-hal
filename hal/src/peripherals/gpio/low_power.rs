@@ -72,7 +72,7 @@ impl<'a, 'mcr, const PIN_CT: usize>
         // - GPIO 3 pin 1's alt fn 1 is for SQWOUT (it outputs data on the pin)
         //     - the MCR_OUTEN register at the sqwout_en bit is how you switch the alternate function
 
-        let r = &self.port.regs.outen;
+        let r = self.port.regs.outen();
 
         match (mode, self.pin_idx, self.get_io_mode()) {
             (PinOperatingMode::DigitalIo, 0, _) => r.write(|w| w.pdown_out_en().clear_bit()),
