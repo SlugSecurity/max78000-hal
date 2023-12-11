@@ -1,13 +1,14 @@
 //! Watchdog timer peripheral API.
 //! TODO: documentation
 
-use crate::peripherals::bit_banding::spin_bit;
 use cortex_m::interrupt::free;
 use max78000::wdt::ctrl::EN_A;
 use max78000::wdt::ctrl::{INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WIN_EN_A};
 use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_LATE_VAL_A};
 use max78000::wdt::rst::RESET_AW;
 use max78000::WDT;
+
+use crate::peripherals::bit_banding::spin_bit;
 
 /// The Watchdog Timer peripheral struct. Obtain an instance of one with `WatchDogTimer::new`
 pub struct WatchdogTimer {
@@ -212,7 +213,35 @@ impl WatchdogTimer {
         }
     }
 
-    fn clear_flags(&mut self) {
+    /// Clears the Reset Late flag (WDT_CTRL.rst_late)
+    pub fn clear_reset_late_flag(&mut self) {
+        self.wdt_regs
+            .ctrl()
+            .write(|w| w.rst_late().variant(RST_LATE_A::NO_EVENT));
+    }
+
+    /// Clears the Reset Early flag (WDT_CTRL.rst_early)
+    pub fn clear_reset_early_flag(&mut self) {
+        self.wdt_regs
+            .ctrl()
+            .write(|w| w.rst_early().variant(RST_EARLY_A::NO_EVENT));
+    }
+
+    /// Clears the Interrupt Late flag (WDT_CTRL.int_late)
+    pub fn clear_interrupt_late_flag(&mut self) {
+        self.wdt_regs
+            .ctrl()
+            .write(|w| w.int_late().variant(INT_LATE_A::INACTIVE));
+    }
+
+    /// Clears the Interrupt Early flag (WDT_CTRL.int_early)
+    pub fn clear_interrupt_early_flag(&mut self) {
+        self.wdt_regs
+            .ctrl()
+            .write(|w| w.int_early().variant(INT_EARLY_A::INACTIVE));
+    }
+
+    fn clear_all_flags(&mut self) {
         // page 332: Software must clear all event flags before enabling the timers
         self.wdt_regs.ctrl().write(|w| {
             w.rst_late()
@@ -253,7 +282,7 @@ impl WatchdogTimer {
                     self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Enable => {
-                    self.clear_flags();
+                    self.clear_all_flags();
                     self.wdt_regs.ctrl().write(|w| w.en().variant(EN_A::EN));
                     self.poll_clkrdy();
                 }
