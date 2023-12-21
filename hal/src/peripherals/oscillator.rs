@@ -150,34 +150,34 @@ impl<'a> SystemClock<'a> {
         let gcr_ptr = self.gcr_clkctrl;
         match self.osc {
             Oscillator::Primary(_) => {
-                gcr_ptr.modify(|_, w| w.ipo_en().set_bit());
+                gcr_ptr.write(|w| w.ipo_en().en());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 27, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 27, true);
                 }
-                gcr_ptr.modify(|_, w| w.sysclk_sel().ipo());
+                gcr_ptr.write(|w| w.sysclk_sel().ipo());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
                 }
             }
 
             Oscillator::Secondary(_) => {
-                gcr_ptr.modify(|_, w| w.iso_en().set_bit());
+                gcr_ptr.write(|w| w.iso_en().en());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 26, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 26, true);
                 }
-                gcr_ptr.modify(|_, w| w.sysclk_sel().iso());
+                gcr_ptr.write(|w| w.sysclk_sel().iso());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
                 }
             }
 
             Oscillator::NanoRing(freq) => {
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 29, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 29, true);
                 }
-                gcr_ptr.modify(|_, w| w.sysclk_sel().inro());
+                gcr_ptr.write(|w| w.sysclk_sel().inro());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
                 }
 
                 match self.freq_perf {
@@ -202,59 +202,59 @@ impl<'a> SystemClock<'a> {
             }
 
             Oscillator::BaudRate(_) => {
-                gcr_ptr.modify(|_, w| w.ibro_en().set_bit());
+                gcr_ptr.write(|w| w.ibro_en().en());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 28, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 28, true);
                 }
-                gcr_ptr.modify(|_, w| w.sysclk_sel().ibro());
+                gcr_ptr.write(|w| w.sysclk_sel().ibro());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
                 }
             }
 
             Oscillator::RealTimeClock(_) => {
-                gcr_ptr.modify(|_, w| w.ertco_en().set_bit());
+                gcr_ptr.write(|w| w.ertco_en().en());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 25, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 25, true);
                 }
-                gcr_ptr.modify(|_, w| w.sysclk_sel().ertco());
+                gcr_ptr.write(|w| w.sysclk_sel().ertco());
                 unsafe {
-                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
                 }
             }
         }
 
         match self.divider {
             Divider::_1 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div1());
+                gcr_ptr.write(|w| w.sysclk_div().div1());
             }
 
             Divider::_2 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div2());
+                gcr_ptr.write(|w| w.sysclk_div().div2());
             }
 
             Divider::_4 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div4());
+                gcr_ptr.write(|w| w.sysclk_div().div4());
             }
 
             Divider::_8 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div8());
+                gcr_ptr.write(|w| w.sysclk_div().div8());
             }
 
             Divider::_16 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+                gcr_ptr.write(|w| w.sysclk_div().div16());
             }
 
             Divider::_32 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+                gcr_ptr.write(|w| w.sysclk_div().div16());
             }
 
             Divider::_64 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+                gcr_ptr.write(|w| w.sysclk_div().div16());
             }
 
             Divider::_128 => {
-                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+                gcr_ptr.write(|w| w.sysclk_div().div16());
             }
         }
     }
