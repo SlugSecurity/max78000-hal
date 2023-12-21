@@ -93,7 +93,7 @@ impl<'a> SystemClock<'a> {
     pub fn configure_ipo(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
         Self {
             osc: Oscillator::Primary(IpoFrequency::_100MHz),
-            divider: divider,
+            divider,
             gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
@@ -103,7 +103,7 @@ impl<'a> SystemClock<'a> {
     pub fn configure_iso(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
         Self {
             osc: Oscillator::Secondary(IsoFrequency::_60MHz),
-            divider: divider,
+            divider,
             gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
@@ -118,7 +118,7 @@ impl<'a> SystemClock<'a> {
     ) -> Self {
         Self {
             osc: Oscillator::NanoRing(freq),
-            divider: divider,
+            divider,
             gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::TrimsirInro(inro_trsimsir_peripheral),
         }
@@ -128,7 +128,7 @@ impl<'a> SystemClock<'a> {
     pub fn configure_ibro(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
         Self {
             osc: Oscillator::BaudRate(IbroFrequency::_7_3728MHz),
-            divider: divider,
+            divider,
             gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
@@ -138,7 +138,7 @@ impl<'a> SystemClock<'a> {
     pub fn configure_ertco(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
         Self {
             osc: Oscillator::RealTimeClock(ErtcoFrequency::_32_768kHz),
-            divider: divider,
+            divider,
             gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
@@ -148,105 +148,114 @@ impl<'a> SystemClock<'a> {
     /// configuration
     pub fn set(&self) {
         let gcr_ptr = self.gcr_clkctrl;
-        gcr_ptr.write(|w| {
-            match self.osc {
-                Oscillator::Primary(_) => {
-                    w.ipo_en().set_bit();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 27, true); }
-                    w.sysclk_sel().ipo();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
+        match self.osc {
+            Oscillator::Primary(_) => {
+                gcr_ptr.modify(|_, w| w.ipo_en().set_bit());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 27, true);
+                }
+                gcr_ptr.modify(|_, w| w.sysclk_sel().ipo());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                }
+            }
+
+            Oscillator::Secondary(_) => {
+                gcr_ptr.modify(|_, w| w.iso_en().set_bit());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 26, true);
+                }
+                gcr_ptr.modify(|_, w| w.sysclk_sel().iso());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
+                }
+            }
+
+            Oscillator::NanoRing(freq) => {
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 29, true);
+                }
+                gcr_ptr.modify(|_, w| w.sysclk_sel().inro());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
                 }
 
-                Oscillator::Secondary(_) => {
-                    w.iso_en().set_bit();
-
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 26, true); }
-                    w.sysclk_sel().iso();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
-                }
-
-                Oscillator::NanoRing(freq) => {
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 29, true); }
-                    w.sysclk_sel().inro();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
-
-                    match self.freq_perf {
-                        FrequencyPeripheral::TrimsirInro(trimsir_perf) => {
-                            trimsir_perf.write(|w| {
-                                match freq {
-                                    InroFrequency::_8kHz => {
-                                        w.lpclksel()._8khz();
-                                    }
-                                    InroFrequency::_16kHz => {
-                                        w.lpclksel()._16khz();
-                                    }
-                                    InroFrequency::_30kHz => {
-                                        w.lpclksel()._30khz();
-                                    }
-                                }
-
-                                w
-                            });
+                match self.freq_perf {
+                    FrequencyPeripheral::TrimsirInro(trimsir_perf) => match freq {
+                        InroFrequency::_8kHz => {
+                            trimsir_perf.write(|w| w.lpclksel()._8khz());
                         }
-
-                        FrequencyPeripheral::None => {
-                            unreachable!("You need to give access to the trimsir peripheral when using the irno")
+                        InroFrequency::_16kHz => {
+                            trimsir_perf.write(|w| w.lpclksel()._16khz());
                         }
+                        InroFrequency::_30kHz => {
+                            trimsir_perf.write(|w| w.lpclksel()._30khz());
+                        }
+                    },
+
+                    FrequencyPeripheral::None => {
+                        unreachable!(
+                            "You need to give access to the trimsir peripheral when using the irno"
+                        )
                     }
                 }
+            }
 
-                Oscillator::BaudRate(_) => {
-                    w.ibro_en().set_bit();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 28, true); }
-                    w.sysclk_sel().ibro();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
-
+            Oscillator::BaudRate(_) => {
+                gcr_ptr.modify(|_, w| w.ibro_en().set_bit());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 28, true);
                 }
-
-                Oscillator::RealTimeClock(_) => {
-                    w.ertco_en().set_bit();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 25, true); }
-                    w.sysclk_sel().ertco();
-                    unsafe { bb::spin_bit(&gcr_ptr.as_ptr(), 13, true); }
-
+                gcr_ptr.modify(|_, w| w.sysclk_sel().ibro());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
                 }
             }
 
-            match self.divider {
-                Divider::_1 => {
-                    w.sysclk_div().div1();
+            Oscillator::RealTimeClock(_) => {
+                gcr_ptr.modify(|_, w| w.ertco_en().set_bit());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 25, true);
                 }
-
-                Divider::_2 => {
-                    w.sysclk_div().div2();
-                }
-
-                Divider::_4 => {
-                    w.sysclk_div().div4();
-                }
-
-                Divider::_8 => {
-                    w.sysclk_div().div8();
-                }
-
-                Divider::_16 => {
-                    w.sysclk_div().div16();
-                }
-
-                Divider::_32 => {
-                    w.sysclk_div().div16();
-                }
-
-                Divider::_64 => {
-                    w.sysclk_div().div16();
-                }
-
-                Divider::_128 => {
-                    w.sysclk_div().div16();
+                gcr_ptr.modify(|_, w| w.sysclk_sel().ertco());
+                unsafe {
+                    bb::spin_bit(&gcr_ptr.as_ptr(), 13, true);
                 }
             }
+        }
 
-            w
-        });
+        match self.divider {
+            Divider::_1 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div1());
+            }
+
+            Divider::_2 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div2());
+            }
+
+            Divider::_4 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div4());
+            }
+
+            Divider::_8 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div8());
+            }
+
+            Divider::_16 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+            }
+
+            Divider::_32 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+            }
+
+            Divider::_64 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+            }
+
+            Divider::_128 => {
+                gcr_ptr.modify(|_, w| w.sysclk_div().div16());
+            }
+        }
     }
 }
