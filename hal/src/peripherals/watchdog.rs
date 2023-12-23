@@ -8,8 +8,6 @@ use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_
 use max78000::wdt::rst::RESET_AW;
 use max78000::WDT;
 
-use crate::peripherals::bit_banding::spin_bit;
-
 /// The Watchdog Timer peripheral struct. Obtain an instance of one with `WatchDogTimer::new`
 pub struct WatchdogTimer {
     wdt_regs: WDT,
@@ -17,9 +15,9 @@ pub struct WatchdogTimer {
 
 /// Clock source for the watchdog timer
 pub enum ClockSource {
-    /// PCLK
+    /// PCLK - the system oscillator; the clock rate of the processor
     PCLK,
-    /// IBRO
+    /// IBRO - 7.3728MHz Internal Baud Rate Oscillator
     IBRO,
 }
 
@@ -87,19 +85,30 @@ macro_rules! into_threshold {
     };
 }
 
-/// Windowed timer mode configuration - allows the timer to trigger an interrupt or reset
-/// if the watchdog is kicked too early, as well as too late
+/// Windowed timer mode configuration - allows the timer to also trigger an interrupt or reset
+/// if the watchdog is kicked too early.
 pub struct WindowedConfiguration {
-    interrupt_early_val: Threshold,
-    reset_early_val: Threshold,
+    /// Threshold for an early interrupt - if the watchdog is kicked before this value
+    /// but after `reset_early_val`, it will trigger an interrupt.
+    pub interrupt_early_val: Threshold,
+    /// Threshold for an early reset - if the watchdog is kicked before this value,
+    /// the system will be reset.
+    pub reset_early_val: Threshold,
 }
 
 /// Configuration for the watchdog timer.
 pub struct Configuration {
-    clock_source: ClockSource,
-    interrupt_late_val: Threshold,
-    reset_late_val: Threshold,
-    windowed_mode: Option<WindowedConfiguration>,
+    /// Clock source for the watchdog timer to use.
+    pub clock_source: ClockSource,
+    /// Threshold for a late interrupt - if the watchdog is kicked after this value
+    /// but before `reset_late_val`, it will trigger an interrupt.
+    pub interrupt_late_val: Threshold,
+    /// Threshold for a late reset - if the watchdog isn't kicked for this many cycles,
+    /// the system will be reset.
+    pub reset_late_val: Threshold,
+    /// Configuration for windowed mode - leave `None` if you don't wish to use the windowed mode
+    /// of the watchdog timer, pass in `Some<WindowedConfiguration` if you do.
+    pub windowed_mode: Option<WindowedConfiguration>,
 }
 
 enum FeedSequenceOperation {
@@ -259,9 +268,10 @@ impl WatchdogTimer {
         // SAFETY: safe, as we are passing in a peripheral address in bit-banding space,
         // (0x4000_3000), bit 28 (WDT0_CTRL.clkrdy) is a readable bit of a valid register
         // (page 336 of the user guide)
-        unsafe {
+        /*unsafe {
             spin_bit(self.wdt_regs.ctrl().as_ptr(), 28, true);
-        }
+        }*/
+        while !self.wdt_regs.ctrl().read().clkrdy().bit() {}
     }
 
     fn feed_sequence(&mut self, feed_sequence_operation: FeedSequenceOperation) {
