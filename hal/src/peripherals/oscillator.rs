@@ -1,6 +1,8 @@
 use crate::peripherals::bit_banding as bb;
-use max78000::gcr::CLKCTRL;
-use max78000::trimsir::INRO;
+use core::fmt::Write;
+use cortex_m_semihosting::hio;
+use max78000::GCR;
+use max78000::TRIMSIR;
 
 #[derive(Clone, Copy)]
 /// All acceptable oscillators configurations
@@ -72,39 +74,58 @@ pub enum Divider {
 
 #[derive(Clone, Copy)]
 /// Frequency sum type
-pub enum FrequencyPeripheral<'a> {
+pub enum FrequencyPeripheral {
     /// For oscillators that can not change their frequency
     None,
     /// For the internal nano-ring oscillator that can change its frequency to
     /// 8kHz, 16kHz, or 30kHz
-    TrimsirInro(&'a INRO),
+    TrimsirInro,
 }
 
 /// SystemClock struct, owns gcr::CLKCTRL
-pub struct SystemClock<'a> {
+pub struct SystemClock {
     osc: Oscillator,
     divider: Divider,
-    gcr_clkctrl: &'a CLKCTRL,
-    freq_perf: FrequencyPeripheral<'a>,
+    freq_perf: FrequencyPeripheral,
 }
 
-impl<'a> SystemClock<'a> {
+impl SystemClock {
     /// constructor for ipo type oscillator struct
-    pub fn configure_ipo(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
+    pub fn configure_ipo(divider: Divider, gcr_peripheral: &GCR) -> Self {
+        gcr_peripheral.clkctrl().modify(|_, w| w.ipo_en().en());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 27, true);
+        }
+        gcr_peripheral.clkctrl().modify(|_, w| w.sysclk_sel().ipo());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
         Self {
             osc: Oscillator::Primary(IpoFrequency::_100MHz),
             divider,
-            gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
     }
 
     /// constructor for iso type oscillator struct
-    pub fn configure_iso(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
+    pub fn configure_iso(divider: Divider, gcr_peripheral: &GCR) -> Self {
+        gcr_peripheral.clkctrl().modify(|_, w| w.iso_en().en());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 26, true);
+        }
+        gcr_peripheral.clkctrl().modify(|_, w| w.sysclk_sel().iso());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
         Self {
             osc: Oscillator::Secondary(IsoFrequency::_60MHz),
             divider,
-            gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
     }
@@ -113,148 +134,140 @@ impl<'a> SystemClock<'a> {
     pub fn configure_inro(
         freq: InroFrequency,
         divider: Divider,
-        gcr_peripheral: &'a CLKCTRL,
-        inro_trsimsir_peripheral: &'a INRO,
+        gcr_peripheral: &GCR,
+        trimsir_peripheral: &TRIMSIR,
     ) -> Self {
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 29, true);
+        }
+        gcr_peripheral
+            .clkctrl()
+            .modify(|_, w| w.sysclk_sel().inro());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        match freq {
+            InroFrequency::_8kHz => {
+                trimsir_peripheral
+                    .inro()
+                    .modify(|_, w| w.lpclksel()._8khz());
+            }
+            InroFrequency::_16kHz => {
+                trimsir_peripheral
+                    .inro()
+                    .modify(|_, w| w.lpclksel()._16khz());
+            }
+            InroFrequency::_30kHz => {
+                trimsir_peripheral
+                    .inro()
+                    .modify(|_, w| w.lpclksel()._30khz());
+            }
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
         Self {
             osc: Oscillator::NanoRing(freq),
             divider,
-            gcr_clkctrl: gcr_peripheral,
-            freq_perf: FrequencyPeripheral::TrimsirInro(inro_trsimsir_peripheral),
+            freq_perf: FrequencyPeripheral::TrimsirInro,
         }
     }
 
     /// constructor for ibro type oscillator struct
-    pub fn configure_ibro(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
+    pub fn configure_ibro(divider: Divider, gcr_peripheral: &GCR) -> Self {
+        gcr_peripheral.clkctrl().modify(|_, w| w.ibro_en().en());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 28, true);
+        }
+        gcr_peripheral
+            .clkctrl()
+            .modify(|_, w| w.sysclk_sel().ibro());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
         Self {
             osc: Oscillator::BaudRate(IbroFrequency::_7_3728MHz),
             divider,
-            gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
     }
 
     /// constructor for ertco type oscillator struct
-    pub fn configure_ertco(divider: Divider, gcr_peripheral: &'a CLKCTRL) -> Self {
+    pub fn configure_ertco(divider: Divider, gcr_peripheral: &GCR) -> Self {
+        gcr_peripheral.clkctrl().modify(|_, w| w.ertco_en().en());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 25, true);
+        }
+        gcr_peripheral
+            .clkctrl()
+            .modify(|_, w| w.sysclk_sel().ertco());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
         Self {
             osc: Oscillator::RealTimeClock(ErtcoFrequency::_32_768kHz),
             divider,
-            gcr_clkctrl: gcr_peripheral,
             freq_perf: FrequencyPeripheral::None,
         }
     }
 
     /// Configures the system clock hardware according to the oscillator struct
     /// configuration
-    pub fn set(&self) {
-        let gcr_ptr = self.gcr_clkctrl;
-        match self.osc {
-            Oscillator::Primary(_) => {
-                gcr_ptr.write(|w| w.ipo_en().en());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 27, true);
-                }
-                gcr_ptr.write(|w| w.sysclk_sel().ipo());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
-                }
-            }
-
-            Oscillator::Secondary(_) => {
-                gcr_ptr.write(|w| w.iso_en().en());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 26, true);
-                }
-                gcr_ptr.write(|w| w.sysclk_sel().iso());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
-                }
-            }
-
-            Oscillator::NanoRing(freq) => {
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 29, true);
-                }
-                gcr_ptr.write(|w| w.sysclk_sel().inro());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
-                }
-
-                match self.freq_perf {
-                    FrequencyPeripheral::TrimsirInro(trimsir_perf) => match freq {
-                        InroFrequency::_8kHz => {
-                            trimsir_perf.write(|w| w.lpclksel()._8khz());
-                        }
-                        InroFrequency::_16kHz => {
-                            trimsir_perf.write(|w| w.lpclksel()._16khz());
-                        }
-                        InroFrequency::_30kHz => {
-                            trimsir_perf.write(|w| w.lpclksel()._30khz());
-                        }
-                    },
-
-                    FrequencyPeripheral::None => {
-                        unreachable!(
-                            "You need to give access to the trimsir peripheral when using the irno"
-                        )
-                    }
-                }
-            }
-
-            Oscillator::BaudRate(_) => {
-                gcr_ptr.write(|w| w.ibro_en().en());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 28, true);
-                }
-                gcr_ptr.write(|w| w.sysclk_sel().ibro());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
-                }
-            }
-
-            Oscillator::RealTimeClock(_) => {
-                gcr_ptr.write(|w| w.ertco_en().en());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 25, true);
-                }
-                gcr_ptr.write(|w| w.sysclk_sel().ertco());
-                unsafe {
-                    bb::spin_bit(gcr_ptr.as_ptr(), 13, true);
-                }
-            }
-        }
-
-        match self.divider {
+    fn set_divider(gcr_peripheral: &GCR, div: Divider) {
+        match div {
             Divider::_1 => {
-                gcr_ptr.write(|w| w.sysclk_div().div1());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div1());
             }
 
             Divider::_2 => {
-                gcr_ptr.write(|w| w.sysclk_div().div2());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div2());
             }
 
             Divider::_4 => {
-                gcr_ptr.write(|w| w.sysclk_div().div4());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div4());
             }
 
             Divider::_8 => {
-                gcr_ptr.write(|w| w.sysclk_div().div8());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div8());
             }
 
             Divider::_16 => {
-                gcr_ptr.write(|w| w.sysclk_div().div16());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div16());
             }
 
             Divider::_32 => {
-                gcr_ptr.write(|w| w.sysclk_div().div16());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div16());
             }
 
             Divider::_64 => {
-                gcr_ptr.write(|w| w.sysclk_div().div16());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div16());
             }
 
             Divider::_128 => {
-                gcr_ptr.write(|w| w.sysclk_div().div16());
+                gcr_peripheral
+                    .clkctrl()
+                    .modify(|_, w| w.sysclk_div().div16());
             }
         }
     }
