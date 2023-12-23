@@ -28,7 +28,7 @@ fn main() -> ! {
 
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
 
-    watchdog_tests::run_watchdog_tests(&mut stdout, peripherals.WDT);
+    watchdog_tests::run_watchdog_tests(&mut stdout, peripherals.WDT, &peripherals.GCR);
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 

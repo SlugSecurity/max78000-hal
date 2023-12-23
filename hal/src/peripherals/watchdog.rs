@@ -2,11 +2,12 @@
 //! TODO: documentation
 
 use cortex_m::interrupt::free;
+use max78000::gcr::pclkdis1::UART2_A;
 use max78000::wdt::ctrl::EN_A;
 use max78000::wdt::ctrl::{INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WIN_EN_A};
 use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_LATE_VAL_A};
 use max78000::wdt::rst::RESET_AW;
-use max78000::WDT;
+use max78000::{GCR, WDT};
 
 /// The Watchdog Timer peripheral struct. Obtain an instance of one with `WatchDogTimer::new`
 pub struct WatchdogTimer {
@@ -119,7 +120,8 @@ enum FeedSequenceOperation {
 
 impl WatchdogTimer {
     /// Creates a new instance of the Watchdog Timer peripheral.
-    pub fn new(wdt_regs: WDT) -> Self {
+    pub fn new(wdt_regs: WDT, gcr_regs: &GCR) -> Self {
+        gcr_regs.pclkdis1().write(|w| w.wdt0().variant(UART2_A::EN));
         Self { wdt_regs }
     }
 
@@ -288,12 +290,16 @@ impl WatchdogTimer {
 
             match feed_sequence_operation {
                 FeedSequenceOperation::Disable => {
-                    self.wdt_regs.ctrl().write(|w| w.en().variant(EN_A::DIS));
+                    self.wdt_regs
+                        .ctrl()
+                        .write(|w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
                     self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Enable => {
                     self.clear_all_flags();
-                    self.wdt_regs.ctrl().write(|w| w.en().variant(EN_A::EN));
+                    self.wdt_regs
+                        .ctrl()
+                        .write(|w| w.en().variant(EN_A::EN).clkrdy_ie().variant(false));
                     self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Kick => (),
