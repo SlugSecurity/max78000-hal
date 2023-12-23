@@ -255,19 +255,19 @@ impl SystemClock {
             Divider::_32 => {
                 gcr_peripheral
                     .clkctrl()
-                    .modify(|_, w| w.sysclk_div().div16());
+                    .modify(|_, w| w.sysclk_div().div32());
             }
 
             Divider::_64 => {
                 gcr_peripheral
                     .clkctrl()
-                    .modify(|_, w| w.sysclk_div().div16());
+                    .modify(|_, w| w.sysclk_div().div64());
             }
 
             Divider::_128 => {
                 gcr_peripheral
                     .clkctrl()
-                    .modify(|_, w| w.sysclk_div().div16());
+                    .modify(|_, w| w.sysclk_div().div128());
             }
         }
     }

@@ -49,14 +49,14 @@ pub fn run_oscillator_tests(gcr_reg: &GCR, trsimsir_reg: &TRIMSIR, stdout: &mut 
     writeln!(stdout, "Testing setting system oscillator divider to 16...").unwrap();
     test_divider_16(gcr_reg);
 
-    // writeln!(stdout, "Testing setting system oscillator divider to 32...").unwrap();
-    // test_divider_32(gcr_reg);
+    writeln!(stdout, "Testing setting system oscillator divider to 32...").unwrap();
+    test_divider_32(gcr_reg);
 
-    // writeln!(stdout, "Testing setting system oscillator divider to 64...").unwrap();
-    // test_divider_64(gcr_reg);
+    writeln!(stdout, "Testing setting system oscillator divider to 64...").unwrap();
+    test_divider_64(gcr_reg);
 
-	// writeln!(stdout, "Testing setting system oscillator divider to 128...").unwrap();
-    // test_divider_128(gcr_reg);
+	writeln!(stdout, "Testing setting system oscillator divider to 128...").unwrap();
+    test_divider_128(gcr_reg);
 
     writeln!(stdout, "Oscillator tests complete!").unwrap();
 }
@@ -164,6 +164,6 @@ fn test_divider_64(gcr_reg: &GCR) {
 fn test_divider_128(gcr_reg: &GCR) {
     let div = Divider::_128;
     let sys_clk = SystemClock::configure_ipo(div, gcr_reg);
-    assert_eq!(gcr_reg.clkctrl().read().sysclk_div().is_div64(), true);
+    assert_eq!(gcr_reg.clkctrl().read().sysclk_div().is_div128(), true);
 }
 
