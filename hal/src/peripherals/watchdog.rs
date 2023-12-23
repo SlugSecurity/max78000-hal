@@ -121,7 +121,7 @@ enum FeedSequenceOperation {
 impl WatchdogTimer {
     /// Creates a new instance of the Watchdog Timer peripheral.
     pub fn new(wdt_regs: WDT, gcr_regs: &GCR) -> Self {
-        gcr_regs.pclkdis1().write(|w| w.wdt0().variant(UART2_A::EN));
+        gcr_regs.pclkdis1().modify(|_, w| w.wdt0().variant(UART2_A::EN));
         Self { wdt_regs }
     }
 
@@ -140,14 +140,14 @@ impl WatchdogTimer {
             self.disable();
         }
 
-        self.wdt_regs.clksel().write(|w| {
+        self.wdt_regs.clksel().modify(|_, w| {
             w.source().variant(match options.clock_source {
                 ClockSource::PCLK => 1,
                 ClockSource::IBRO => 2,
             })
         });
 
-        self.wdt_regs.ctrl().write(|w| {
+        self.wdt_regs.ctrl().modify(|_, w| {
             w.int_late_val()
                 .variant(into_threshold!(options.interrupt_late_val, INT_LATE_VAL_A))
                 .rst_late_val()
@@ -158,9 +158,9 @@ impl WatchdogTimer {
             None => {
                 self.wdt_regs
                     .ctrl()
-                    .write(|w| w.win_en().variant(WIN_EN_A::DIS));
+                    .modify(|_, w| w.win_en().variant(WIN_EN_A::DIS));
             }
-            Some(windowed_config) => self.wdt_regs.ctrl().write(|w| {
+            Some(windowed_config) => self.wdt_regs.ctrl().modify(|_, w| {
                 w.win_en()
                     .variant(WIN_EN_A::EN)
                     .rst_early_val()
@@ -228,33 +228,33 @@ impl WatchdogTimer {
     pub fn clear_reset_late_flag(&mut self) {
         self.wdt_regs
             .ctrl()
-            .write(|w| w.rst_late().variant(RST_LATE_A::NO_EVENT));
+            .modify(|_, w| w.rst_late().variant(RST_LATE_A::NO_EVENT));
     }
 
     /// Clears the Reset Early flag (WDT_CTRL.rst_early)
     pub fn clear_reset_early_flag(&mut self) {
         self.wdt_regs
             .ctrl()
-            .write(|w| w.rst_early().variant(RST_EARLY_A::NO_EVENT));
+            .modify(|_, w| w.rst_early().variant(RST_EARLY_A::NO_EVENT));
     }
 
     /// Clears the Interrupt Late flag (WDT_CTRL.int_late)
     pub fn clear_interrupt_late_flag(&mut self) {
         self.wdt_regs
             .ctrl()
-            .write(|w| w.int_late().variant(INT_LATE_A::INACTIVE));
+            .modify(|_, w| w.int_late().variant(INT_LATE_A::INACTIVE));
     }
 
     /// Clears the Interrupt Early flag (WDT_CTRL.int_early)
     pub fn clear_interrupt_early_flag(&mut self) {
         self.wdt_regs
             .ctrl()
-            .write(|w| w.int_early().variant(INT_EARLY_A::INACTIVE));
+            .modify(|_, w| w.int_early().variant(INT_EARLY_A::INACTIVE));
     }
 
     fn clear_all_flags(&mut self) {
         // page 332: Software must clear all event flags before enabling the timers
-        self.wdt_regs.ctrl().write(|w| {
+        self.wdt_regs.ctrl().modify(|_, w| {
             w.rst_late()
                 .variant(RST_LATE_A::NO_EVENT)
                 .rst_early()
@@ -292,14 +292,14 @@ impl WatchdogTimer {
                 FeedSequenceOperation::Disable => {
                     self.wdt_regs
                         .ctrl()
-                        .write(|w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
+                        .modify(|_, w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
                     self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Enable => {
                     self.clear_all_flags();
                     self.wdt_regs
                         .ctrl()
-                        .write(|w| w.en().variant(EN_A::EN).clkrdy_ie().variant(false));
+                        .modify(|_, w| w.en().variant(EN_A::EN).clkrdy_ie().variant(false));
                     self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Kick => (),
