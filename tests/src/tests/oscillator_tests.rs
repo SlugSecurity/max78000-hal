@@ -56,6 +56,13 @@ pub fn run_oscillator_tests(gcr_reg: &GCR, trsimsir_reg: &TRIMSIR, stdout: &mut 
     writeln!(stdout, "Testing setting system oscillator divider to 64...").unwrap();
     test_divider_64(gcr_reg);
 
+    writeln!(
+        stdout,
+        "Testing setting system oscillator divider to 128..."
+    )
+    .unwrap();
+    test_divider_128(gcr_reg);
+
     writeln!(stdout, "Oscillator tests complete!").unwrap();
 }
 
@@ -247,5 +254,17 @@ fn test_divider_64(gcr_reg: &GCR) {
     );
     sys_clk.set();
     assert_eq!(gcr_reg.clkctrl().read().sysclk_div().is_div64(), true);
+    gcr_reg.clkctrl().reset();
+}
+
+fn test_divider_128(gcr_reg: &GCR) {
+    let sys_clk = SystemClock::new(
+        Oscillator::Primary(IpoFrequency::_100MHz),
+        Divider::_128,
+        FrequencyPeripheral::None,
+        gcr_reg,
+    );
+    sys_clk.set();
+    assert_eq!(gcr_reg.clkctrl().read().sysclk_div().is_div128(), true);
     gcr_reg.clkctrl().reset();
 }
