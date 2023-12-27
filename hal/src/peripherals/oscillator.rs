@@ -1,9 +1,11 @@
 use crate::peripherals::bit_banding as bb;
 use max78000::GCR;
+
+#[cfg(feature = "low_frequency")]
 use max78000::TRIMSIR;
 
-/// All acceptable oscillators configurations
 #[derive(Clone, Copy)]
+/// All acceptable oscillators configurations
 pub enum Oscillator {
     /// 100 mHz
     Primary(IpoFrequency),
@@ -34,8 +36,8 @@ pub enum IsoFrequency {
 }
 
 /// Acceptable Internal Nano-Ring Oscillator frequencies
-#[derive(Clone, Copy)]
 #[cfg(feature = "low_frequency")]
+#[derive(Clone, Copy)]
 pub enum InroFrequency {
     /// 9 kilohertz
     _8kHz,
@@ -53,8 +55,8 @@ pub enum IbroFrequency {
 }
 
 /// Acceptable External Real-Time Clock Oscillator frequency
-#[derive(Clone, Copy)]
 #[cfg(feature = "low_frequency")]
+#[derive(Clone, Copy)]
 pub enum ErtcoFrequency {
     /// 32.768 kilohertz
     _32_768kHz,
@@ -76,66 +78,25 @@ pub enum Divider {
 
 #[derive(Clone, Copy)]
 /// Frequency sum type
-pub enum FrequencyPeripheral<'a> {
+pub enum FrequencyPeripheral {
     /// For oscillators that can not change their frequency
     None,
+    #[cfg(feature = "low_frequency")]
     /// For the internal nano-ring oscillator that can change its frequency to
     /// 8kHz, 16kHz, or 30kHz
-    TrimsirInro(&'a TRIMSIR),
+    TrimsirInro,
 }
 
 /// SystemClock struct, owns gcr::CLKCTRL
-pub struct SystemClock<'a> {
+pub struct SystemClock {
     osc: Oscillator,
     divider: Divider,
-    freq_perf: FrequencyPeripheral<'a>,
-    gcr_peripheral: &'a GCR,
+    freq_perf: FrequencyPeripheral,
 }
 
-impl<'a> SystemClock<'a> {
-    /// create a new System Clock
-    pub fn new(
-        osc: Oscillator,
-        divider: Divider,
-        freq_peripheral: FrequencyPeripheral<'a>,
-        gcr_peripheral: &'a GCR,
-    ) -> Self {
-        SystemClock {
-            osc,
-            divider,
-            freq_perf: freq_peripheral,
-            gcr_peripheral,
-        }
-    }
-
-    pub fn set(&self) {
-        match self.osc {
-            Oscillator::Primary(_) => {
-                Self::configure_ipo(self.divider, self.gcr_peripheral);
-            }
-            Oscillator::Secondary(_) => {
-                Self::configure_iso(self.divider, self.gcr_peripheral);
-            }
-            #[cfg(feature = "low_frequency")]
-            Oscillator::NanoRing(freq) => {
-                if let FrequencyPeripheral::TrimsirInro(trimsir) = self.freq_perf {
-                    Self::configure_inro(freq, self.divider, self.gcr_peripheral, trimsir);
-                } else {
-                    unreachable!();
-                }
-            }
-            Oscillator::BaudRate(_) => {
-                Self::configure_ibro(self.divider, self.gcr_peripheral);
-            }
-            #[cfg(feature = "low_frequency")]
-            Oscillator::RealTimeClock(_) => {
-                Self::configure_ertco(self.divider, self.gcr_peripheral);
-            }
-        }
-    }
-
+impl SystemClock {
     /// constructor for ipo type oscillator struct
-    fn configure_ipo(divider: Divider, gcr_peripheral: &GCR) {
+    pub fn configure_ipo(divider: Divider, gcr_peripheral: &GCR) -> Self {
         gcr_peripheral.clkctrl().modify(|_, w| w.ipo_en().en());
         unsafe {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 27, true);
@@ -146,10 +107,16 @@ impl<'a> SystemClock<'a> {
         }
 
         Self::set_divider(gcr_peripheral, divider);
+
+        Self {
+            osc: Oscillator::Primary(IpoFrequency::_100MHz),
+            divider,
+            freq_perf: FrequencyPeripheral::None,
+        }
     }
 
     /// constructor for iso type oscillator struct
-    fn configure_iso(divider: Divider, gcr_peripheral: &GCR) {
+    pub fn configure_iso(divider: Divider, gcr_peripheral: &GCR) -> Self {
         gcr_peripheral.clkctrl().modify(|_, w| w.iso_en().en());
         unsafe {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 26, true);
@@ -160,10 +127,61 @@ impl<'a> SystemClock<'a> {
         }
 
         Self::set_divider(gcr_peripheral, divider);
+
+        Self {
+            osc: Oscillator::Secondary(IsoFrequency::_60MHz),
+            divider,
+            freq_perf: FrequencyPeripheral::None,
+        }
+    }
+
+    #[cfg(feature = "low_frequency")]
+    /// constructor for inro type oscillator struct
+    pub fn configure_inro(
+        freq: InroFrequency,
+        divider: Divider,
+        gcr_peripheral: &GCR,
+        trimsir_peripheral: &TRIMSIR,
+    ) -> Self {
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 29, true);
+        }
+        gcr_peripheral
+            .clkctrl()
+            .modify(|_, w| w.sysclk_sel().inro());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        match freq {
+            InroFrequency::_8kHz => {
+                trimsir_peripheral
+                    .inro()
+                    .modify(|_, w| w.lpclksel()._8khz());
+            }
+            InroFrequency::_16kHz => {
+                trimsir_peripheral
+                    .inro()
+                    .modify(|_, w| w.lpclksel()._16khz());
+            }
+            InroFrequency::_30kHz => {
+                trimsir_peripheral
+                    .inro()
+                    .modify(|_, w| w.lpclksel()._30khz());
+            }
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
+        Self {
+            osc: Oscillator::NanoRing(freq),
+            divider,
+            freq_perf: FrequencyPeripheral::TrimsirInro,
+        }
     }
 
     /// constructor for ibro type oscillator struct
-    fn configure_ibro(divider: Divider, gcr_peripheral: &GCR) {
+    pub fn configure_ibro(divider: Divider, gcr_peripheral: &GCR) -> Self {
         gcr_peripheral.clkctrl().modify(|_, w| w.ibro_en().en());
         unsafe {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 28, true);
@@ -176,6 +194,35 @@ impl<'a> SystemClock<'a> {
         }
 
         Self::set_divider(gcr_peripheral, divider);
+
+        Self {
+            osc: Oscillator::BaudRate(IbroFrequency::_7_3728MHz),
+            divider,
+            freq_perf: FrequencyPeripheral::None,
+        }
+    }
+
+    #[cfg(feature = "low_frequency")]
+    /// constructor for ertco type oscillator struct
+    pub fn configure_ertco(divider: Divider, gcr_peripheral: &GCR) -> Self {
+        gcr_peripheral.clkctrl().modify(|_, w| w.ertco_en().en());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 25, true);
+        }
+        gcr_peripheral
+            .clkctrl()
+            .modify(|_, w| w.sysclk_sel().ertco());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        Self::set_divider(gcr_peripheral, divider);
+
+        Self {
+            osc: Oscillator::RealTimeClock(ErtcoFrequency::_32_768kHz),
+            divider,
+            freq_perf: FrequencyPeripheral::None,
+        }
     }
 
     /// Configures the system clock hardware according to the oscillator struct
@@ -229,64 +276,6 @@ impl<'a> SystemClock<'a> {
                     .clkctrl()
                     .modify(|_, w| w.sysclk_div().div128());
             }
-        }
-    }
-}
-
-#[cfg(feature = "low_frequency")]
-mod low_frequency_oscillator {
-    use super::*;
-    impl<'a> super::SystemClock<'a> {
-        /// constructor for inro type oscillator struct
-        pub(super) fn configure_inro(
-            freq: InroFrequency,
-            divider: Divider,
-            gcr_peripheral: &GCR,
-            trimsir_peripheral: &'a TRIMSIR,
-        ) {
-            unsafe {
-                bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 29, true);
-            }
-            gcr_peripheral.clkctrl().modify(|_, w| w.ertco_en().en());
-            unsafe {
-                bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
-            }
-
-            match freq {
-                InroFrequency::_8kHz => {
-                    trimsir_peripheral
-                        .inro()
-                        .modify(|_, w| w.lpclksel()._8khz());
-                }
-                InroFrequency::_16kHz => {
-                    trimsir_peripheral
-                        .inro()
-                        .modify(|_, w| w.lpclksel()._16khz());
-                }
-                InroFrequency::_30kHz => {
-                    trimsir_peripheral
-                        .inro()
-                        .modify(|_, w| w.lpclksel()._30khz());
-                }
-            }
-
-            Self::set_divider(gcr_peripheral, divider);
-        }
-
-        /// constructor for ertco type oscillator struct
-        pub(super) fn configure_ertco(divider: Divider, gcr_peripheral: &GCR) {
-            gcr_peripheral.clkctrl().modify(|_, w| w.ertco_en().en());
-            unsafe {
-                bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 25, true);
-            }
-            gcr_peripheral
-                .clkctrl()
-                .modify(|_, w| w.sysclk_sel().ertco());
-            unsafe {
-                bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
-            }
-
-            Self::set_divider(gcr_peripheral, divider);
         }
     }
 }
