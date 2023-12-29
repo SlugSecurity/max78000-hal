@@ -1,3 +1,19 @@
+//! Common GPIO pin manipulation.
+//!
+//! # Examples
+//!
+//! Basic usage:
+//! ```
+//! let pin = port.get_pin_handle(0).unwrap().into_input_pin().unwrap();
+//! assert_ne!(pin.is_low(), pin.is_high());
+//!
+//! let mut pin = pin.into_output_pin(PinState::High).unwrap();
+//! pin.set_low().unwrap();
+//! assert!(pin.is_set_low().unwrap());
+//! pin.set_high().unwrap();
+//! assert!(pin.is_set_high().unwrap());
+//! ```
+
 use core::convert::Infallible;
 use core::marker::PhantomData;
 
@@ -88,6 +104,7 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> PinHandle<'a>
     }
 }
 
+/// `InputPin` implementation for common GPIO ports.
 pub struct CommonInputPin<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>(
     CommonPinHandle<'a, Port, PIN_CT>,
 );
@@ -106,6 +123,7 @@ impl<Port: GpioPortNum + 'static, const PIN_CT: usize> InputPin
     }
 }
 
+/// `OutputPin` implementation for common GPIO ports.
 pub struct CommonOutputPin<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>(
     CommonPinHandle<'a, Port, PIN_CT>,
 );
@@ -259,7 +277,7 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
             0 => P0_TABLE,
             1 => P1_TABLE,
             2 => P2_TABLE,
-            _ => &[]
+            _ => &[],
         };
 
         let entry = table.get(self.pin_idx).copied().unwrap_or_default();
