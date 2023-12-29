@@ -11,32 +11,59 @@ pub struct PowerControl<'r> {
     lpgcr: &'r LPGCR,
 }
 
+/// Indicate a module to enable, disable, or reset through power control registers
 pub enum Module {
+    /// Low-power comparators
     LPCOMP,
+    /// UART 0
     UART0,
+    /// UART 1
     UART1,
+    /// UART 2
     UART2,
+    /// UART 3
     UART3,
+    /// Timer 0
     TMR0,
+    /// Timer 1
     TMR1,
+    /// Timer 2
     TMR2,
+    /// Timer 3
     TMR3,
+    /// Timer 4 (low-power timer 0)
     TMR4,
+    /// Timer 5 (low-power timer 1)
     TMR5,
+    /// Watchdog timer 1
     WDT1,
+    /// GPIO 0
     GPIO0,
+    /// GPIO 1
     GPIO1,
+    /// GPIO 2
     GPIO2,
+    /// Pulse train engine
     PT,
+    /// I2C 0
     I2C0,
+    /// I2C 1
     I2C1,
+    /// Convolutional neural network
     CNN,
+    /// Analog-to-digital converter
     ADC,
+    /// SPI 1
     SPI1,
+    /// Direct memory access
     DMA,
+    /// Cyclic redundancy check
     CRC,
+    /// 1-Wire Master
     OWM,
+    /// Semaphore
     SMPHR,
+    /// True random number generator
     TRNG,
 }
 
