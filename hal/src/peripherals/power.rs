@@ -1,9 +1,6 @@
 //! Power control API.
 
-use max78000::{
-    lpgcr::{pclkdis::PCLKDIS_SPEC, PCLKDIS},
-    DMA, GCR, GPIO0, GPIO1, I2C0, LPGCR, SPI1, TMR3, TRNG,
-};
+use max78000::{GCR, LPGCR};
 
 /// Enable/disable peripheral clocks; reset peripherals.
 pub struct PowerControl<'r> {
