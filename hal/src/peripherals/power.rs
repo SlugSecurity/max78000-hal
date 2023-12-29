@@ -47,7 +47,7 @@ impl<'r> PowerControl<'r> {
         Self { gcr, lpgcr }
     }
 
-    //Enables the module from the Module enum
+    /// Enables the module from the Module enum
     pub fn enable_peripheral(&self, module_input: Module) {
         match module_input {
             Module::LPCOMP => self.lpgcr.pclkdis().write(|w| w.lpcomp().en()),
@@ -81,7 +81,7 @@ impl<'r> PowerControl<'r> {
         }
     }
 
-    //Disables the module from the module enum
+    /// Disables the module from the module enum
     pub fn disable_peripheral(&self, module_input: Module) {
         match module_input {
             Module::LPCOMP => self.lpgcr.pclkdis().write(|w| w.lpcomp().dis()),
@@ -115,6 +115,7 @@ impl<'r> PowerControl<'r> {
         }
     }
 
+    /// Reset the given module
     pub fn reset(&self, module_input: Module) {
         match module_input {
             Module::LPCOMP => self.lpgcr.rst().write(|w| w.lpcomp().bit(true)),
@@ -148,7 +149,6 @@ impl<'r> PowerControl<'r> {
         }
     }
     /// System Reset
-    ///
     pub fn reset_sys(&self) {
         self.gcr.rst0().write(|w| w.sys().bit(true));
     }
