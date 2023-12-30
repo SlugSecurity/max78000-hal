@@ -10,7 +10,7 @@ cd "$(dirname "$0")"
 /opt/MaximSDK/Tools/OpenOCD/openocd -s /opt/MaximSDK/Tools/OpenOCD/scripts \
   -f interface/cmsis-dap.cfg \
   -f target/max78000.cfg \
-  -c "init; reset halt" &
+  -c "init; reset init" &
 
 # Open tests in GDB.
 cargo run -- -x .runner_gdb

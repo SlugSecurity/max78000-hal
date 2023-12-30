@@ -1,4 +1,5 @@
 use crate::peripherals::bit_banding as bb;
+use max78000::FLC;
 use max78000::GCR;
 
 #[cfg(feature = "low_frequency")]
@@ -11,11 +12,15 @@ pub enum Oscillator {
     Primary(IpoFrequency),
     /// 60 mHz
     Secondary(IsoFrequency),
+    /// Warning: if you decide to use the INRO, you need to set the daplink
+    /// adapter speed to the lowest frequency you are testing
     /// 8kHz, 16kHz, or 30kHz
     #[cfg(feature = "low_frequency")]
     NanoRing(InroFrequency),
     /// 7.3728 mHz
     BaudRate(IbroFrequency),
+    /// Warning: if you decide to use the ERTCO, you need to set the daplink
+    /// adapter speed to the lowest frequency you are testing
     /// 32.768 kHz
     #[cfg(feature = "low_frequency")]
     RealTimeClock(ErtcoFrequency),
@@ -28,11 +33,27 @@ pub enum IpoFrequency {
     _100MHz,
 }
 
+impl Into<u32> for IpoFrequency {
+    fn into(self) -> u32 {
+        match self {
+            Self::_100MHz => 100,
+        }
+    }
+}
+
 /// Acceptable Internal Secondary Oscillator frequency
 #[derive(Clone, Copy)]
 pub enum IsoFrequency {
     /// 60 megahertz
     _60MHz,
+}
+
+impl Into<u32> for IsoFrequency {
+    fn into(self) -> u32 {
+        match self {
+            Self::_60MHz => 60,
+        }
+    }
 }
 
 /// Acceptable Internal Nano-Ring Oscillator frequencies
@@ -54,6 +75,14 @@ pub enum IbroFrequency {
     _7_3728MHz,
 }
 
+impl Into<u32> for IbroFrequency {
+    fn into(self) -> u32 {
+        match self {
+            Self::_7_3728MHz => 7,
+        }
+    }
+}
+
 /// Acceptable External Real-Time Clock Oscillator frequency
 #[cfg(feature = "low_frequency")]
 #[derive(Clone, Copy)]
@@ -64,6 +93,8 @@ pub enum ErtcoFrequency {
 
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
+/// Warning: You can't set the divider to be larger than the oscillator
+/// frequency because the flash controllers frequency needs to be 1MHz
 /// All acceptable oscillator dividors
 pub enum Divider {
     _1 = 1,
@@ -76,27 +107,59 @@ pub enum Divider {
     _128 = 128,
 }
 
+impl Into<u32> for Divider {
+    fn into(self) -> u32 {
+        match self {
+            Self::_1 => 1,
+            Self::_2 => 2,
+            Self::_4 => 4,
+            Self::_8 => 8,
+            Self::_16 => 16,
+            Self::_32 => 32,
+            Self::_64 => 64,
+            Self::_128 => 128,
+        }
+    }
+}
+
+/// All acceptable oscillator dividors
 #[derive(Clone, Copy)]
-/// Frequency sum type
-pub enum FrequencyPeripheral {
-    /// For oscillators that can not change their frequency
-    None,
-    #[cfg(feature = "low_frequency")]
-    /// For the internal nano-ring oscillator that can change its frequency to
-    /// 8kHz, 16kHz, or 30kHz
-    TrimsirInro,
+#[allow(missing_docs)]
+enum FlashDivider {
+    IpoDiv = 100,
+    IsoDiv = 60,
+    IbroDiv = 7,
+    None = 0,
+}
+
+impl Into<u32> for FlashDivider {
+    fn into(self) -> u32 {
+        match self {
+            Self::IpoDiv => 100,
+            Self::IsoDiv => 60,
+            Self::IbroDiv => 7,
+            Self::None => {
+                unreachable!("The oscillator choosen is incompatible with flash controller")
+            }
+        }
+    }
 }
 
 /// SystemClock struct, owns gcr::CLKCTRL
 pub struct SystemClock {
     osc: Oscillator,
     divider: Divider,
-    freq_perf: FrequencyPeripheral,
+    flash_divider: FlashDivider,
 }
 
 impl SystemClock {
     /// constructor for ipo type oscillator struct
-    pub fn configure_ipo(divider: Divider, gcr_peripheral: &GCR) -> Self {
+    /// Sets the gcr_clkctrl regester values according to the Analog Devices
+    /// user guide
+    /// Additionly sets the flash controller clock divider to the correct value
+    /// so that its frequency is 1Mhz
+    /// Can not set the clock divider above 64
+    pub fn configure_ipo(divider: Divider, gcr_peripheral: &GCR, flc_peripheral: &FLC) -> Self {
         gcr_peripheral.clkctrl().modify(|_, w| w.ipo_en().en());
         unsafe {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 27, true);
@@ -106,17 +169,31 @@ impl SystemClock {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
         }
 
-        Self::set_divider(gcr_peripheral, divider);
+        match divider {
+            Divider::_128 => unreachable!("Divider too large"),
+            _ => Self::set_divider(gcr_peripheral, divider),
+        }
+
+        unsafe {
+            flc_peripheral
+                .clkdiv()
+                .modify(|_, w| w.bits((divider as u32) / (FlashDivider::IpoDiv as u32)));
+        }
 
         Self {
             osc: Oscillator::Primary(IpoFrequency::_100MHz),
             divider,
-            freq_perf: FrequencyPeripheral::None,
+            flash_divider: FlashDivider::IpoDiv,
         }
     }
 
     /// constructor for iso type oscillator struct
-    pub fn configure_iso(divider: Divider, gcr_peripheral: &GCR) -> Self {
+    /// Sets the gcr_clkctrl regester values according to the Analog Devices
+    /// user guide
+    /// Additionly sets the flash controller clock divider to the correct value
+    /// so that its frequency is 1Mhz
+    /// Can not set the clock divider above 32
+    pub fn configure_iso(divider: Divider, gcr_peripheral: &GCR, flc_peripheral: &FLC) -> Self {
         gcr_peripheral.clkctrl().modify(|_, w| w.iso_en().en());
         unsafe {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 26, true);
@@ -126,21 +203,78 @@ impl SystemClock {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
         }
 
-        Self::set_divider(gcr_peripheral, divider);
+        match divider {
+            Divider::_128 => unreachable!("Divider too large"),
+            Divider::_64 => unreachable!("Divider too large"),
+            _ => Self::set_divider(gcr_peripheral, divider),
+        }
+
+        unsafe {
+            flc_peripheral
+                .clkdiv()
+                .modify(|_, w| w.bits((divider as u32) / (FlashDivider::IsoDiv as u32)));
+        }
 
         Self {
             osc: Oscillator::Secondary(IsoFrequency::_60MHz),
             divider,
-            freq_perf: FrequencyPeripheral::None,
+            flash_divider: FlashDivider::IsoDiv,
+        }
+    }
+
+    /// constructor for ibro type oscillator struct
+    /// Sets the gcr_clkctrl regester values according to the Analog Devices
+    /// user guide
+    /// Additionly sets the flash controller clock divider to the correct value
+    /// so that its frequency is 1Mhz
+    /// Can not set the clock divider above 4
+    pub fn configure_ibro(divider: Divider, gcr_peripheral: &GCR, flc_peripheral: &FLC) -> Self {
+        gcr_peripheral.clkctrl().modify(|_, w| w.ibro_en().en());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 28, true);
+        }
+        gcr_peripheral
+            .clkctrl()
+            .modify(|_, w| w.sysclk_sel().ibro());
+        unsafe {
+            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
+        }
+
+        match divider {
+            Divider::_128 => unreachable!("Divider too large"),
+            Divider::_64 => unreachable!("Divider too large"),
+            Divider::_32 => unreachable!("Divider too large"),
+            Divider::_16 => unreachable!("Divider too large"),
+            Divider::_8 => unreachable!("Divider too large"),
+            _ => Self::set_divider(gcr_peripheral, divider),
+        }
+
+        unsafe {
+            flc_peripheral
+                .clkdiv()
+                .modify(|_, w| w.bits((divider as u32) / (FlashDivider::IbroDiv as u32)));
+        }
+
+        Self {
+            osc: Oscillator::BaudRate(IbroFrequency::_7_3728MHz),
+            divider,
+            flash_divider: FlashDivider::IbroDiv,
         }
     }
 
     #[cfg(feature = "low_frequency")]
     /// constructor for inro type oscillator struct
+    /// Sets the gcr_clkctrl regester values according to the Analog Devices
+    /// user guide
+    /// Uses the Trimsir register to set the clock divider for low power mode
+    /// Warning: Do not use this oscillator as the system oscillator because it
+    /// breaks the flash controller in assumption that the system oscillator
+    /// frequency is above 1Mhz
     pub fn configure_inro(
         freq: InroFrequency,
         divider: Divider,
         gcr_peripheral: &GCR,
+        flc_peripheral: &FLC,
         trimsir_peripheral: &TRIMSIR,
     ) -> Self {
         unsafe {
@@ -171,40 +305,19 @@ impl SystemClock {
             }
         }
 
-        Self::set_divider(gcr_peripheral, divider);
-
         Self {
             osc: Oscillator::NanoRing(freq),
             divider,
-            freq_perf: FrequencyPeripheral::TrimsirInro,
-        }
-    }
-
-    /// constructor for ibro type oscillator struct
-    pub fn configure_ibro(divider: Divider, gcr_peripheral: &GCR) -> Self {
-        gcr_peripheral.clkctrl().modify(|_, w| w.ibro_en().en());
-        unsafe {
-            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 28, true);
-        }
-        gcr_peripheral
-            .clkctrl()
-            .modify(|_, w| w.sysclk_sel().ibro());
-        unsafe {
-            bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
-        }
-
-        Self::set_divider(gcr_peripheral, divider);
-
-        Self {
-            osc: Oscillator::BaudRate(IbroFrequency::_7_3728MHz),
-            divider,
-            freq_perf: FrequencyPeripheral::None,
+            flash_divider: FlashDivider::None,
         }
     }
 
     #[cfg(feature = "low_frequency")]
     /// constructor for ertco type oscillator struct
-    pub fn configure_ertco(divider: Divider, gcr_peripheral: &GCR) -> Self {
+    /// Warning: Do not use this oscillator as the system oscillator because it
+    /// breaks the flash controller in assumption that the system oscillator
+    /// frequency is above 1Mhz
+    pub fn configure_ertco(divider: Divider, gcr_peripheral: &GCR, flc_peripheral: &FLC) -> Self {
         gcr_peripheral.clkctrl().modify(|_, w| w.ertco_en().en());
         unsafe {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 25, true);
@@ -216,12 +329,10 @@ impl SystemClock {
             bb::spin_bit(gcr_peripheral.clkctrl().as_ptr(), 13, true);
         }
 
-        Self::set_divider(gcr_peripheral, divider);
-
         Self {
             osc: Oscillator::RealTimeClock(ErtcoFrequency::_32_768kHz),
             divider,
-            freq_perf: FrequencyPeripheral::None,
+            flash_divider: FlashDivider::None,
         }
     }
 
