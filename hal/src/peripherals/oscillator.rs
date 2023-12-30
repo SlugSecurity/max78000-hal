@@ -129,7 +129,6 @@ enum FlashClkDivider {
     IpoDiv = 100,
     IsoDiv = 60,
     IbroDiv = 7,
-    None = 0,
 }
 
 impl Into<u32> for FlashClkDivider {
@@ -138,9 +137,6 @@ impl Into<u32> for FlashClkDivider {
             Self::IpoDiv => 100,
             Self::IsoDiv => 60,
             Self::IbroDiv => 7,
-            Self::None => {
-                unreachable!("The oscillator choosen is incompatible with flash controller")
-            }
         }
     }
 }
