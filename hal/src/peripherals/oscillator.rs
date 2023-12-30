@@ -122,17 +122,17 @@ impl Into<u32> for Divider {
     }
 }
 
-/// All acceptable oscillator dividors
+/// All acceptable flash clock dividers
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
-enum FlashDivider {
+enum FlashClkDivider {
     IpoDiv = 100,
     IsoDiv = 60,
     IbroDiv = 7,
     None = 0,
 }
 
-impl Into<u32> for FlashDivider {
+impl Into<u32> for FlashClkDivider {
     fn into(self) -> u32 {
         match self {
             Self::IpoDiv => 100,
@@ -149,7 +149,7 @@ impl Into<u32> for FlashDivider {
 pub struct SystemClock {
     osc: Oscillator,
     divider: Divider,
-    flash_divider: FlashDivider,
+    flash_divider: Option<u32>,
 }
 
 impl SystemClock {
@@ -174,16 +174,15 @@ impl SystemClock {
             _ => Self::set_divider(gcr_peripheral, divider),
         }
 
+        let flc_clk_div = (divider as u32) / (FlashClkDivider::IpoDiv as u32);
         unsafe {
-            flc_peripheral
-                .clkdiv()
-                .modify(|_, w| w.bits((divider as u32) / (FlashDivider::IpoDiv as u32)));
+            flc_peripheral.clkdiv().modify(|_, w| w.bits(flc_clk_div));
         }
 
         Self {
             osc: Oscillator::Primary(IpoFrequency::_100MHz),
             divider,
-            flash_divider: FlashDivider::IpoDiv,
+            flash_divider: Some(flc_clk_div),
         }
     }
 
@@ -209,16 +208,15 @@ impl SystemClock {
             _ => Self::set_divider(gcr_peripheral, divider),
         }
 
+        let flc_clk_div = (divider as u32) / (FlashClkDivider::IsoDiv as u32);
         unsafe {
-            flc_peripheral
-                .clkdiv()
-                .modify(|_, w| w.bits((divider as u32) / (FlashDivider::IsoDiv as u32)));
+            flc_peripheral.clkdiv().modify(|_, w| w.bits(flc_clk_div));
         }
 
         Self {
             osc: Oscillator::Secondary(IsoFrequency::_60MHz),
             divider,
-            flash_divider: FlashDivider::IsoDiv,
+            flash_divider: Some(flc_clk_div),
         }
     }
 
@@ -249,16 +247,15 @@ impl SystemClock {
             _ => Self::set_divider(gcr_peripheral, divider),
         }
 
+        let flc_clk_div = (divider as u32) / (FlashClkDivider::IbroDiv as u32);
         unsafe {
-            flc_peripheral
-                .clkdiv()
-                .modify(|_, w| w.bits((divider as u32) / (FlashDivider::IbroDiv as u32)));
+            flc_peripheral.clkdiv().modify(|_, w| w.bits(flc_clk_div));
         }
 
         Self {
             osc: Oscillator::BaudRate(IbroFrequency::_7_3728MHz),
             divider,
-            flash_divider: FlashDivider::IbroDiv,
+            flash_divider: Some(flc_clk_div),
         }
     }
 
@@ -308,7 +305,7 @@ impl SystemClock {
         Self {
             osc: Oscillator::NanoRing(freq),
             divider,
-            flash_divider: FlashDivider::None,
+            flash_divider: None,
         }
     }
 
@@ -332,7 +329,7 @@ impl SystemClock {
         Self {
             osc: Oscillator::RealTimeClock(ErtcoFrequency::_32_768kHz),
             divider,
-            flash_divider: FlashDivider::None,
+            flash_divider: None,
         }
     }
 
