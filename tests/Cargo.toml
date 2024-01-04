@@ -9,7 +9,7 @@ license = "MIT"
 [dependencies]
 bitvec = { version = "1.0.1", default-features = false }
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
-cortex-m-rt = { version = "0.7.3" }
+cortex-m-rt = { version = "0.7.3", features = ["set-sp", "set-vtor"] }
 cortex-m-semihosting = "0.5.0"
 libm = "0.2.8"
 max78000-hal = { version = "0.1.0", path = "../hal", features = ["rt"] }
