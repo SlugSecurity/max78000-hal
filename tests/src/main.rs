@@ -24,14 +24,14 @@ fn main() -> ! {
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
 
+    bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
+
     oscillator_tests::run_oscillator_tests(
         &peripherals.GCR,
         &peripherals.FLC,
         &peripherals.TRIMSIR,
         &mut stdout,
     );
-
-    bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
 
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
 
