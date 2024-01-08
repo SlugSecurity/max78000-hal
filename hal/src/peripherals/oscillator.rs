@@ -1,7 +1,8 @@
 use max78000::gcr::CLKCTRL;
 use max78000::trimsir::INRO;
 
-/// Acceptable Internal Primary Oscillator frequency
+/// Acceptable Internal Primary Oscillator frequency. Can be converted into a
+/// u32 integer representing a value in hertz.
 #[derive(Clone, Copy, Default)]
 pub enum IpoFrequency {
     /// 100 megahertz
@@ -17,7 +18,8 @@ impl Into<u32> for IpoFrequency {
     }
 }
 
-/// Acceptable Internal Secondary Oscillator frequency
+/// Acceptable Internal Secondary Oscillator frequency. Can be converted into a
+/// u32 integer representing a value in hertz.
 #[derive(Clone, Copy, Default)]
 pub enum IsoFrequency {
     /// 60 megahertz
@@ -33,7 +35,8 @@ impl Into<u32> for IsoFrequency {
     }
 }
 
-/// Acceptable Internal Nano-Ring Oscillator frequencies
+/// Acceptable Internal Nano-Ring Oscillator frequencies. Can be converted into
+/// a u32 integer representing a value in hertz.
 #[cfg(feature = "low_frequency")]
 #[derive(Clone, Copy)]
 pub enum InroFrequency {
@@ -56,7 +59,8 @@ impl Into<u32> for InroFrequency {
     }
 }
 
-/// Acceptable Internal Baud Rate Oscillator frequency
+/// Acceptable Internal Baud Rate Oscillator frequency. Can be converted into
+/// a u32 integer representing a value in hertz.
 #[derive(Clone, Copy, Default)]
 pub enum IbroFrequency {
     /// 7.3728 megahertz
@@ -72,7 +76,8 @@ impl Into<u32> for IbroFrequency {
     }
 }
 
-/// Acceptable External Real-Time Clock Oscillator frequency
+/// Acceptable External Real-Time Clock Oscillator frequency. Can be converted into
+/// a u32 integer representing a value in hertz.
 #[cfg(feature = "low_frequency")]
 #[derive(Clone, Copy, Default)]
 pub enum ErtcoFrequency {
@@ -95,6 +100,7 @@ impl Into<u32> for ErtcoFrequency {
 /// Acceptable Internal Primary Oscillator dividers. Can not set the divider
 /// above 64 because that would make the clock signal to the flash controller
 /// lower than 1Mhz.
+/// Can be converted into a u8 integer.
 pub enum IpoDivider {
     _1 = 1,
     _2 = 2,
@@ -124,6 +130,7 @@ impl Into<u8> for IpoDivider {
 /// Acceptable Internal Secondary Oscillator dividers. Can not set the divider
 /// above 32 because that would make the clock signal to the flash controller
 /// lower than 1Mhz.
+/// Can be converted into a u8 integer.
 pub enum IsoDivider {
     _1 = 1,
     _2 = 2,
@@ -151,6 +158,7 @@ impl Into<u8> for IsoDivider {
 /// Acceptable Internal Baud Rate Oscillator dividers. Can not set the divider
 /// above 4 because that would make the clock signal to the flash controller
 /// lower than 1Mhz.
+/// Can be converted into a u8 integer.
 pub enum IbroDivider {
     _1 = 1,
     _2 = 2,
@@ -173,6 +181,7 @@ impl Into<u8> for IbroDivider {
 /// Acceptable Internal Nano Ring Oscillator dividers. The frequency of the INRO
 /// is bellow 1MHz so it should never be used. The divider is set to 1, but this
 /// is arbitrary.
+/// Can be converted into a u8 integer.
 pub enum InroDivider {
     #[default]
     _1 = 1,
@@ -191,12 +200,13 @@ impl Into<u8> for InroDivider {
 /// Acceptable External Real Time Clock dividers. The frequency of the INRO
 /// is bellow 1MHz so it should never be used. The divider is set to 1, but this
 /// is arbitrary.
+/// Can be converted into a u8 integer.
 pub type ErtcoDivider = InroDivider;
 
 /// The SystemClock struct is the userfacing api to configure the onboard system
 /// clock. It has access to the GCR's clkctrl registers and the TRIMSIR's inro
-/// registers. The GCR's clkctrl register is used turn certain oscillators and
-/// set the system oscillator. The TRIMSIR's inro register is used to configure
+/// registers. The GCR's clkctrl register is used turn on certain oscillators and
+/// select the system oscillator. The TRIMSIR's inro register is used to configure
 /// the frequency of the inro.
 pub struct SystemClock<'a> {
     clkctrl_peripheral: &'a CLKCTRL,
@@ -210,10 +220,10 @@ impl<'a> SystemClock<'a> {
     /// and references to the GCR's clkctrl register block and the TRIMSIR's
     /// inro register block. The constructor defines current system clock's
     /// frequency and divider. In addition it sets the system oscillator to the
-    /// desired oscillator using the Oscillator object's set_sysclk function.
+    /// desired oscillator using the SystemClock's set_sysclk function.
     /// # Example
     /// ```
-    /// let ipo = Ipo::new(IpoFrequency, IpoDivider::_1);
+    /// let ipo = Ipo::new(IpoFrequency::_100Mhz, IpoDivider::_1);
     /// let sys_clk = SystemClock::new(&ipo, clkctrl_peripheral, trimsir_peripheral);
     /// ```
     pub fn new<T: Oscillator>(
@@ -245,9 +255,9 @@ impl<'a> SystemClock<'a> {
 
 /// Oscillator trait that describes the needed functionality of a oscillator type
 pub trait Oscillator {
-    /// A frequency type that can be cast to a u32
+    /// Type representing acceptable frequency values of the oscillator
     type Frequency: Into<u32>;
-    /// A divider type that can be cast to a u8
+    /// Type representing acceptable divider values of the oscillator
     type Divider: Into<u8>;
 
     /// Oscillator type constructor
@@ -255,7 +265,7 @@ pub trait Oscillator {
     /// Sets the bits in the GCR clkctrl register to select the oscillitor as
     /// the system oscillator used by the system clock
     fn set_sysclk(&self, clkctrl: &CLKCTRL);
-    /// Sets the bits in the GCR clkctrl register to select the clock divider
+    /// Sets the bits in the GCR clkctrl register to select the clock divider and frequency
     fn set_divider(&self, clkctrl: &CLKCTRL, trimsir: &INRO);
     /// Returns the frequency of the oscillator
     fn get_freq(&self) -> Self::Frequency;
