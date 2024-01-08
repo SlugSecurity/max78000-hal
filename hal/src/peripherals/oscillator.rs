@@ -179,7 +179,7 @@ impl Into<u8> for IbroDivider {
 #[derive(Clone, Copy, Default)]
 #[allow(missing_docs)]
 /// Acceptable Internal Nano Ring Oscillator dividers. The frequency of the INRO
-/// is bellow 1MHz so it should never be used. The divider is set to 1, but this
+/// is below 1MHz so it should never be used. The divider is set to 1, but this
 /// is arbitrary.
 /// Can be converted into a u8 integer.
 pub enum InroDivider {
@@ -198,7 +198,7 @@ impl Into<u8> for InroDivider {
 
 #[cfg(feature = "low_frequency")]
 /// Acceptable External Real Time Clock dividers. The frequency of the INRO
-/// is bellow 1MHz so it should never be used. The divider is set to 1, but this
+/// is below 1MHz so it should never be used. The divider is set to 1, but this
 /// is arbitrary.
 /// Can be converted into a u8 integer.
 pub type ErtcoDivider = InroDivider;
