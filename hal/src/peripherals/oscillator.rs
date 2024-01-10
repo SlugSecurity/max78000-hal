@@ -262,8 +262,11 @@ pub trait Oscillator {
 
     /// Oscillator type constructor
     fn new(frequency: Self::Frequency, divider: Self::Divider) -> Self;
+    /// Sets the bits in the GCR clkctrl register to enable the oscillitor
+    fn enable(&self, clkctrl: &CLKCTRL);
     /// Sets the bits in the GCR clkctrl register to select the oscillitor as
-    /// the system oscillator used by the system clock
+    /// the system oscillator used by the system clock. If the oscillator is not
+    /// enable, this function enables it
     fn set_sysclk(&self, clkctrl: &CLKCTRL);
     /// Sets the bits in the GCR clkctrl register to select the clock divider and frequency
     fn set_divider(&self, clkctrl: &CLKCTRL, trimsir: &INRO);
@@ -287,13 +290,16 @@ impl Oscillator for Ipo {
         Self { frequency, divider }
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+    fn enable(&self, clkctrl: &CLKCTRL) {
         clkctrl.modify(|r, w| {
             w.ipo_en().en();
             while r.ipo_rdy().bit_is_set() == false {}
             w
         });
+    }
 
+    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+        self.enable(clkctrl);
         clkctrl.modify(|r, w| {
             w.sysclk_sel().ipo();
             while r.sysclk_rdy().bit_is_set() == false {}
@@ -350,13 +356,16 @@ impl Oscillator for Iso {
         Self { frequency, divider }
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+    fn enable(&self, clkctrl: &CLKCTRL) {
         clkctrl.modify(|r, w| {
             w.iso_en().en();
             while r.iso_rdy().bit_is_set() == false {}
             w
         });
+    }
 
+    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+        self.enable(clkctrl);
         clkctrl.modify(|r, w| {
             w.sysclk_sel().iso();
             while r.sysclk_rdy().bit_is_set() == false {}
@@ -410,13 +419,16 @@ impl Oscillator for Ibro {
         Self { frequency, divider }
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+    fn enable(&self, clkctrl: &CLKCTRL) {
         clkctrl.modify(|r, w| {
             w.ibro_en().en();
             while r.ibro_rdy().bit_is_set() == false {}
             w
         });
+    }
 
+    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+        self.enable(clkctrl);
         clkctrl.modify(|r, w| {
             w.sysclk_sel().ibro();
             while r.sysclk_rdy().bit_is_set() == false {}
@@ -463,12 +475,15 @@ impl Oscillator for Inro {
         Self { frequency, divider }
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+    fn enable(&self, clkctrl: &CLKCTRL) {
         clkctrl.modify(|r, w| {
             while r.inro_rdy().bit_is_set() == false {}
             w
         });
+    }
 
+    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+        self.enable(clkctrl);
         clkctrl.modify(|r, w| {
             w.sysclk_sel().inro();
             while r.sysclk_rdy().bit_is_set() == false {}
@@ -521,12 +536,15 @@ impl Oscillator for Ertco {
         Self { frequency, divider }
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+    fn enable(&self, clkctrl: &CLKCTRL) {
         clkctrl.modify(|r, w| {
             while r.ertco_rdy().bit_is_set() == false {}
             w
         });
+    }
 
+    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
+        self.enable(clkctrl);
         clkctrl.modify(|r, w| {
             w.sysclk_sel().ertco();
             while r.sysclk_rdy().bit_is_set() == false {}
