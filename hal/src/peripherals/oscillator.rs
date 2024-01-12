@@ -599,6 +599,7 @@ impl Oscillator for Inro {
     }
 }
 
+#[cfg(feature = "low_frequency")]
 impl private::Oscillator for Inro {
     type Frequency = InroFrequency;
     type Divider = InroDivider;
@@ -693,6 +694,7 @@ impl Oscillator for Ertco {
     }
 }
 
+#[cfg(feature = "low_frequency")]
 impl private::Oscillator for Ertco {
     type Frequency = ErtcoFrequency;
     type Divider = ErtcoDivider;
