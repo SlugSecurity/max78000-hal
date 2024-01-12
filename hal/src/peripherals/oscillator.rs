@@ -6,7 +6,6 @@ use max78000::trimsir::INRO;
 #[derive(Clone, Copy)]
 pub enum IpoFrequency {
     /// 100 megahertz
-
     _100MHz,
 }
 
@@ -23,7 +22,6 @@ impl Into<u32> for IpoFrequency {
 #[derive(Clone, Copy)]
 pub enum IsoFrequency {
     /// 60 megahertz
-
     _60MHz,
 }
 
@@ -64,7 +62,6 @@ impl Into<u32> for InroFrequency {
 #[derive(Clone, Copy)]
 pub enum IbroFrequency {
     /// 7.3728 megahertz
-
     _7_3728MHz,
 }
 
@@ -82,7 +79,6 @@ impl Into<u32> for IbroFrequency {
 #[derive(Clone, Copy)]
 pub enum ErtcoFrequency {
     /// 32.768 kilohertz
-
     _32_768kHz,
 }
 
@@ -700,7 +696,7 @@ impl private::Oscillator for Ertco {
     type Divider = ErtcoDivider;
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
-        gcr_clkctrl.modify(|_, w| w.ercto_en().en());
+        gcr_clkctrl.modify(|_, w| w.ertco_en().en());
         gcr_clkctrl.modify(|r, w| {
             while r.ertco_rdy().bit_is_set() == false {}
             w
