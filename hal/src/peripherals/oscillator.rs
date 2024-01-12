@@ -700,6 +700,7 @@ impl private::Oscillator for Ertco {
     type Divider = ErtcoDivider;
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        gcr_clkctrl.modify(|_, w| w.ercto_en().en());
         gcr_clkctrl.modify(|r, w| {
             while r.ertco_rdy().bit_is_set() == false {}
             w
