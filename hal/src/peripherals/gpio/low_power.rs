@@ -47,14 +47,17 @@ impl<'a, 'mcr, const PIN_CT: usize>
     type Error = Infallible;
 
     fn into_input_pin(self) -> Result<LowPowerInputPin<'a, 'mcr, PIN_CT>, Self::Error> {
-        todo!()
+        Ok(LowPowerInputPin(self))
     }
 
     fn into_output_pin(
         self,
         state: PinState,
     ) -> Result<LowPowerOutputPin<'a, 'mcr, PIN_CT>, Self::Error> {
-        todo!()
+        let mut output_pin = LowPowerOutputPin(self);
+        output_pin.set_state(state)?;
+
+        Ok(output_pin)
     }
 }
 
@@ -91,11 +94,36 @@ impl<'a, 'mcr, const PIN_CT: usize>
     }
 
     fn get_operating_mode(&self) -> PinOperatingMode {
-        todo!()
+        let reg = self.port.regs.outen();
+
+        if self.pin_idx == 0 {
+            match reg.read().pdown_out_en().bit_is_set() {
+                true => PinOperatingMode::AltFunction1,
+                false => PinOperatingMode::DigitalIo,
+            }
+        } else {
+            // Pin 1
+            match reg.read().sqwout_en().bit_is_set() {
+                true => PinOperatingMode::AltFunction1,
+                false => PinOperatingMode::DigitalIo,
+            }
+        }
     }
 
     fn get_io_mode(&self) -> PinIoMode {
-        todo!()
+        let reg = self.port.regs.gpio3_ctrl();
+
+        if self.pin_idx == 0 {
+            match reg.read().p30_oe().bit_is_set() {
+                true => PinIoMode::Output,
+                false => PinIoMode::Input,
+            }
+        } else {
+            match reg.read().p31_oe().bit_is_set() {
+                true => PinIoMode::Output,
+                false => PinIoMode::Input,
+            }
+        }
     }
 }
 
@@ -132,11 +160,21 @@ impl<'a, 'mcr, const PIN_CT: usize> InputPin for LowPowerInputPin<'a, 'mcr, PIN_
     type Error = Infallible;
 
     fn is_high(&self) -> Result<bool, Self::Error> {
-        todo!()
+        let reg = self.0.port.regs.gpio3_ctrl();
+
+        match self.0.pin_idx == 0 {
+            true => Ok(reg.read().p30_in().bit_is_set()),
+            false => Ok(reg.read().p31_in().bit_is_set()),
+        }
     }
 
     fn is_low(&self) -> Result<bool, Self::Error> {
-        todo!()
+        let reg = self.0.port.regs.gpio3_ctrl();
+
+        match self.0.pin_idx == 0 {
+            true => Ok(reg.read().p30_in().bit_is_clear()),
+            false => Ok(reg.read().p31_in().bit_is_clear()),
+        }
     }
 }
 
