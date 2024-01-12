@@ -3,10 +3,10 @@ use max78000::trimsir::INRO;
 
 /// Acceptable Internal Primary Oscillator frequency. Can be converted into a
 /// u32 integer representing a value in hertz.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub enum IpoFrequency {
     /// 100 megahertz
-    #[default]
+
     _100MHz,
 }
 
@@ -20,10 +20,10 @@ impl Into<u32> for IpoFrequency {
 
 /// Acceptable Internal Secondary Oscillator frequency. Can be converted into a
 /// u32 integer representing a value in hertz.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub enum IsoFrequency {
     /// 60 megahertz
-    #[default]
+
     _60MHz,
 }
 
@@ -40,7 +40,7 @@ impl Into<u32> for IsoFrequency {
 #[cfg(feature = "low_frequency")]
 #[derive(Clone, Copy)]
 pub enum InroFrequency {
-    /// 9 kilohertz
+    /// 8 kilohertz
     _8kHz,
     /// 16 kilohertz
     _16kHz,
@@ -61,10 +61,10 @@ impl Into<u32> for InroFrequency {
 
 /// Acceptable Internal Baud Rate Oscillator frequency. Can be converted into
 /// a u32 integer representing a value in hertz.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub enum IbroFrequency {
     /// 7.3728 megahertz
-    #[default]
+
     _7_3728MHz,
 }
 
@@ -79,10 +79,10 @@ impl Into<u32> for IbroFrequency {
 /// Acceptable External Real-Time Clock Oscillator frequency. Can be converted into
 /// a u32 integer representing a value in hertz.
 #[cfg(feature = "low_frequency")]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub enum ErtcoFrequency {
     /// 32.768 kilohertz
-    #[default]
+
     _32_768kHz,
 }
 
@@ -97,9 +97,10 @@ impl Into<u32> for ErtcoFrequency {
 
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
+#[non_exhaustive]
 /// Acceptable Internal Primary Oscillator dividers. Can not set the divider
 /// above 64 because that would make the clock signal to the flash controller
-/// lower than 1Mhz.
+/// lower than 1MHz.
 /// Can be converted into a u8 integer.
 pub enum IpoDivider {
     _1 = 1,
@@ -109,6 +110,8 @@ pub enum IpoDivider {
     _16 = 16,
     _32 = 32,
     _64 = 64,
+    #[cfg(feature = "low_frequency")]
+    _128 = 128,
 }
 
 impl Into<u8> for IpoDivider {
@@ -121,6 +124,8 @@ impl Into<u8> for IpoDivider {
             Self::_16 => 16,
             Self::_32 => 32,
             Self::_64 => 64,
+            #[cfg(feature = "low_frequency")]
+            Self::_128 => 128,
         }
     }
 }
@@ -129,7 +134,7 @@ impl Into<u8> for IpoDivider {
 #[allow(missing_docs)]
 /// Acceptable Internal Secondary Oscillator dividers. Can not set the divider
 /// above 32 because that would make the clock signal to the flash controller
-/// lower than 1Mhz.
+/// lower than 1MHz.
 /// Can be converted into a u8 integer.
 pub enum IsoDivider {
     _1 = 1,
@@ -138,6 +143,10 @@ pub enum IsoDivider {
     _8 = 8,
     _16 = 16,
     _32 = 32,
+    #[cfg(feature = "low_frequency")]
+    _64 = 64,
+    #[cfg(feature = "low_frequency")]
+    _128 = 128,
 }
 
 impl Into<u8> for IsoDivider {
@@ -149,6 +158,10 @@ impl Into<u8> for IsoDivider {
             Self::_8 => 8,
             Self::_16 => 16,
             Self::_32 => 32,
+            #[cfg(feature = "low_frequency")]
+            Self::_64 => 64,
+            #[cfg(feature = "low_frequency")]
+            Self::_128 => 128,
         }
     }
 }
@@ -157,12 +170,22 @@ impl Into<u8> for IsoDivider {
 #[allow(missing_docs)]
 /// Acceptable Internal Baud Rate Oscillator dividers. Can not set the divider
 /// above 4 because that would make the clock signal to the flash controller
-/// lower than 1Mhz.
+/// lower than 1MHz.
 /// Can be converted into a u8 integer.
 pub enum IbroDivider {
     _1 = 1,
     _2 = 2,
     _4 = 4,
+    #[cfg(feature = "low_frequency")]
+    _8 = 8,
+    #[cfg(feature = "low_frequency")]
+    _16 = 16,
+    #[cfg(feature = "low_frequency")]
+    _32 = 32,
+    #[cfg(feature = "low_frequency")]
+    _64 = 64,
+    #[cfg(feature = "low_frequency")]
+    _128 = 128,
 }
 
 impl Into<u8> for IbroDivider {
@@ -171,20 +194,43 @@ impl Into<u8> for IbroDivider {
             Self::_1 => 1,
             Self::_2 => 2,
             Self::_4 => 4,
+            #[cfg(feature = "low_frequency")]
+            Self::_8 => 8,
+            #[cfg(feature = "low_frequency")]
+            Self::_16 => 16,
+            #[cfg(feature = "low_frequency")]
+            Self::_32 => 32,
+            #[cfg(feature = "low_frequency")]
+            Self::_64 => 64,
+            #[cfg(feature = "low_frequency")]
+            Self::_128 => 128,
         }
     }
 }
 
 #[cfg(feature = "low_frequency")]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 #[allow(missing_docs)]
 /// Acceptable Internal Nano Ring Oscillator dividers. The frequency of the INRO
 /// is below 1MHz so it should never be used. The divider is set to 1, but this
 /// is arbitrary.
 /// Can be converted into a u8 integer.
 pub enum InroDivider {
-    #[default]
     _1 = 1,
+    #[cfg(feature = "low_frequency")]
+    _2 = 2,
+    #[cfg(feature = "low_frequency")]
+    _4 = 4,
+    #[cfg(feature = "low_frequency")]
+    _8 = 8,
+    #[cfg(feature = "low_frequency")]
+    _16 = 16,
+    #[cfg(feature = "low_frequency")]
+    _32 = 32,
+    #[cfg(feature = "low_frequency")]
+    _64 = 64,
+    #[cfg(feature = "low_frequency")]
+    _128 = 128,
 }
 
 #[cfg(feature = "low_frequency")]
@@ -192,6 +238,20 @@ impl Into<u8> for InroDivider {
     fn into(self) -> u8 {
         match self {
             Self::_1 => 1,
+            #[cfg(feature = "low_frequency")]
+            Self::_2 => 2,
+            #[cfg(feature = "low_frequency")]
+            Self::_4 => 4,
+            #[cfg(feature = "low_frequency")]
+            Self::_8 => 8,
+            #[cfg(feature = "low_frequency")]
+            Self::_16 => 16,
+            #[cfg(feature = "low_frequency")]
+            Self::_32 => 32,
+            #[cfg(feature = "low_frequency")]
+            Self::_64 => 64,
+            #[cfg(feature = "low_frequency")]
+            Self::_128 => 128,
         }
     }
 }
@@ -209,10 +269,14 @@ pub type ErtcoDivider = InroDivider;
 /// select the system oscillator. The TRIMSIR's inro register is used to configure
 /// the frequency of the inro.
 pub struct SystemClock<'a> {
-    clkctrl_peripheral: &'a CLKCTRL,
-    trimsir_peripheral: &'a INRO,
-    clock_frequency: u32,
-    clock_divider: u8,
+    /// Reference to the clkctrl register from the GCR
+    pub gcr_clkctrl_register: &'a CLKCTRL,
+    /// Reference to the inro register from the TRIMSIR
+    pub trimsir_inro_register: &'a INRO,
+    /// The current SYS_OSC frequency
+    pub clock_frequency: u32,
+    /// The current SYS_OSC divider
+    pub clock_divider: u8,
 }
 
 impl<'a> SystemClock<'a> {
@@ -223,17 +287,17 @@ impl<'a> SystemClock<'a> {
     /// desired oscillator using the SystemClock's set_sysclk function.
     /// # Example
     /// ```
-    /// let ipo = Ipo::new(IpoFrequency::_100Mhz, IpoDivider::_1);
+    /// let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     /// let sys_clk = SystemClock::new(&ipo, clkctrl_peripheral, trimsir_peripheral);
     /// ```
-    pub fn new<T: Oscillator>(
+    pub fn new<T: Oscillator + private::Oscillator>(
         osc: &'a T,
-        clkctrl_peripheral: &'a CLKCTRL,
-        trimsir_peripheral: &'a INRO,
+        gcr_clkctrl_peripheral: &'a CLKCTRL,
+        trimsir_inro_peripheral: &'a INRO,
     ) -> Self {
         let mut new_sysclk = Self {
-            clkctrl_peripheral,
-            trimsir_peripheral,
+            gcr_clkctrl_register: gcr_clkctrl_peripheral,
+            trimsir_inro_register: trimsir_inro_peripheral,
             clock_frequency: osc.get_freq().into(),
             clock_divider: osc.get_div().into(),
         };
@@ -245,9 +309,9 @@ impl<'a> SystemClock<'a> {
     /// Sets the desired oscillator as the system oscillator using the
     /// set_sysclk function of the oscillator type. In addition, it updates the
     /// clock_frequency and clock_divider fields of the SystemClock struct.
-    pub fn set_sysclk<T: Oscillator>(&mut self, osc: &'a T) {
-        osc.set_sysclk(self.clkctrl_peripheral);
-        osc.set_divider(self.clkctrl_peripheral, self.trimsir_peripheral);
+    pub fn set_sysclk<T: Oscillator + private::Oscillator>(&mut self, osc: &'a T) {
+        osc.set_sysclk(self.gcr_clkctrl_register);
+        osc.set_divider(self.gcr_clkctrl_register, self.trimsir_inro_register);
         self.clock_frequency = osc.get_freq().into();
         self.clock_divider = osc.get_div().into();
     }
@@ -262,20 +326,32 @@ pub trait Oscillator {
 
     /// Oscillator type constructor
     fn new(frequency: Self::Frequency, divider: Self::Divider) -> Self;
-    /// Sets the bits in the GCR clkctrl register to enable the oscillitor
-    fn enable(&self, clkctrl: &CLKCTRL);
-    /// Sets the bits in the GCR clkctrl register to select the oscillitor as
-    /// the system oscillator used by the system clock. If the oscillator is not
-    /// enable, this function enables it
-    fn set_sysclk(&self, clkctrl: &CLKCTRL);
-    /// Sets the bits in the GCR clkctrl register to select the clock divider and frequency
-    fn set_divider(&self, clkctrl: &CLKCTRL, trimsir: &INRO);
-    /// Returns the frequency of the oscillator
-    fn get_freq(&self) -> Self::Frequency;
-    /// Returns the divider of the system clock
-    fn get_div(&self) -> Self::Divider;
 }
 
+pub(crate) mod private {
+    use max78000::gcr::CLKCTRL;
+    use max78000::trimsir::INRO;
+
+    pub trait Oscillator {
+        /// Type representing acceptable frequency values of the oscillator
+        type Frequency: Into<u32>;
+        /// Type representing acceptable divider values of the oscillator
+        type Divider: Into<u8>;
+
+        /// Sets the bits in the GCR clkctrl register to enable the oscillitor
+        fn enable(&self, gcr_clkctrl: &CLKCTRL);
+        /// Sets the bits in the GCR clkctrl register to select the oscillitor as
+        /// the system oscillator used by the system clock. If the oscillator is not
+        /// enable, this function enables it
+        fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL);
+        /// Sets the bits in the GCR clkctrl register to select the clock divider and frequency
+        fn set_divider(&self, gcr_clkctrl: &CLKCTRL, trimsir_inro: &INRO);
+        /// Returns the frequency of the oscillator
+        fn get_freq(&self) -> Self::Frequency;
+        /// Returns the divider of the system clock
+        fn get_div(&self) -> Self::Divider;
+    }
+}
 /// The Internal Primary Oscillator structure which conforms to the oscillator trait
 pub struct Ipo {
     frequency: IpoFrequency,
@@ -289,46 +365,55 @@ impl Oscillator for Ipo {
     fn new(frequency: IpoFrequency, divider: IpoDivider) -> Self {
         Self { frequency, divider }
     }
+}
 
-    fn enable(&self, clkctrl: &CLKCTRL) {
-        clkctrl.modify(|r, w| {
-            w.ipo_en().en();
+impl private::Oscillator for Ipo {
+    type Frequency = IpoFrequency;
+    type Divider = IpoDivider;
+
+    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        gcr_clkctrl.modify(|_, w| w.ipo_en().en());
+        gcr_clkctrl.modify(|r, w| {
             while r.ipo_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
-        self.enable(clkctrl);
-        clkctrl.modify(|r, w| {
-            w.sysclk_sel().ipo();
+    fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
+        self.enable(gcr_clkctrl);
+        gcr_clkctrl.modify(|_, w| w.sysclk_sel().ipo());
+        gcr_clkctrl.modify(|r, w| {
             while r.sysclk_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_divider(&self, clkctrl: &CLKCTRL, _trimsir: &INRO) {
+    fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
         match self.divider {
             IpoDivider::_1 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div1());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
             }
             IpoDivider::_2 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div2());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
             }
             IpoDivider::_4 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div4());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
             }
             IpoDivider::_8 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div8());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
             }
             IpoDivider::_16 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div16());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
             }
             IpoDivider::_32 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div32());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
             }
             IpoDivider::_64 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div64());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
+            }
+            #[cfg(feature = "low_frequency")]
+            IpoDivider::_128 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
     }
@@ -355,43 +440,56 @@ impl Oscillator for Iso {
     fn new(frequency: IsoFrequency, divider: IsoDivider) -> Self {
         Self { frequency, divider }
     }
+}
 
-    fn enable(&self, clkctrl: &CLKCTRL) {
-        clkctrl.modify(|r, w| {
-            w.iso_en().en();
+impl private::Oscillator for Iso {
+    type Frequency = IsoFrequency;
+    type Divider = IsoDivider;
+
+    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        gcr_clkctrl.modify(|_, w| w.iso_en().en());
+        gcr_clkctrl.modify(|r, w| {
             while r.iso_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
-        self.enable(clkctrl);
-        clkctrl.modify(|r, w| {
-            w.sysclk_sel().iso();
+    fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
+        self.enable(gcr_clkctrl);
+        gcr_clkctrl.modify(|_, w| w.sysclk_sel().iso());
+        gcr_clkctrl.modify(|r, w| {
             while r.sysclk_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_divider(&self, clkctrl: &CLKCTRL, _trimsir: &INRO) {
+    fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
         match self.divider {
             IsoDivider::_1 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div1());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
             }
             IsoDivider::_2 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div2());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
             }
             IsoDivider::_4 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div4());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
             }
             IsoDivider::_8 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div8());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
             }
             IsoDivider::_16 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div16());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
             }
             IsoDivider::_32 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div32());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
+            }
+            #[cfg(feature = "low_frequency")]
+            IsoDivider::_64 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
+            }
+            #[cfg(feature = "low_frequency")]
+            IsoDivider::_128 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
     }
@@ -418,34 +516,59 @@ impl Oscillator for Ibro {
     fn new(frequency: IbroFrequency, divider: IbroDivider) -> Self {
         Self { frequency, divider }
     }
+}
 
-    fn enable(&self, clkctrl: &CLKCTRL) {
-        clkctrl.modify(|r, w| {
-            w.ibro_en().en();
+impl private::Oscillator for Ibro {
+    type Frequency = IbroFrequency;
+    type Divider = IbroDivider;
+
+    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        gcr_clkctrl.modify(|_, w| w.ibro_en().en());
+        gcr_clkctrl.modify(|r, w| {
             while r.ibro_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
-        self.enable(clkctrl);
-        clkctrl.modify(|r, w| {
-            w.sysclk_sel().ibro();
+    fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
+        self.enable(gcr_clkctrl);
+        gcr_clkctrl.modify(|_, w| w.sysclk_sel().ibro());
+        gcr_clkctrl.modify(|r, w| {
             while r.sysclk_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_divider(&self, clkctrl: &CLKCTRL, _trimsir: &INRO) {
+    fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
         match self.divider {
             IbroDivider::_1 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div1());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
             }
             IbroDivider::_2 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div2());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
             }
             IbroDivider::_4 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div4());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
+            }
+            #[cfg(feature = "low_frequency")]
+            IbroDivider::_8 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
+            }
+            #[cfg(feature = "low_frequency")]
+            IbroDivider::_16 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
+            }
+            #[cfg(feature = "low_frequency")]
+            IbroDivider::_32 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
+            }
+            #[cfg(feature = "low_frequency")]
+            IbroDivider::_64 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
+            }
+            #[cfg(feature = "low_frequency")]
+            IbroDivider::_128 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
     }
@@ -474,24 +597,29 @@ impl Oscillator for Inro {
     fn new(frequency: InroFrequency, divider: InroDivider) -> Self {
         Self { frequency, divider }
     }
+}
 
-    fn enable(&self, clkctrl: &CLKCTRL) {
-        clkctrl.modify(|r, w| {
+impl private::Oscillator for Inro {
+    type Frequency = InroFrequency;
+    type Divider = InroDivider;
+
+    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        gcr_clkctrl.modify(|r, w| {
             while r.inro_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
-        self.enable(clkctrl);
-        clkctrl.modify(|r, w| {
-            w.sysclk_sel().inro();
+    fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
+        self.enable(gcr_clkctrl);
+        gcr_clkctrl.modify(|_, w| w.sysclk_sel().inro());
+        gcr_clkctrl.modify(|r, w| {
             while r.sysclk_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_divider(&self, clkctrl: &CLKCTRL, trimsir: &INRO) {
+    fn set_divider(&self, gcr_clkctrl: &CLKCTRL, trimsir: &INRO) {
         match self.frequency {
             InroFrequency::_8kHz => {
                 trimsir.modify(|_, w| w.lpclksel()._8khz());
@@ -506,7 +634,35 @@ impl Oscillator for Inro {
 
         match self.divider {
             InroDivider::_1 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div1());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_2 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_4 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_8 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_16 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_32 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_64 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
+            }
+            #[cfg(feature = "low_frequency")]
+            InroDivider::_128 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
     }
@@ -535,27 +691,60 @@ impl Oscillator for Ertco {
     fn new(frequency: ErtcoFrequency, divider: ErtcoDivider) -> Self {
         Self { frequency, divider }
     }
+}
 
-    fn enable(&self, clkctrl: &CLKCTRL) {
-        clkctrl.modify(|r, w| {
+impl private::Oscillator for Ertco {
+    type Frequency = ErtcoFrequency;
+    type Divider = ErtcoDivider;
+
+    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        gcr_clkctrl.modify(|r, w| {
             while r.ertco_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_sysclk(&self, clkctrl: &CLKCTRL) {
-        self.enable(clkctrl);
-        clkctrl.modify(|r, w| {
-            w.sysclk_sel().ertco();
+    fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
+        self.enable(gcr_clkctrl);
+        gcr_clkctrl.modify(|_, w| w.sysclk_sel().ertco());
+        gcr_clkctrl.modify(|r, w| {
             while r.sysclk_rdy().bit_is_set() == false {}
             w
         });
     }
 
-    fn set_divider(&self, clkctrl: &CLKCTRL, _trimsir: &INRO) {
+    fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
         match self.divider {
             ErtcoDivider::_1 => {
-                clkctrl.modify(|_, w| w.sysclk_div().div1());
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_2 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_4 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_8 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_16 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_32 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_64 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
+            }
+            #[cfg(feature = "low_frequency")]
+            ErtcoDivider::_128 => {
+                gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
     }
