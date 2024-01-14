@@ -219,21 +219,37 @@ impl<'a, 'mcr, const PIN_CT: usize> OutputPin for LowPowerOutputPin<'a, 'mcr, PI
     type Error = Infallible;
 
     fn set_low(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        let reg = self.0.port.regs.gpio3_ctrl();
+        match self.0.pin_idx == 0 {
+            true => Ok(reg.write(|w| w.p30_do().clear_bit())),
+            false => Ok(reg.write(|w| w.p31_do().clear_bit())),
+        }
     }
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        let reg = self.0.port.regs.gpio3_ctrl();
+        match self.0.pin_idx == 0 {
+            true => Ok(reg.write(|w| w.p30_do().set_bit())),
+            false => Ok(reg.write(|w| w.p31_do().set_bit())),
+        }
     }
 }
 
 impl<'a, 'mcr, const PIN_CT: usize> StatefulOutputPin for LowPowerOutputPin<'a, 'mcr, PIN_CT> {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
-        todo!()
+        let reg = self.0.port.regs.gpio3_ctrl();
+        match self.0.pin_idx == 0{
+            true => Ok(reg.read().p30_do().bit_is_set()),
+            false => Ok(reg.read().p31_do().bit_is_set()),
+        }
     }
 
     fn is_set_low(&self) -> Result<bool, Self::Error> {
-        todo!()
+        let reg = self.0.port.regs.gpio3_ctrl();
+        match self.0.pin_idx == 0{
+            true => Ok(reg.read().p30_do().bit_is_clear()),
+            false => Ok(reg.read().p31_do().bit_is_clear()),
+        }
     }
 }
 
