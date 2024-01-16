@@ -34,7 +34,8 @@ pub struct FlashController<'a> {
 
 impl<'a> FlashController<'a> {
     /// Creates a new flash controller peripheral.
-    // TODO: Make this function pub(crate) when the peripheral API is available. Tests needs it public until then.
+    pub fn new(flc: FLC, icc: &'a ICC0, gcr: &'a GCR) -> Self {
+        // TODO: Make this function pub(crate) when the peripheral API is available. Tests needs it public until then.
         Self { flc, icc, gcr }
     }
 
