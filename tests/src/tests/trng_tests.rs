@@ -7,7 +7,7 @@ use cortex_m_semihosting::hio;
 use max78000_hal::{
     max78000::TRNG,
     peripherals::{
-        power::{Module, PowerControl},
+        power::{PowerControl, ToggleableModule},
         trng::Trng,
     },
 };
@@ -18,7 +18,7 @@ pub fn run_trng_tests(trng_regs: TRNG, power: &PowerControl, stdout: &mut hio::H
 
     // Enable TRNG clock. This will be done by the peripheral API when available.
     // TODO: Remove this when the peripheral API is available.
-    power.enable_peripheral(Module::TRNG);
+    power.enable_peripheral(ToggleableModule::TRNG);
 
     // Run tests.
     let trng = Trng::new(trng_regs);
