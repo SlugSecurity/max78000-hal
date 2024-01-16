@@ -437,3 +437,117 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> CommonPinHandle<'a, P
         }
     }
 }
+
+/// Represents the pull mode of an input pin.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum PullMode {
+    /// High impedance mode (the default after power-on-reset).
+    HighImpedance,
+    /// Weak pullup mode (1 megaohm).
+    WeakPullup,
+    /// Strong pullup mode (25 kiloohms).
+    StrongPullup,
+    /// Weak pulldown mode (1 megaohm).
+    WeakPulldown,
+    /// Strong pulldown mode (25 kiloohms).
+    StrongPulldown,
+}
+
+impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> CommonInputPin<'a, Port, PIN_CT> {
+    /// Sets the pin's pull mode.
+    pub fn set_pull_mode(&self, mode: PullMode) {
+        let (padctrl0, padctrl1, ps) = match mode {
+            PullMode::HighImpedance => (false, false, None),
+            PullMode::WeakPullup => (true, false, Some(false)),
+            PullMode::StrongPullup => (true, false, Some(true)),
+            PullMode::WeakPulldown => (false, true, Some(false)),
+            PullMode::StrongPulldown => (false, true, Some(true)),
+        };
+
+        let bit = |r, bit| (r & !(1 << self.0.pin_idx)) | ((bit as u32) << self.0.pin_idx);
+
+        self.0
+            .port
+            .regs
+            .padctrl0()
+            .modify(|r, w| w.gpio_padctrl0().variant(bit(r.bits(), padctrl0)));
+        self.0
+            .port
+            .regs
+            .padctrl1()
+            .modify(|r, w| w.gpio_padctrl1().variant(bit(r.bits(), padctrl1)));
+        if let Some(ps) = ps {
+            self.0
+                .port
+                .regs
+                .ps()
+                .modify(|r, w| w.all().variant(bit(r.bits(), ps)));
+        }
+    }
+
+    /// Gets the pin's pull mode.
+    pub fn get_pull_mode(&self) -> PullMode {
+        let padctrl0 = self.0.port.regs.padctrl0().read().gpio_padctrl0().bits();
+        let padctrl1 = self.0.port.regs.padctrl1().read().gpio_padctrl1().bits();
+        let ps = self.0.port.regs.ps().read().all().bits();
+
+        match [padctrl0, padctrl1, ps].map(|x| x & (1 << self.0.pin_idx) != 0) {
+            [true, false, false] => PullMode::WeakPullup,
+            [true, false, true] => PullMode::StrongPullup,
+            [false, true, false] => PullMode::WeakPulldown,
+            [false, true, true] => PullMode::StrongPulldown,
+            _ => PullMode::HighImpedance,
+        }
+    }
+}
+
+/// Represents the drive strength of an output pin.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum DriveStrength {
+    /// Drive strength 0.
+    S0,
+    /// Drive strength 1.
+    S1,
+    /// Drive strength 2.
+    S2,
+    /// Drive strength 3.
+    S3,
+}
+
+impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> CommonOutputPin<'a, Port, PIN_CT> {
+    /// Sets the pin's drive strength.
+    pub fn set_drive_strength(&self, ds: DriveStrength) {
+        let (ds0, ds1) = match ds {
+            DriveStrength::S0 => (false, false),
+            DriveStrength::S1 => (true, false),
+            DriveStrength::S2 => (false, true),
+            DriveStrength::S3 => (true, true),
+        };
+
+        let bit = |r, bit| (r & !(1 << self.0.pin_idx)) | ((bit as u32) << self.0.pin_idx);
+
+        self.0
+            .port
+            .regs
+            .ds0()
+            .modify(|r, w| w.gpio_ds0().variant(bit(r.bits(), ds0)));
+        self.0
+            .port
+            .regs
+            .ds1()
+            .modify(|r, w| w.gpio_ds1().variant(bit(r.bits(), ds1)));
+    }
+
+    /// Gets the pin's drive strength.
+    pub fn get_drive_strength(&self) -> DriveStrength {
+        let ds0 = self.0.port.regs.ds0().read().gpio_ds0().bits();
+        let ds1 = self.0.port.regs.ds1().read().gpio_ds1().bits();
+
+        match [ds0, ds1].map(|x| x & (1 << self.0.pin_idx) != 0) {
+            [false, false] => DriveStrength::S0,
+            [true, false] => DriveStrength::S1,
+            [false, true] => DriveStrength::S2,
+            [true, true] => DriveStrength::S3,
+        }
+    }
+}
