@@ -64,6 +64,9 @@ pub enum ToggleableModule {
     TRNG,
 }
 
+/// Indicate a module that can be reset but not enabled or disabled
+pub enum NonToggleableModule {}
+
 impl<'r, 'l> PowerControl<'r, 'l> {
     // TODO: Make pub(crate)
     /// Creates a new PowerControl instance that holds references to the GCR and LPGCR registers.
