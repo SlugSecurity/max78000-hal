@@ -47,10 +47,6 @@ impl<'a> FlashController<'a> {
         }
     }
 
-    fn get_physical_address(&self, address: u32) -> u32 {
-        address - self::FLASH_MEM_BASE
-    }
-
     /// Unlocks memory protection to allow flash operations
     fn unlock_write_protection(&self) {
         self.flc.ctrl().modify(|_, w| w.unlock().unlocked());
@@ -93,9 +89,29 @@ impl<'a> FlashController<'a> {
         });
 
         // Clear the line fill buffer by reading 2 pages from flash
-        let mut _buffer: [u8; 4] = [0; 4];
-        self.read_bytes(self::FLASH_MEM_BASE, &mut _buffer);
-        self.read_bytes(self::FLASH_MEM_BASE + self::FLASH_PAGE_SIZE, &mut _buffer);
+        unsafe {
+            let ptr = FLASH_MEM_BASE as *const u32;
+            core::ptr::read_volatile(ptr);
+            core::ptr::read_volatile(ptr.add(FLASH_PAGE_SIZE as usize));
+        }
+    }
+
+    pub fn disable_icc0(&self) {
+        self.icc.ctrl().modify(|_, w| w.en().dis());
+    }
+
+    pub fn enable_icc0(&self) {
+        // ensure the cache is invalidated when enabled
+        self.disable_icc0();
+
+        self.icc.ctrl().modify(|_, w| w.en().en());
+        self.icc.ctrl().modify(|r, w| {
+            while r.rdy().bit_is_set() == false {}
+            w
+        });
+
+        // zeroize the icc instance
+        self.gcr.memz().modify(|_, w| w.icc0().set_bit());
     }
 
     /// Reads data from flash.
@@ -103,19 +119,6 @@ impl<'a> FlashController<'a> {
         if !self.check_address_bounds(address as u32) {
             return FlcReadErr::PtrBoundsErr;
         }
-
-        // Safety
-        // Behavior is undefined if any of the following conditions are violated:
-        //     src must be valid for reads of count * size_of::<T>() bytes.
-        //     dst must be valid for writes of count * size_of::<T>() bytes.
-        //     Both src and dst must be properly aligned.
-        //     The region of memory beginning at src with a size of count *
-        //     size_of::<T>() bytes must not overlap with the region of
-        //     memory beginning at dst with the same size.
-        // Like read, copy_nonoverlapping creates a bitwise copy of T,
-        // regardless of whether T is Copy. If T is not Copy, using both the
-        // values in the region beginning at *src and the region beginning
-        // at *dst can violate memory safety.
 
         unsafe {
             core::ptr::copy_nonoverlapping(address as *const u8, data.as_mut_ptr(), data.len());
@@ -174,8 +177,6 @@ impl<'a> FlashController<'a> {
             self.write_lt_128(physical_addr, chunk_8.remainder());
         }
 
-        self.flush_icc();
-
         FlcWriteErr::Succ
     }
 
@@ -224,6 +225,12 @@ impl<'a> FlashController<'a> {
         });
 
         self.set_clock_divisor();
+
+        // clear sale errors
+        self.flc.intr().modify(|_, w| w.af().clear_bit());
+
+        self.unlock_write_protection();
+
         unsafe {
             self.flc.addr().modify(|_, w| w.bits(address));
             self.flc.data(0).modify(|_, w| w.bits(data[0]));
@@ -232,7 +239,6 @@ impl<'a> FlashController<'a> {
             self.flc.data(3).modify(|_, w| w.bits(data[3]));
         }
 
-        self.unlock_write_protection();
         // Turn on write bit
         // The hardware automatically clears this field when the write
         // operation is complete.
@@ -246,6 +252,12 @@ impl<'a> FlashController<'a> {
         // If an error occurred, the FLC_INTR.af field is set to 1 by
         // hardware. An interrupt is generated if the FLC_INTR.afie field is
         // set to 1.
+
+        // Cant check af field cause didnt set up fault handling mabye ...
+        // self.flc.intr().modify(|r, w| {
+        //     while r.af().bit_is_set() == true {}
+        //     w
+        // });
 
         self.lock_write_protection();
         self.flush_icc();
@@ -278,10 +290,16 @@ impl<'a> FlashController<'a> {
             while r.pend().bit_is_clear() == false {}
             w
         });
+
         self.flc.intr().modify(|r, w| {
             while r.done().bit_is_set() == false {}
             w
         });
+
+        // self.flc.intr().modify(|r, w| {
+        //     while r.af().bit_is_set() == true {}
+        //     w
+        // });
 
         self.lock_write_protection();
         self.flush_icc();
