@@ -15,7 +15,7 @@ pub fn run_trng_tests(trng_regs: TRNG, gcr_regs: &GCR, stdout: &mut hio::HostStr
 
     // Enable TRNG clock. This will be done by the peripheral API when available.
     // TODO: Remove this when the peripheral API is available.
-    gcr_regs.pclkdis1.write(|w| w.trng().en());
+    gcr_regs.pclkdis1().write(|w| w.trng().en());
 
     // Run tests.
     let trng = Trng::new(trng_regs);
@@ -24,7 +24,7 @@ pub fn run_trng_tests(trng_regs: TRNG, gcr_regs: &GCR, stdout: &mut hio::HostStr
     writeln!(stdout, "TRNG peripheral tests complete!\n").unwrap();
 }
 
-/// Tests the [`trng::Trng::random_u32()`] function.
+/// Tests the [`Trng::random_u32()`] function.
 fn test_random_u32(trng: &Trng) {
     for _ in 0..100 {
         let random = trng.random_u32();
@@ -81,7 +81,7 @@ fn find_and_warn_entropy(
     }
 }
 
-/// Tests the [`trng::Trng::fill_buffer()`] function.
+/// Tests the [`Trng::fill_buffer()`] function.
 fn test_fill_buffer(trng: &Trng, stdout: &mut hio::HostStream) {
     // Small buffer test.
     let mut buf = [0u8; 15];
