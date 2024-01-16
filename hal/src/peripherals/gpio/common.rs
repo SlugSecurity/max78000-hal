@@ -409,3 +409,31 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
         self.0.get_io_mode()
     }
 }
+
+/// Represents the associated power supply of a pin.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum PowerSupply {
+    /// VDDIO (1.8V).
+    Vddio,
+    /// VDDIOH (3.0V).
+    Vddioh,
+}
+
+impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> CommonPinHandle<'a, Port, PIN_CT> {
+    /// Sets the pin's associated power supply.
+    pub fn set_power_supply(&self, ps: PowerSupply) {
+        self.port.regs.vssel().modify(|r, w| match ps {
+            PowerSupply::Vddio => w.all().variant(r.bits() & !(1 << self.pin_idx)),
+            PowerSupply::Vddioh => w.all().variant(r.bits() | (1 << self.pin_idx)),
+        });
+    }
+
+    /// Gets the pin's associated power supply.
+    pub fn get_power_supply(&self) -> PowerSupply {
+        if self.port.regs.vssel().read().bits() & (1 << self.pin_idx) == 0 {
+            PowerSupply::Vddio
+        } else {
+            PowerSupply::Vddioh
+        }
+    }
+}
