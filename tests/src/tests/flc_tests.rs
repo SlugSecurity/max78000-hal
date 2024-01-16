@@ -12,12 +12,13 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
 
 fn test_flash_write(flc: FLC, icc0: &ICC0, gcr: &GCR) {
     let flc = FlashController::new(flc, icc0, gcr);
-    const MAGIC: u32 = 0xFEEDBEEF;
-    const TEST_VALUE: u32 = 0xDEADBEEF;
-    flc.page_erase(MAGIC);
-    flc.write(MAGIC, &u32::to_le_bytes(TEST_VALUE));
+    // let test_addr: u32 = FLASH_MEM_BASE + FLASH_MEM_SIZE - (2 * FLASH_PAGE_SIZE);
+    let test_addr: u32 = 0x1007bf00;
+    let test_val: u32 = 0xCAFEBABE;
+    flc.page_erase(test_addr);
+    flc.write(test_addr, &u32::to_le_bytes(test_val));
     let mut data_read: [u8; 4] = [0; 4];
-    flc.read_bytes(MAGIC, &mut data_read);
+    flc.read_bytes(test_addr, &mut data_read);
 
-    assert_eq!(u32::from_le_bytes(data_read) == TEST_VALUE, true);
+    assert_eq!(u32::from_le_bytes(data_read) == test_val, true);
 }
