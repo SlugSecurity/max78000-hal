@@ -499,6 +499,16 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> CommonInputPin<'a, Po
             _ => PullMode::HighImpedance,
         }
     }
+
+    /// Sets the pin's associated power supply.
+    pub fn set_power_supply(&self, ps: PowerSupply) {
+        self.0.set_power_supply(ps);
+    }
+
+    /// Gets the pin's associated power supply.
+    pub fn get_power_supply(&self) -> PowerSupply {
+        self.0.get_power_supply()
+    }
 }
 
 /// Represents the drive strength of an output pin.
@@ -549,5 +559,15 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize> CommonOutputPin<'a, P
             [false, true] => DriveStrength::S2,
             [true, true] => DriveStrength::S3,
         }
+    }
+
+    /// Sets the pin's associated power supply.
+    pub fn set_power_supply(&self, ps: PowerSupply) {
+        self.0.set_power_supply(ps);
+    }
+
+    /// Gets the pin's associated power supply.
+    pub fn get_power_supply(&self) -> PowerSupply {
+        self.0.get_power_supply()
     }
 }
