@@ -3,9 +3,9 @@
 use max78000::{GCR, LPGCR};
 
 /// Enable/disable peripheral clocks; reset peripherals.
-pub struct PowerControl<'r> {
+pub struct PowerControl<'r, 'l> {
     gcr: &'r GCR,
-    lpgcr: &'r LPGCR,
+    lpgcr: &'l LPGCR,
 }
 
 /// Indicate a module to enable, disable, or reset through power control registers
@@ -64,10 +64,10 @@ pub enum Module {
     TRNG,
 }
 
-impl<'r> PowerControl<'r> {
+impl<'r, 'l> PowerControl<'r, 'l> {
     // TODO: Make pub(crate)
     /// Creates a new PowerControl instance that holds references to the GCR and LPGCR registers.
-    pub fn new(gcr: &'r GCR, lpgcr: &'r LPGCR) -> Self {
+    pub fn new(gcr: &'r GCR, lpgcr: &'l LPGCR) -> Self {
         Self { gcr, lpgcr }
     }
 
