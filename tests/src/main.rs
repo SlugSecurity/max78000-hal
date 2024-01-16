@@ -9,7 +9,7 @@ use core::fmt::Write;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::Peripherals;
-use tests::{bit_band_tests, trng_tests};
+use tests::{bit_band_tests, flc_tests, trng_tests};
 
 extern crate panic_halt;
 
@@ -23,6 +23,13 @@ fn main() -> ! {
 
     // TODO: Use peripheral API when available.
     let peripherals = Peripherals::take().unwrap();
+
+    flc_tests::run_flc_tests(
+        &mut stdout,
+        peripherals.FLC,
+        &peripherals.ICC0,
+        &peripherals.GCR,
+    );
 
     bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
 
