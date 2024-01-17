@@ -169,6 +169,7 @@ impl<'a, 'mcr, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, 'mcr
     }
 }
 
+/// `InputPin` implementation for low power GPIO port.
 pub struct LowPowerInputPin<'a, 'mcr, const PIN_CT: usize>(LowPowerPinHandle<'a, 'mcr, PIN_CT>);
 
 impl<'a, 'mcr, const PIN_CT: usize> LowPowerInputPin<'a, 'mcr, PIN_CT> {
@@ -240,6 +241,7 @@ impl<'a, 'mcr, const PIN_CT: usize>
     }
 }
 
+/// `OutputPin` implementation for low power GPIO port.
 pub struct LowPowerOutputPin<'a, 'mcr, const PIN_CT: usize>(LowPowerPinHandle<'a, 'mcr, PIN_CT>);
 
 impl<'a, 'mcr, const PIN_CT: usize> OutputPin for LowPowerOutputPin<'a, 'mcr, PIN_CT> {
