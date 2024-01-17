@@ -250,17 +250,21 @@ impl<'a, 'mcr, const PIN_CT: usize> OutputPin for LowPowerOutputPin<'a, 'mcr, PI
     fn set_low(&mut self) -> Result<(), Self::Error> {
         let reg = self.0.port.regs.gpio3_ctrl();
         match self.0.pin_idx == 0 {
-            true => Ok(reg.write(|w| w.p30_do().clear_bit())),
-            false => Ok(reg.write(|w| w.p31_do().clear_bit())),
-        }
+            true => reg.write(|w| w.p30_do().clear_bit()),
+            false => reg.write(|w| w.p31_do().clear_bit()),
+        };
+
+        Ok(())
     }
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
         let reg = self.0.port.regs.gpio3_ctrl();
         match self.0.pin_idx == 0 {
-            true => Ok(reg.write(|w| w.p30_do().set_bit())),
-            false => Ok(reg.write(|w| w.p31_do().set_bit())),
-        }
+            true => reg.write(|w| w.p30_do().set_bit()),
+            false => reg.write(|w| w.p31_do().set_bit()),
+        };
+
+        Ok(())
     }
 }
 
