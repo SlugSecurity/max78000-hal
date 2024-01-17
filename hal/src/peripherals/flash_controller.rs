@@ -82,11 +82,8 @@ impl<'a> FlashController<'a> {
     // https://github.com/Analog-Devices-MSDK/msdk/blob/main/Libraries/PeriphDrivers/Source/FLC/flc_ai87.c
 
     fn flush_icc(&self) {
-        self.gcr.sysctrl().modify(|_, w| w.icc0_flush().flush());
-        self.gcr.sysctrl().modify(|r, w| {
-            while r.icc0_flush().is_flush() == false {}
-            w
-        });
+        self.icc.invalidate().modify(|_, w| w.invalid().variant(1));
+        while self.icc.ctrl().read().rdy().bit_is_set() == false {}
 
         // Clear the line fill buffer by reading 2 pages from flash
         unsafe {
@@ -105,10 +102,7 @@ impl<'a> FlashController<'a> {
         self.disable_icc0();
 
         self.icc.ctrl().modify(|_, w| w.en().en());
-        self.icc.ctrl().modify(|r, w| {
-            while r.rdy().bit_is_set() == false {}
-            w
-        });
+        while self.icc.ctrl().read().rdy().bit_is_set() == false {}
 
         // zeroize the icc instance
         self.gcr.memz().modify(|_, w| w.icc0().set_bit());
@@ -219,45 +213,24 @@ impl<'a> FlashController<'a> {
         // If desired, enable the flash controller interrupts by setting the
         // FLC_INTR.afie and FLC_INTR.doneie bits.
 
-        self.flc.ctrl().modify(|r, w| {
-            while r.pend().bit_is_clear() == false {}
-            w
-        });
+        while self.flc.ctrl().read().pend().is_busy() == true {}
 
         self.set_clock_divisor();
 
-        // clear sale errors
-        self.flc.intr().modify(|_, w| w.af().clear_bit());
+        self.flc.addr().modify(|_, w| w.addr().variant(address));
+        self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
+        self.flc.data(1).modify(|_, w| w.data().variant(data[1]));
+        self.flc.data(2).modify(|_, w| w.data().variant(data[2]));
+        self.flc.data(3).modify(|_, w| w.data().variant(data[3]));
 
         self.unlock_write_protection();
-
-        unsafe {
-            self.flc.addr().modify(|_, w| w.bits(address));
-            self.flc.data(0).modify(|_, w| w.bits(data[0]));
-            self.flc.data(1).modify(|_, w| w.bits(data[1]));
-            self.flc.data(2).modify(|_, w| w.bits(data[2]));
-            self.flc.data(3).modify(|_, w| w.bits(data[3]));
-        }
 
         // Turn on write bit
         // The hardware automatically clears this field when the write
         // operation is complete.
 
         self.flc.ctrl().modify(|_, w| w.wr().set_bit());
-        self.flc.intr().modify(|r, w| {
-            while r.done().bit_is_set() == false {}
-            w
-        });
-
-        // If an error occurred, the FLC_INTR.af field is set to 1 by
-        // hardware. An interrupt is generated if the FLC_INTR.afie field is
-        // set to 1.
-
-        // Cant check af field cause didnt set up fault handling mabye ...
-        // self.flc.intr().modify(|r, w| {
-        //     while r.af().bit_is_set() == true {}
-        //     w
-        // });
+        while self.flc.ctrl().read().wr().is_complete() == false {}
 
         self.lock_write_protection();
         self.flush_icc();
@@ -270,36 +243,19 @@ impl<'a> FlashController<'a> {
             return FlcEraseErr::PtrBoundsErr;
         }
 
-        self.flc.ctrl().modify(|r, w| {
-            while r.pend().bit_is_clear() == false {}
-            w
-        });
+        while self.flc.ctrl().read().pend().bit_is_clear() == false {}
 
         self.set_clock_divisor();
 
         //  FLC_ADDR[12:0] is ignored by the FLC to ensure the address is
         //  page-aligned.
-        unsafe {
-            self.flc.addr().modify(|_, w| w.bits(address));
-        }
+        self.flc.addr().modify(|_, w| w.addr().variant(address));
 
         self.unlock_write_protection();
         self.flc.ctrl().modify(|_, w| w.erase_code().erase_page());
         self.flc.ctrl().modify(|_, w| w.pge().set_bit());
-        self.flc.ctrl().modify(|r, w| {
-            while r.pend().bit_is_clear() == false {}
-            w
-        });
 
-        self.flc.intr().modify(|r, w| {
-            while r.done().bit_is_set() == false {}
-            w
-        });
-
-        // self.flc.intr().modify(|r, w| {
-        //     while r.af().bit_is_set() == true {}
-        //     w
-        // });
+        while self.flc.ctrl().read().pend().bit_is_clear() == false {}
 
         self.lock_write_protection();
         self.flush_icc();

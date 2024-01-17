@@ -4,10 +4,10 @@ use max78000_hal::max78000::{FLC, GCR, ICC0};
 use max78000_hal::peripherals::flash_controller::*;
 
 pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR) {
-    // writeln!(stdout, "Starting flash tests...").unwrap();
-    // writeln!(stdout, "Test flash write...").unwrap();
+    writeln!(stdout, "Starting flash tests...").unwrap();
+    writeln!(stdout, "Test flash write...").unwrap();
     test_flash_write(flc, icc0, gcr);
-    // writeln!(stdout, "Flash Controller tests complete!").unwrap();
+    writeln!(stdout, "Flash Controller tests complete!").unwrap();
 }
 
 fn test_flash_write(flc: FLC, icc0: &ICC0, gcr: &GCR) {
