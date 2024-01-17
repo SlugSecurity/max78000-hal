@@ -238,7 +238,7 @@ impl<'a, 'mcr, const PIN_CT: usize> OutputPin for LowPowerOutputPin<'a, 'mcr, PI
 impl<'a, 'mcr, const PIN_CT: usize> StatefulOutputPin for LowPowerOutputPin<'a, 'mcr, PIN_CT> {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         let reg = self.0.port.regs.gpio3_ctrl();
-        match self.0.pin_idx == 0{
+        match self.0.pin_idx == 0 {
             true => Ok(reg.read().p30_do().bit_is_set()),
             false => Ok(reg.read().p31_do().bit_is_set()),
         }
@@ -246,7 +246,7 @@ impl<'a, 'mcr, const PIN_CT: usize> StatefulOutputPin for LowPowerOutputPin<'a, 
 
     fn is_set_low(&self) -> Result<bool, Self::Error> {
         let reg = self.0.port.regs.gpio3_ctrl();
-        match self.0.pin_idx == 0{
+        match self.0.pin_idx == 0 {
             true => Ok(reg.read().p30_do().bit_is_clear()),
             false => Ok(reg.read().p31_do().bit_is_clear()),
         }

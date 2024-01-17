@@ -29,9 +29,9 @@ macro_rules! generate_gpio_port_num {
         pub struct $port_num_type;
 
         #[sealed]
-
         impl GpioPortNum for $port_num_type {
             type Peripheral = $port_periph;
+
             const PORT_NUM: usize = $port_num;
         }
     };
