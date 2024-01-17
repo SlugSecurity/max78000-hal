@@ -31,31 +31,31 @@ use super::{
 pub mod port_num_types;
 
 // TODO FOR ASTRA:
-// - make input pin and output pin structs
-//       - pin types should implement InputPin for input pin and StatefulOutputPin for output pin
-//       - these pins should be a newtype wrapping the pin handle so drop works on it properly
-//       - all pin types, including PinHandle, should implement GeneralIoPin<INPUT_PIN_TYPE, OUTPUT_PIN_TYPE>
-//       - note: to implement the error checking for alternate functions,
+// [x] make input pin and output pin structs
+//     [x] pin types should implement InputPin for input pin and StatefulOutputPin for output pin
+//     [x] these pins should be a newtype wrapping the pin handle so drop works on it properly
+//     [x] all pin types, including PinHandle, should implement GeneralIoPin<INPUT_PIN_TYPE, OUTPUT_PIN_TYPE>
+//     [-] note: to implement the error checking for alternate functions,
 //               implement it based on the port num given back with GpioPortNum::PORT_NUM
 //
-// - after implementing above trait functionality
-//       - implement weak/strong pullup/pulldown resistor configuration (input mode only)
-//       - also drive strength and power supply (output mode only)
+// [x] after implementing above trait functionality
+//     [x] implement weak/strong pullup/pulldown resistor configuration (input mode only)
+//     [x] also drive strength and power supply (output mode only)
 //
-// - see low power module for example on everything above
+// [x] see low power module for example on everything above
 //
-// - add interrupt support (input mode only)
-//       - just need to support adding 1 listener per pin
-//       - the listener can either be low/high level triggered, rising/falling edge triggered, or dual edge triggered
-//       - if developer provides another listener through same function, overwrite previous listener
-// - add documentation
-//     - a module-level doc comment
-//     - public functions within this module that aren't trait impl functions
-//     - other public items like structs
-//     - on the super module with examples of how to use the API (can tell user to see user guide and datasheet too)
-//     - improve existing comments in entire driver to add more detail
-// - add unit tests for acquiring handles, releasing handles and recaquiring
-// - add unit tests for each public function in the common pin API
+// [ ] add interrupt support (input mode only)
+//     [ ] just need to support adding 1 listener per pin
+//     [ ] the listener can either be low/high level triggered, rising/falling edge triggered, or dual edge triggered
+//     [ ] if developer provides another listener through same function, overwrite previous listener
+// [-] add documentation
+//     [x] a module-level doc comment
+//     [x] public functions within this module that aren't trait impl functions
+//     [x] other public items like structs
+//     [ ] on the super module with examples of how to use the API (can tell user to see user guide and datasheet too)
+//     [ ] improve existing comments in entire driver to add more detail
+// [x] add unit tests for acquiring handles, releasing handles and recaquiring
+// [ ] add unit tests for each public function in the common pin API
 
 /// Marker struct implementing `GpioPortMetadata` for
 /// common GPIO ports.
