@@ -16,7 +16,6 @@ use super::{
 
 // TODO for arelyx:
 // - implement functions with todo!() in them (see LowPowerPinHandle::set_operating_mode for example)
-// - implement pullup resistor configuration (should be for just input mode, confirm this)
 // - add documentation
 //     - a module-level doc comment
 //     - public functions within this module that aren't trait impl functions
@@ -155,6 +154,18 @@ impl<'a, 'mcr, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, 'mcr
 }
 
 pub struct LowPowerInputPin<'a, 'mcr, const PIN_CT: usize>(LowPowerPinHandle<'a, 'mcr, PIN_CT>);
+
+impl<'a, 'mcr, const PIN_CT: usize> LowPowerInputPin<'a, 'mcr, PIN_CT> {
+    /// Enables the pin's pull-up resistor.
+    pub fn enable_pullup_resistor(&self, enable: bool) {
+        let reg = self.0.port.regs.gpio3_ctrl();
+
+        match self.0.pin_idx == 0 {
+            true => reg.write(|w| w.p30_pe().bit(enable)),
+            false => reg.write(|w| w.p31_pe().bit(enable)),
+        }
+    }
+}
 
 impl<'a, 'mcr, const PIN_CT: usize> InputPin for LowPowerInputPin<'a, 'mcr, PIN_CT> {
     type Error = Infallible;
