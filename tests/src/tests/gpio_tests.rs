@@ -42,6 +42,7 @@ pub fn run_gpio_tests(
     test_common_port(gpio0_port);
     test_common_port(gpio1_port);
     test_common_port(gpio2_port);
+    test_low_power_port(gpio3_port);
 
     writeln!(stdout, "GPIO peripheral tests complete!\n").unwrap();
 }
@@ -49,6 +50,38 @@ pub fn run_gpio_tests(
 fn test_common_port<const PIN_CT: usize>(
     port: GpioPort<'static, CommonGpio<impl GpioPortNum + 'static>, PIN_CT>,
 ) {
+    let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
+    assert!(matches!(
+        port.get_pin_handle(PIN_CT - 1),
+        Err(GpioError::HandleAlreadyTaken)
+    ));
+    assert!(matches!(
+        port.get_pin_handle(PIN_CT),
+        Err(GpioError::InvalidPinIndex)
+    ));
+
+    let pin = pin.into_input_pin().unwrap();
+    assert!(matches!(pin.get_io_mode(), PinIoMode::Input));
+    assert_ne!(pin.is_low(), pin.is_high());
+
+    let mut pin = pin.into_output_pin(PinState::High).unwrap();
+    assert!(matches!(pin.get_io_mode(), PinIoMode::Output));
+    assert!(pin.is_set_high().unwrap());
+    pin.set_low().unwrap();
+    assert!(pin.is_set_low().unwrap());
+    pin.set_high().unwrap();
+    assert!(pin.is_set_high().unwrap());
+    drop(pin);
+
+    let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
+    assert!(matches!(
+        port.get_pin_handle(PIN_CT - 1),
+        Err(GpioError::HandleAlreadyTaken)
+    ));
+    drop(pin);
+}
+
+fn test_low_power_port<'a, const PIN_CT: usize>(port: GpioPort<'a, LowPowerGpio<'a>, PIN_CT>) {
     let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
     assert!(matches!(
         port.get_pin_handle(PIN_CT - 1),
