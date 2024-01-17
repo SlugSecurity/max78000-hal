@@ -2,24 +2,38 @@
 
 use max78000::{FLC, GCR, ICC0};
 
+/// Flash memory base address.
 pub const FLASH_MEM_BASE: u32 = 0x1000_0000;
+
+/// Flash memory size.
 pub const FLASH_MEM_SIZE: u32 = 0x0007_FFFF;
+
+/// Flash page size.
 pub const FLASH_PAGE_SIZE: u32 = 0x2000;
 
+/// Error values a flash read operation throws.
 pub enum FlcReadErr {
+    /// The pointer argument is not a valid flash address.
     PtrBoundsErr,
+    /// Flash read operation succeeded.
     Succ,
 }
 
+/// Error values a flash write operation throws.
 pub enum FlcWriteErr {
-    AddressNotAlignedByte,
+    /// The pointer argument is not word (4 bytes) aligned.
     AddressNotAlignedWord,
+    /// The pointer argument is not a valid flash address.
     PtrBoundsErr,
+    /// Flash read operation succeeded.
     Succ,
 }
 
+/// Error values a flash erase operation throws.
 pub enum FlcEraseErr {
+    /// The pointer argument is not a valid flash address.
     PtrBoundsErr,
+    /// Flash read operation succeeded.
     Succ,
 }
 
@@ -30,8 +44,6 @@ pub struct FlashController<'a> {
     gcr: &'a GCR,
 }
 
-// TODO: Implement with the peripheral API when available.
-
 impl<'a> FlashController<'a> {
     /// Creates a new flash controller peripheral.
     pub fn new(flc: FLC, icc: &'a ICC0, gcr: &'a GCR) -> Self {
@@ -39,19 +51,21 @@ impl<'a> FlashController<'a> {
         Self { flc, icc, gcr }
     }
 
+    /// Checks the address to see if it is a valid flash memory address
     fn check_address_bounds(&self, address: u32) -> bool {
-        if address >= FLASH_MEM_BASE && address < (FLASH_MEM_BASE + FLASH_MEM_SIZE) {
-            return true;
-        } else {
-            return false;
-        }
+        (FLASH_MEM_BASE..(FLASH_MEM_BASE + FLASH_MEM_SIZE)).contains(&address)
     }
 
     /// Unlocks memory protection to allow flash operations
+    ///
+    /// This MUST be called before any non-read flash controller operation.
     fn unlock_write_protection(&self) {
         self.flc.ctrl().modify(|_, w| w.unlock().unlocked());
     }
 
+    /// Locks memory protection.
+    ///
+    /// This MUST be called after any non-read flash controller operation.
     fn lock_write_protection(&self) {
         self.flc.ctrl().modify(|_, w| w.unlock().locked());
     }
@@ -61,29 +75,16 @@ impl<'a> FlashController<'a> {
     ///
     /// This MUST be called before any non-read flash controller operations.
     fn set_clock_divisor(&self) {
+        todo!()
         // TODO: Finish.
     }
 
-    /// Flushes the data and instruction cache.
+    /// Flushes the flash line buffer and arm instruction cache.
     ///
     /// This MUST be called after any write/erase flash controller operations.
-
-    // This function should be called after modifying the contents of flash memory.
-    // It flushes the instruction caches and line fill buffer.
-
-    // It should be called _afterwards_ because after flash is modified the cache
-    // may contain instructions that may no longer be valid.  _Before_ the
-    // flash modifications the ICC may contain relevant cached instructions related to
-    // the incoming flash instructions (especially relevant in the case of external memory),
-    // and these instructions will be valid up until the point that the modifications are made.
-
-    // The line fill buffer is a FLC-related buffer that also may no longer be valid.
-    // It's flushed by reading 2 pages of flash.
-    // https://github.com/Analog-Devices-MSDK/msdk/blob/main/Libraries/PeriphDrivers/Source/FLC/flc_ai87.c
-
     fn flush_icc(&self) {
         self.icc.invalidate().modify(|_, w| w.invalid().variant(1));
-        while self.icc.ctrl().read().rdy().bit_is_set() == false {}
+        while !self.icc.ctrl().read().rdy().bit_is_set() {}
 
         // Clear the line fill buffer by reading 2 pages from flash
         unsafe {
@@ -93,16 +94,22 @@ impl<'a> FlashController<'a> {
         }
     }
 
+    /// Disables instruction cache.
+    ///
+    /// This MUST be called before any non-read flash controller operations.
     pub fn disable_icc0(&self) {
         self.icc.ctrl().modify(|_, w| w.en().dis());
     }
 
+    /// Disables instruction cache.
+    ///
+    /// This MUST be called after any non-read flash controller operations.
     pub fn enable_icc0(&self) {
         // ensure the cache is invalidated when enabled
         self.disable_icc0();
 
         self.icc.ctrl().modify(|_, w| w.en().en());
-        while self.icc.ctrl().read().rdy().bit_is_set() == false {}
+        while !self.icc.ctrl().read().rdy().bit_is_set() {}
 
         // zeroize the icc instance
         self.gcr.memz().modify(|_, w| w.icc0().set_bit());
@@ -110,7 +117,7 @@ impl<'a> FlashController<'a> {
 
     /// Reads data from flash.
     pub fn read_bytes(&self, address: u32, data: &mut [u8]) -> FlcReadErr {
-        if !self.check_address_bounds(address as u32) {
+        if !self.check_address_bounds(address) {
             return FlcReadErr::PtrBoundsErr;
         }
 
@@ -122,11 +129,6 @@ impl<'a> FlashController<'a> {
     }
 
     /// Write arbitary number of bytes of data to flash.
-    // make sure to disable ICC with ICC_Disable(); before Running this function
-
-    // Stuff that needs to be taken care of ...
-    // unaligned data needs to written to the correct address while maintaining the 128bit write
-    // page erases need to be accurate, for example, if a single write spans multiple pages
     pub fn write(&self, address: u32, data: &[u8]) -> FlcWriteErr {
         // Check address bounds
         if !self.check_address_bounds(address) {
@@ -153,7 +155,7 @@ impl<'a> FlashController<'a> {
                 &data[0..core::cmp::min(bytes_unaligned, data.len())],
             );
 
-            physical_addr = physical_addr + bytes_unaligned as u32;
+            physical_addr += bytes_unaligned as u32;
         }
 
         // If data left is less than 128 bits (16 bytes)
@@ -168,7 +170,6 @@ impl<'a> FlashController<'a> {
         let chunk_8 = data[bytes_unaligned_idx..].chunks_exact(4);
         let chunk_32 = chunk_8
             .clone()
-            .into_iter()
             .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()));
 
         let mut buffer_128_bits: [u32; 4] = [0; 4];
@@ -187,15 +188,14 @@ impl<'a> FlashController<'a> {
         // remainder from chunks
         if bytes_written < data.len() {
             self.write_lt_128(physical_addr, &data[bytes_written..]);
-        } else if chunk_8.remainder().len() > 0 {
+        } else if !chunk_8.remainder().is_empty() {
             self.write_lt_128(physical_addr, chunk_8.remainder());
         }
 
         FlcWriteErr::Succ
     }
 
-    /// Writes less than 128 bits (16 bytes) of data to flash. Data should be byte aligned.
-    // make sure to disable ICC with ICC_Disable(); before Running this function
+    /// Writes less than 128 bits (16 bytes) of data to flash.
     fn write_lt_128(&self, address: u32, data: &[u8]) -> FlcWriteErr {
         // Get byte idx within 128-bit word
         let byte_idx = (address & 0xF) as usize;
@@ -229,10 +229,7 @@ impl<'a> FlashController<'a> {
             return FlcWriteErr::AddressNotAlignedWord;
         }
 
-        // If desired, enable the flash controller interrupts by setting the
-        // FLC_INTR.afie and FLC_INTR.doneie bits.
-
-        while self.flc.ctrl().read().pend().is_busy() == true {}
+        while self.flc.ctrl().read().pend().is_busy() {}
 
         self.set_clock_divisor();
 
@@ -244,36 +241,32 @@ impl<'a> FlashController<'a> {
 
         self.unlock_write_protection();
 
-        // Turn on write bit
-        // The hardware automatically clears this field when the write
-        // operation is complete.
-
         self.flc.ctrl().modify(|_, w| w.wr().set_bit());
-        while self.flc.ctrl().read().wr().is_complete() == false {}
+        while !self.flc.ctrl().read().wr().is_complete() {}
 
         self.lock_write_protection();
         self.flush_icc();
         FlcWriteErr::Succ
     }
 
+    /// Erases a page of flash. FLC_ADDR[12:0] is ignored to ensure the address
+    /// is page-aligned.
     pub fn page_erase(&self, address: u32) -> FlcEraseErr {
         if !self.check_address_bounds(address) {
             return FlcEraseErr::PtrBoundsErr;
         }
 
-        while self.flc.ctrl().read().pend().bit_is_clear() == false {}
+        while !self.flc.ctrl().read().pend().bit_is_clear() {}
 
         self.set_clock_divisor();
 
-        //  FLC_ADDR[12:0] is ignored by the FLC to ensure the address is
-        //  page-aligned.
         self.flc.addr().modify(|_, w| w.addr().variant(address));
 
         self.unlock_write_protection();
         self.flc.ctrl().modify(|_, w| w.erase_code().erase_page());
         self.flc.ctrl().modify(|_, w| w.pge().set_bit());
 
-        while self.flc.ctrl().read().pend().bit_is_clear() == false {}
+        while !self.flc.ctrl().read().pend().bit_is_clear() {}
 
         self.lock_write_protection();
         self.flush_icc();

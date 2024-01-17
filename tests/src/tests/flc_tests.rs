@@ -1,8 +1,10 @@
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::{FLC, GCR, ICC0};
-use max78000_hal::peripherals::flash_controller::*;
+use max78000_hal::peripherals::flash_controller::FlashController;
 
+/// Runs all flash controller tests: [`flash_write`], [`flash_write_large`],
+/// [`flash_write_extra_large`], and [`flash_mass_erase`].
 pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR) {
     writeln!(stdout, "Starting flash tests...").unwrap();
     let flash_controller = FlashController::new(flc, icc0, gcr);
@@ -23,7 +25,6 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
 }
 
 fn test_flash_write(flash_controller: &FlashController) {
-    // let test_addr: u32 = FLASH_MEM_BASE + FLASH_MEM_SIZE - (1 * FLASH_PAGE_SIZE);
     let test_addr: u32 = 0x1007DFF0;
     let test_val: u32 = 0xCAFEBABE;
 
@@ -34,7 +35,7 @@ fn test_flash_write(flash_controller: &FlashController) {
     let mut data_read: [u8; 4] = [0; 4];
     flash_controller.read_bytes(test_addr, &mut data_read);
 
-    assert_eq!(u32::from_le_bytes(data_read) == test_val, true);
+    assert!(u32::from_le_bytes(data_read) == test_val);
 
     flash_controller.enable_icc0();
 }
@@ -50,7 +51,7 @@ fn test_flash_write_large(flash_controller: &FlashController) {
     let mut read_data: [u8; 20] = [0; 20];
     flash_controller.read_bytes(test_addr, &mut read_data);
 
-    assert_eq!(test_data == read_data, true);
+    assert!(test_data == read_data);
 
     flash_controller.enable_icc0();
 }
@@ -66,7 +67,7 @@ fn test_flash_write_extra_large(flash_controller: &FlashController) {
     let mut read_data: [u8; 100] = [0; 100];
     flash_controller.read_bytes(test_addr, &mut read_data);
 
-    assert_eq!(test_data == read_data, true);
+    assert!(test_data == read_data);
 
     flash_controller.enable_icc0();
 }
@@ -82,7 +83,7 @@ fn test_flash_write_unaligned(flash_controller: &FlashController) {
     let mut read_data: [u8; 10] = [0; 10];
     flash_controller.read_bytes(test_addr, &mut read_data);
 
-    assert_eq!(test_data == read_data, true);
+    assert!(test_data == read_data);
 
     flash_controller.enable_icc0();
 }
