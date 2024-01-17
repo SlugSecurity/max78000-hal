@@ -1,10 +1,10 @@
-//! Common GPIO pin manipulation.
+//! GPIO0-GPIO2 pin manipulation.
 //!
 //! # Examples
 //!
 //! Basic usage:
 //! ```
-//! let pin = port.get_pin_handle(0).unwrap().into_input_pin().unwrap();
+//! let pin = gpio_port.get_pin_handle(0).unwrap().into_input_pin().unwrap();
 //! assert_ne!(pin.is_low(), pin.is_high());
 //!
 //! let mut pin = pin.into_output_pin(PinState::High).unwrap();

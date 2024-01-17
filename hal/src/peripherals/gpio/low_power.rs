@@ -1,3 +1,19 @@
+//! GPIO3 pin manipulation.
+//!
+//! # Examples
+//!
+//! Basic usage:
+//! ```
+//! let pin = gpio_port.get_pin_handle(0).unwrap().into_input_pin().unwrap();
+//! assert_ne!(pin.is_low(), pin.is_high());
+//!
+//! let mut pin = pin.into_output_pin(PinState::High).unwrap();
+//! pin.set_low().unwrap();
+//! assert!(pin.is_set_low().unwrap());
+//! pin.set_high().unwrap();
+//! assert!(pin.is_set_high().unwrap());
+//! ```
+
 use core::convert::Infallible;
 use core::marker::PhantomData;
 
