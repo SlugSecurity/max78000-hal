@@ -5,25 +5,84 @@ use max78000_hal::peripherals::flash_controller::*;
 
 pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR) {
     writeln!(stdout, "Starting flash tests...").unwrap();
+    let flash_controller = FlashController::new(flc, icc0, gcr);
+
     writeln!(stdout, "Test flash write...").unwrap();
-    test_flash_write(flc, icc0, gcr);
+    test_flash_write(&flash_controller);
+
+    writeln!(stdout, "Test flash write large...").unwrap();
+    test_flash_write_large(&flash_controller);
+
+    writeln!(stdout, "Test flash write extra large...").unwrap();
+    test_flash_write_extra_large(&flash_controller);
+
+    writeln!(stdout, "Test flash write unaligned...").unwrap();
+    test_flash_write_unaligned(&flash_controller);
+
     writeln!(stdout, "Flash Controller tests complete!").unwrap();
 }
 
-fn test_flash_write(flc: FLC, icc0: &ICC0, gcr: &GCR) {
-    let flc = FlashController::new(flc, icc0, gcr);
+fn test_flash_write(flash_controller: &FlashController) {
     // let test_addr: u32 = FLASH_MEM_BASE + FLASH_MEM_SIZE - (1 * FLASH_PAGE_SIZE);
     let test_addr: u32 = 0x1007DFF0;
     let test_val: u32 = 0xCAFEBABE;
 
-    flc.disable_icc0();
+    flash_controller.disable_icc0();
 
-    flc.page_erase(test_addr);
-    flc.write(test_addr, &u32::to_le_bytes(test_val));
+    flash_controller.page_erase(test_addr);
+    flash_controller.write(test_addr, &u32::to_le_bytes(test_val));
     let mut data_read: [u8; 4] = [0; 4];
-    flc.read_bytes(test_addr, &mut data_read);
+    flash_controller.read_bytes(test_addr, &mut data_read);
 
     assert_eq!(u32::from_le_bytes(data_read) == test_val, true);
 
-    flc.enable_icc0();
+    flash_controller.enable_icc0();
+}
+
+fn test_flash_write_large(flash_controller: &FlashController) {
+    let test_addr: u32 = 0x1007DF00;
+    let test_data: [u8; 20] = [b'A'; 20];
+
+    flash_controller.disable_icc0();
+
+    flash_controller.page_erase(test_addr);
+    flash_controller.write(test_addr, &test_data);
+    let mut read_data: [u8; 20] = [0; 20];
+    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    assert_eq!(test_data == read_data, true);
+
+    flash_controller.enable_icc0();
+}
+
+fn test_flash_write_extra_large(flash_controller: &FlashController) {
+    let test_addr: u32 = 0x1007DF00;
+    let test_data: [u8; 100] = [b'A'; 100];
+
+    flash_controller.disable_icc0();
+
+    flash_controller.page_erase(test_addr);
+    flash_controller.write(test_addr, &test_data);
+    let mut read_data: [u8; 100] = [0; 100];
+    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    assert_eq!(test_data == read_data, true);
+
+    flash_controller.enable_icc0();
+}
+
+fn test_flash_write_unaligned(flash_controller: &FlashController) {
+    let test_addr: u32 = 0x1007DF0A;
+    let test_data: [u8; 10] = [b'A'; 10];
+
+    flash_controller.disable_icc0();
+
+    flash_controller.page_erase(test_addr);
+    flash_controller.write(test_addr, &test_data);
+    let mut read_data: [u8; 10] = [0; 10];
+    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    assert_eq!(test_data == read_data, true);
+
+    flash_controller.enable_icc0();
 }

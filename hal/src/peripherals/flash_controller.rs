@@ -123,6 +123,10 @@ impl<'a> FlashController<'a> {
 
     /// Write arbitary number of bytes of data to flash.
     // make sure to disable ICC with ICC_Disable(); before Running this function
+
+    // Stuff that needs to be taken care of ...
+    // unaligned data needs to written to the correct address while maintaining the 128bit write
+    // page erases need to be accurate, for example, if a single write spans multiple pages
     pub fn write(&self, address: u32, data: &[u8]) -> FlcWriteErr {
         // Check address bounds
         if !self.check_address_bounds(address) {
@@ -130,44 +134,60 @@ impl<'a> FlashController<'a> {
         }
 
         let mut physical_addr = address;
-        let bytes_unaligned = (address & 0xF) as usize;
+        let bytes_unaligned = if (address & 0xF) > 0 {
+            16 - (address & 0xF) as usize
+        } else {
+            0
+        };
+
+        let bytes_unaligned_idx = if bytes_unaligned > 0 {
+            bytes_unaligned - 1
+        } else {
+            0
+        };
 
         // Write unaligned data
         if bytes_unaligned > 0 {
             self.write_lt_128(
                 physical_addr,
-                &data[0..core::cmp::min(data.len(), bytes_unaligned)],
+                &data[0..core::cmp::min(bytes_unaligned, data.len())],
             );
 
             physical_addr = physical_addr + bytes_unaligned as u32;
         }
 
         // If data left is less than 128 bits (16 bytes)
-        if bytes_unaligned < data.len() && data[bytes_unaligned..].len() < 16 {
-            self.write_lt_128(physical_addr, &data[bytes_unaligned..]);
+        if bytes_unaligned < data.len() && data[bytes_unaligned_idx..].len() < 16 {
+            self.write_lt_128(physical_addr, &data[bytes_unaligned_idx..]);
             return FlcWriteErr::Succ;
-        } else if bytes_unaligned > data.len() {
+        } else if bytes_unaligned >= data.len() {
             return FlcWriteErr::Succ;
         }
 
-        let chunk_8 = data[bytes_unaligned..].chunks_exact(4);
+        // If data left is more than 128 bits (16 bytes)
+        let chunk_8 = data[bytes_unaligned_idx..].chunks_exact(4);
         let chunk_32 = chunk_8
             .clone()
             .into_iter()
             .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()));
 
         let mut buffer_128_bits: [u32; 4] = [0; 4];
+        let mut bytes_written = 0;
         for (idx, word) in chunk_32.into_iter().enumerate() {
             // If buffer is filled with user data
             if idx != 0 && idx % 4 == 0 {
                 self.write128(physical_addr, &buffer_128_bits);
+                bytes_written += 16;
                 physical_addr += 16;
             }
 
-            buffer_128_bits[0 % 4] = word;
+            buffer_128_bits[idx % 4] = word;
         }
 
-        if chunk_8.remainder().len() > 0 {
+        // remainder from chunks
+        if bytes_written < data.len() {
+            self.write_lt_128(physical_addr, &data[bytes_written..]);
+        } else if chunk_8.remainder().len() > 0 {
             self.write_lt_128(physical_addr, chunk_8.remainder());
         }
 
@@ -177,13 +197,8 @@ impl<'a> FlashController<'a> {
     /// Writes less than 128 bits (16 bytes) of data to flash. Data should be byte aligned.
     // make sure to disable ICC with ICC_Disable(); before Running this function
     fn write_lt_128(&self, address: u32, data: &[u8]) -> FlcWriteErr {
-        // Check if adddress is byte addressable
-        if address & 0x3 > 0 {
-            return FlcWriteErr::AddressNotAlignedByte;
-        }
-
         // Get byte idx within 128-bit word
-        let byte_idx = address & 0xF;
+        let byte_idx = (address & 0xF) as usize;
 
         // Align address to 128-bit word
         let aligned_addr = address & !0xF;
@@ -192,12 +207,16 @@ impl<'a> FlashController<'a> {
         self.read_bytes(aligned_addr, &mut current_bytes[..]);
 
         // construct 128 bits of data to write back to flash
-        current_bytes[byte_idx as usize..data.len()].copy_from_slice(data);
+        current_bytes[byte_idx..(byte_idx + data.len())].copy_from_slice(data);
+
         let mut new_data: [u32; 4] = [0; 4];
 
-        for (idx, word_chunk) in current_bytes.chunks(4).into_iter().enumerate() {
-            new_data[idx] = u32::from_le_bytes(word_chunk.try_into().unwrap());
-        }
+        current_bytes
+            .chunks(4)
+            .enumerate()
+            .for_each(|(idx, word_chunk)| {
+                new_data[idx] = u32::from_le_bytes(word_chunk.try_into().unwrap())
+            });
 
         self.write128(aligned_addr, &new_data)
     }
@@ -238,7 +257,6 @@ impl<'a> FlashController<'a> {
     }
 
     pub fn page_erase(&self, address: u32) -> FlcEraseErr {
-        // If desired, enable flash controller interrupts by setting the FLC_INTR.afie and FLC_INTR.doneie bits.
         if !self.check_address_bounds(address) {
             return FlcEraseErr::PtrBoundsErr;
         }
