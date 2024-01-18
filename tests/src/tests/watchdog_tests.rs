@@ -11,12 +11,12 @@ use max78000_hal::peripherals::watchdog::{ClockSource, Configuration, Threshold,
 fn WWDT() {
     // SAFETY: probably safe lol
     let mut watchdog_timer: WatchdogTimer =
-        WatchdogTimer::new(unsafe { WDT::steal() }, unsafe { &GCR::steal() });
+        WatchdogTimer::new(unsafe { WDT::steal() }, unsafe { GCR::steal() });
     let mut stdout = hio::hstdout().unwrap();
 
     writeln!(stdout, "Inside WWDT interrupt!").unwrap();
 
-    watchdog_timer.disable();
+    watchdog_timer.reset();
 
     if watchdog_timer.interrupt_late_event() {
         writeln!(stdout, "Clearing late interrupt flag...").unwrap();
@@ -29,7 +29,7 @@ fn WWDT() {
 }
 
 /// Run the tests for the watchdog timer peripheral module
-pub fn run_watchdog_tests(stdout: &mut hio::HostStream, wdt_regs: WDT, gcr_regs: &GCR) {
+pub fn run_watchdog_tests(stdout: &mut hio::HostStream, wdt_regs: WDT, gcr_regs: GCR) {
     let mut watchdog_timer = WatchdogTimer::new(wdt_regs, gcr_regs);
     writeln!(stdout, "Starting watchdog timer tests...").unwrap();
 
@@ -42,6 +42,8 @@ pub fn run_watchdog_tests(stdout: &mut hio::HostStream, wdt_regs: WDT, gcr_regs:
         windowed_mode: None,
         reset_late_val: Threshold::_2POW31,
         interrupt_late_val: Threshold::_2POW16,
+        watchdog_reset_enable: false,
+        watchdog_interrupt_enable: true
     });
 
     writeln!(stdout, "Configured watchdog timer!").unwrap();
@@ -54,7 +56,7 @@ pub fn run_watchdog_tests(stdout: &mut hio::HostStream, wdt_regs: WDT, gcr_regs:
     )
     .unwrap();
 
-    for _ in 0..65536 {
+    for _ in 0..6553600 {
         nop();
     }
 

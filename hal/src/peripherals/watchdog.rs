@@ -8,10 +8,13 @@ use max78000::wdt::ctrl::{INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WIN_
 use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_LATE_VAL_A};
 use max78000::wdt::rst::RESET_AW;
 use max78000::{GCR, WDT};
+use max78000::gcr::rst0::RESET_A;
+use max78000::wdt1::ctrl::{WDT_INT_EN_A, WDT_RST_EN_A};
 
 /// The Watchdog Timer peripheral struct. Obtain an instance of one with `WatchDogTimer::new`
 pub struct WatchdogTimer {
     wdt_regs: WDT,
+    gcr_regs: GCR
 }
 
 /// Clock source for the watchdog timer
@@ -107,6 +110,12 @@ pub struct Configuration {
     /// Threshold for a late reset - if the watchdog isn't kicked for this many cycles,
     /// the system will be reset.
     pub reset_late_val: Threshold,
+    /// Set to `true` to actually enable an interrupt when the watchdog is kicked past `interrupt_late_val`,
+    /// and/or `interrupt_early_val` if `windowed_mode` is provided.
+    pub watchdog_interrupt_enable: bool,
+    /// Set to `true` to enable an interrupt when the watchdog is kicked past `interrupt_late_val`,
+    /// and/or `interrupt_early_val` if `windowed_mode` is provided
+    pub watchdog_reset_enable: bool,
     /// Configuration for windowed mode - leave `None` if you don't wish to use the windowed mode
     /// of the watchdog timer, pass in `Some<WindowedConfiguration` if you do.
     pub windowed_mode: Option<WindowedConfiguration>,
@@ -118,11 +127,27 @@ enum FeedSequenceOperation {
     Kick,
 }
 
+pub enum WatchdogStatus {
+    DISABLED,
+    PENDING,
+    ENABLED
+}
+
 impl WatchdogTimer {
     /// Creates a new instance of the Watchdog Timer peripheral.
-    pub fn new(wdt_regs: WDT, gcr_regs: &GCR) -> Self {
+    ///
+    /// Note: Will RESET the wdt0 peripheral
+    pub fn new(wdt_regs: WDT, gcr_regs: GCR) -> Self {
         gcr_regs.pclkdis1().modify(|_, w| w.wdt0().variant(UART2_A::EN));
-        Self { wdt_regs }
+        gcr_regs.rst0().modify(|_, w| w.wdt0().variant(RESET_A::BUSY));
+        while !gcr_regs.rst0().read().wdt0().bit() {};
+        Self { wdt_regs, gcr_regs }
+    }
+
+    /// Reset the WDT peripheral
+    pub fn reset(&mut self) {
+        self.gcr_regs.rst0().modify(|_, w| w.wdt0().variant(RESET_A::BUSY));
+        while !self.gcr_regs.rst0().read().wdt0().bit() {};
     }
 
     /// Kicks the watchdog
@@ -136,9 +161,11 @@ impl WatchdogTimer {
     ///
     /// Provide reasonable values, otherwise you risk bricking the system
     pub fn configure(&mut self, options: Configuration) {
-        if self.is_enabled() {
+        /*if self.is_enabled() {
             self.disable();
-        }
+        }*/
+        self.reset();
+        self.disable();
 
         self.wdt_regs.clksel().modify(|_, w| {
             w.source().variant(match options.clock_source {
@@ -152,6 +179,8 @@ impl WatchdogTimer {
                 .variant(into_threshold!(options.interrupt_late_val, INT_LATE_VAL_A))
                 .rst_late_val()
                 .variant(into_threshold!(options.reset_late_val, RST_LATE_VAL_A))
+                .wdt_int_en().variant(if options.watchdog_interrupt_enable {WDT_INT_EN_A::EN} else {WDT_INT_EN_A::DIS})
+                .wdt_rst_en().variant(if options.watchdog_reset_enable {WDT_RST_EN_A::EN} else {WDT_RST_EN_A::DIS})
         });
 
         match options.windowed_mode {
@@ -179,17 +208,30 @@ impl WatchdogTimer {
 
     /// Returns if the watchdog timer peripheral is enabled
     pub fn is_enabled(&self) -> bool {
+        while !self.wdt_regs.ctrl().read().clkrdy().bit() {};
         self.wdt_regs.ctrl().read().en().bit()
     }
 
+    /*pub fn status(&self) -> WatchdogStatus {
+        if !self.wdt_regs.ctrl().read().clkrdy().bit() {
+            WatchdogStatus::PENDING
+        } else if self.wdt_regs.ctrl().read().en().bit() {
+            WatchdogStatus::ENABLED
+        } else {
+            WatchdogStatus::DISABLED
+        }
+    }*/
+
     /// Disables the watchdog timer peripheral
     pub fn disable(&mut self) {
-        self.feed_sequence(FeedSequenceOperation::Disable);
+        //if self.is_enabled() {self.feed_sequence(FeedSequenceOperation::Disable)};
+        self.feed_sequence(FeedSequenceOperation::Disable)
     }
 
     /// Enables the watchdog timer peripheral
     pub fn enable(&mut self) {
-        self.feed_sequence(FeedSequenceOperation::Enable);
+        //if !self.is_enabled() {self.feed_sequence(FeedSequenceOperation::Enable)};
+        self.feed_sequence(FeedSequenceOperation::Enable)
     }
 
     /// Returns whether or not the Reset Late event flag is active
@@ -290,17 +332,19 @@ impl WatchdogTimer {
 
             match feed_sequence_operation {
                 FeedSequenceOperation::Disable => {
-                    self.wdt_regs
-                        .ctrl()
-                        .modify(|_, w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
-                    self.poll_clkrdy();
+                    //if self.is_enabled() {
+                        self.wdt_regs
+                            .ctrl()
+                            .modify(|_, w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
+                        //self.poll_clkrdy();
+                    //}
                 }
                 FeedSequenceOperation::Enable => {
                     self.clear_all_flags();
                     self.wdt_regs
                         .ctrl()
                         .modify(|_, w| w.en().variant(EN_A::EN).clkrdy_ie().variant(false));
-                    self.poll_clkrdy();
+                    //self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Kick => (),
             }
