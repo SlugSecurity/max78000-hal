@@ -1,3 +1,5 @@
+//! Flash controller tests
+
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::{FLC, GCR, ICC0};
