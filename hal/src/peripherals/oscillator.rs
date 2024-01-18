@@ -1,3 +1,5 @@
+//! Oscillator peripheral
+
 use max78000::gcr::CLKCTRL;
 use max78000::trimsir::INRO;
 
@@ -369,19 +371,13 @@ impl private::Oscillator for Ipo {
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
         gcr_clkctrl.modify(|_, w| w.ipo_en().en());
-        gcr_clkctrl.modify(|r, w| {
-            while r.ipo_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().ipo_rdy().bit_is_set() {}
     }
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
         gcr_clkctrl.modify(|_, w| w.sysclk_sel().ipo());
-        gcr_clkctrl.modify(|r, w| {
-            while r.sysclk_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().sysclk_rdy().bit_is_set() {}
     }
 
     fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
@@ -444,19 +440,13 @@ impl private::Oscillator for Iso {
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
         gcr_clkctrl.modify(|_, w| w.iso_en().en());
-        gcr_clkctrl.modify(|r, w| {
-            while r.iso_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().iso_rdy().bit_is_set() {}
     }
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
         gcr_clkctrl.modify(|_, w| w.sysclk_sel().iso());
-        gcr_clkctrl.modify(|r, w| {
-            while r.sysclk_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().sysclk_rdy().bit_is_set() {}
     }
 
     fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
@@ -520,19 +510,13 @@ impl private::Oscillator for Ibro {
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
         gcr_clkctrl.modify(|_, w| w.ibro_en().en());
-        gcr_clkctrl.modify(|r, w| {
-            while r.ibro_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().ibro_rdy().bit_is_set() {}
     }
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
         gcr_clkctrl.modify(|_, w| w.sysclk_sel().ibro());
-        gcr_clkctrl.modify(|r, w| {
-            while r.sysclk_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().sysclk_rdy().bit_is_set() {}
     }
 
     fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
@@ -601,19 +585,13 @@ impl private::Oscillator for Inro {
     type Divider = InroDivider;
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
-        gcr_clkctrl.modify(|r, w| {
-            while r.inro_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().inro_rdy().bit_is_set() {}
     }
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
         gcr_clkctrl.modify(|_, w| w.sysclk_sel().inro());
-        gcr_clkctrl.modify(|r, w| {
-            while r.sysclk_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().sysclk_rdy().bit_is_set() {}
     }
 
     fn set_divider(&self, gcr_clkctrl: &CLKCTRL, trimsir: &INRO) {
@@ -697,19 +675,13 @@ impl private::Oscillator for Ertco {
 
     fn enable(&self, gcr_clkctrl: &CLKCTRL) {
         gcr_clkctrl.modify(|_, w| w.ertco_en().en());
-        gcr_clkctrl.modify(|r, w| {
-            while r.ertco_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().ertco_rdy().bit_is_set() {}
     }
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
         gcr_clkctrl.modify(|_, w| w.sysclk_sel().ertco());
-        gcr_clkctrl.modify(|r, w| {
-            while r.sysclk_rdy().bit_is_set() == false {}
-            w
-        });
+        while !gcr_clkctrl.read().sysclk_rdy().bit_is_set() {}
     }
 
     fn set_divider(&self, gcr_clkctrl: &CLKCTRL, _trimsir_inro: &INRO) {
