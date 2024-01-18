@@ -65,7 +65,32 @@ pub enum ToggleableModule {
 }
 
 /// Indicate a module that can be reset but not enabled or disabled
-pub enum NonToggleableModule {}
+pub enum NonToggleableModule {
+    /// Entire system
+    SYS,
+    /// Peripherals
+    PERIPH,
+    /// Soft reset
+    SOFT,
+    /// RTC reset
+    RTC,
+    /// Watchdog timer 0
+    WDT0,
+    /// Single Inductor Multiple Output
+    SIMO,
+    /// Dynamic Voltage Scaling
+    DVS,
+    /// I2C2
+    I2C2,
+    /// Audio interface
+    I2S,
+    /// Semaphore block
+    SMPHR,
+    /// SPI 0
+    SPI0,
+    /// AES block
+    AES,
+}
 
 impl<'r, 'l> PowerControl<'r, 'l> {
     // TODO: Make pub(crate)
@@ -175,63 +200,22 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             ToggleableModule::UART2 => self.gcr.rst0().write(|w| w.uart2().bit(true)),
         }
     }
-    /// System Reset
-    pub fn reset_sys(&self) {
-        self.gcr.rst0().write(|w| w.sys().bit(true));
-    }
 
-    /// Peripheral Reset
-    pub fn reset_periph(&self) {
-        self.gcr.rst0().write(|w| w.periph().bit(true));
-    }
-
-    /// Soft Reset
-    pub fn reset_soft(&self) {
-        self.gcr.rst0().write(|w| w.soft().bit(true));
-    }
-
-    /// RTC Reset
-    pub fn reset_rtc(&self) {
-        self.gcr.rst0().write(|w| w.rtc().bit(true));
-    }
-
-    /// Watchdog Timer 0 Reset
-    pub fn reset_wdt0(&self) {
-        self.gcr.rst0().write(|w| w.wdt0().bit(true));
-    }
-
-    /// Single Inductor Multiple Output Block Reset
-    pub fn reset_simo(&self) {
-        self.gcr.rst1().write(|w| w.simo().bit(true));
-    }
-
-    /// Dynamic Voltage Scaling Controller Reset
-    pub fn reset_dvs(&self) {
-        self.gcr.rst1().write(|w| w.dvs().bit(true));
-    }
-
-    /// I2C2 Reset
-    pub fn reset_i2c2(&self) {
-        self.gcr.rst1().write(|w| w.i2c2().bit(true));
-    }
-
-    /// Audio Interface Reset
-    pub fn reset_i2s(&self) {
-        self.gcr.rst1().write(|w| w.i2s().bit(true));
-    }
-
-    /// Semaphore Block Reset
-    pub fn reset_smphr(&self) {
-        self.gcr.rst1().write(|w| w.smphr().bit(true));
-    }
-
-    /// SPI0 Reset
-    pub fn reset_spi0(&self) {
-        self.gcr.rst1().write(|w| w.spi0().bit(true));
-    }
-
-    /// AES Block Reset
-    pub fn reset_aes(&self) {
-        self.gcr.rst1().write(|w| w.aes().bit(true));
+    /// Reset a module that cannot be enabled or disabled
+    pub fn reset_non_toggleable(&self, module_input: NonToggleableModule) {
+        match module_input {
+            NonToggleableModule::SYS => self.gcr.rst0().write(|w| w.sys().bit(true)),
+            NonToggleableModule::PERIPH => self.gcr.rst0().write(|w| w.periph().bit(true)),
+            NonToggleableModule::SOFT => self.gcr.rst0().write(|w| w.soft().bit(true)),
+            NonToggleableModule::RTC => self.gcr.rst0().write(|w| w.rtc().bit(true)),
+            NonToggleableModule::WDT0 => self.gcr.rst0().write(|w| w.wdt0().bit(true)),
+            NonToggleableModule::SIMO => self.gcr.rst1().write(|w| w.simo().bit(true)),
+            NonToggleableModule::DVS => self.gcr.rst1().write(|w| w.dvs().bit(true)),
+            NonToggleableModule::I2C2 => self.gcr.rst1().write(|w| w.i2c2().bit(true)),
+            NonToggleableModule::I2S => self.gcr.rst1().write(|w| w.i2s().bit(true)),
+            NonToggleableModule::SMPHR => self.gcr.rst1().write(|w| w.smphr().bit(true)),
+            NonToggleableModule::SPI0 => self.gcr.rst1().write(|w| w.spi0().bit(true)),
+            NonToggleableModule::AES => self.gcr.rst1().write(|w| w.aes().bit(true)),
+        }
     }
 }
