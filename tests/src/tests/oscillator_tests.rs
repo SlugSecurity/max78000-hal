@@ -90,13 +90,13 @@ pub fn run_oscillator_tests(
 fn test_ipo(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_ipo(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_ipo());
 }
 
 fn test_iso(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_1);
     let _sys_clk = SystemClock::new(&iso, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_iso(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_iso());
 }
 
 #[cfg(feature = "low_frequency_test")]
@@ -104,8 +104,8 @@ fn test_iso(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
 fn test_inro_freq_8kHz(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let inro = Inro::new(InroFrequency::_8kHz, InroDivider::_1);
     let _sys_clk = SystemClock::new(&inro, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_inro(), true);
-    assert_eq!(trimsir_inro_reg.read().lpclksel().is_8khz(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_inro());
+    assert!(trimsir_inro_reg.read().lpclksel().is_8khz());
 }
 
 #[cfg(feature = "low_frequency_test")]
@@ -113,8 +113,8 @@ fn test_inro_freq_8kHz(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
 fn test_inro_freq_16kHz(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let inro = Inro::new(InroFrequency::_16kHz, InroDivider::_1);
     let _sys_clk = SystemClock::new(&inro, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_inro(), true);
-    assert_eq!(trimsir_inro_reg.read().lpclksel().is_16khz(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_inro());
+    assert!(trimsir_inro_reg.read().lpclksel().is_16khz());
 }
 
 #[cfg(feature = "low_frequency_test")]
@@ -122,85 +122,85 @@ fn test_inro_freq_16kHz(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
 fn test_inro_freq_30kHz(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let inro = Inro::new(InroFrequency::_30kHz, InroDivider::_1);
     let _sys_clk = SystemClock::new(&inro, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_inro(), true);
-    assert_eq!(trimsir_inro_reg.read().lpclksel().is_30khz(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_inro());
+    assert!(trimsir_inro_reg.read().lpclksel().is_30khz());
 }
 
 fn test_ibro(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ibro = Ibro::new(IbroFrequency::_7_3728MHz, IbroDivider::_1);
     let _sys_clk = SystemClock::new(&ibro, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_ibro(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_ibro());
 }
 
 #[cfg(feature = "low_frequency_test")]
 fn test_ertco(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ertco = Ertco::new(ErtcoFrequency::_32_768kHz, ErtcoDivider::_1);
     let _sys_clk = SystemClock::new(&ertco, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_sel().is_ertco(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_sel().is_ertco());
 }
 
 fn test_divider_1(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div1(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div1());
 }
 
 fn test_divider_2(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_2);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div2(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div2());
 }
 
 fn test_divider_4(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_4);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div4(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div4());
 }
 
 fn test_divider_8(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_8);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div8(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div8());
 }
 
 fn test_divider_16(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_16);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div16(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div16());
 }
 
 fn test_divider_32(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_32);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div32(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div32());
 }
 
 fn test_divider_64(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_64);
     let _sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(gcr_clkctrl_reg.read().sysclk_div().is_div64(), true);
+    assert!(gcr_clkctrl_reg.read().sysclk_div().is_div64());
 }
 
 fn test_frequency_before(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     let sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(sys_clk.clock_frequency == 100_000_000, true);
+    assert!(sys_clk.clock_frequency == 100_000_000);
 }
 
 fn test_divider_before(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     let sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(sys_clk.clock_divider == 1, true);
+    assert!(sys_clk.clock_divider == 1);
 }
 
 fn test_frequency_after(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_8);
     let sys_clk = SystemClock::new(&iso, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(sys_clk.clock_frequency == 60_000_000, true);
+    assert!(sys_clk.clock_frequency == 60_000_000);
 }
 
 fn test_divider_after(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_8);
     let sys_clk = SystemClock::new(&iso, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert_eq!(sys_clk.clock_divider == 8, true);
+    assert!(sys_clk.clock_divider == 8);
 }

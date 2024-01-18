@@ -27,8 +27,8 @@ fn main() -> ! {
     bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
 
     oscillator_tests::run_oscillator_tests(
-        &peripherals.GCR.clkctrl(),
-        &peripherals.TRIMSIR.inro(),
+        peripherals.GCR.clkctrl(),
+        peripherals.TRIMSIR.inro(),
         &mut stdout,
     );
 

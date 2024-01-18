@@ -11,10 +11,10 @@ pub enum IpoFrequency {
     _100MHz,
 }
 
-impl Into<u32> for IpoFrequency {
-    fn into(self) -> u32 {
-        match self {
-            Self::_100MHz => 100_000_000,
+impl From<IpoFrequency> for u32 {
+    fn from(val: IpoFrequency) -> Self {
+        match val {
+            IpoFrequency::_100MHz => 100_000_000,
         }
     }
 }
@@ -27,10 +27,10 @@ pub enum IsoFrequency {
     _60MHz,
 }
 
-impl Into<u32> for IsoFrequency {
-    fn into(self) -> u32 {
-        match self {
-            Self::_60MHz => 60_000_000,
+impl From<IsoFrequency> for u32 {
+    fn from(val: IsoFrequency) -> Self {
+        match val {
+            IsoFrequency::_60MHz => 60_000_000,
         }
     }
 }
@@ -49,12 +49,12 @@ pub enum InroFrequency {
 }
 
 #[cfg(feature = "low_frequency")]
-impl Into<u32> for InroFrequency {
-    fn into(self) -> u32 {
-        match self {
-            Self::_8kHz => 8_000,
-            Self::_16kHz => 16_000,
-            Self::_30kHz => 30_000,
+impl From<InroFrequency> for u32 {
+    fn from(val: InroFrequency) -> Self {
+        match val {
+            InroFrequency::_8kHz => 8_000,
+            InroFrequency::_16kHz => 16_000,
+            InroFrequency::_30kHz => 30_000,
         }
     }
 }
@@ -67,10 +67,10 @@ pub enum IbroFrequency {
     _7_3728MHz,
 }
 
-impl Into<u32> for IbroFrequency {
-    fn into(self) -> u32 {
-        match self {
-            Self::_7_3728MHz => 7_372_800,
+impl From<IbroFrequency> for u32 {
+    fn from(val: IbroFrequency) -> Self {
+        match val {
+            IbroFrequency::_7_3728MHz => 7_372_800,
         }
     }
 }
@@ -85,10 +85,10 @@ pub enum ErtcoFrequency {
 }
 
 #[cfg(feature = "low_frequency")]
-impl Into<u32> for ErtcoFrequency {
-    fn into(self) -> u32 {
-        match self {
-            Self::_32_768kHz => 32_768,
+impl From<ErtcoFrequency> for u32 {
+    fn from(val: ErtcoFrequency) -> Self {
+        match val {
+            ErtcoFrequency::_32_768kHz => 32_768,
         }
     }
 }
@@ -112,18 +112,18 @@ pub enum IpoDivider {
     _128 = 128,
 }
 
-impl Into<u8> for IpoDivider {
-    fn into(self) -> u8 {
-        match self {
-            Self::_1 => 1,
-            Self::_2 => 2,
-            Self::_4 => 4,
-            Self::_8 => 8,
-            Self::_16 => 16,
-            Self::_32 => 32,
-            Self::_64 => 64,
+impl From<IpoDivider> for u8 {
+    fn from(val: IpoDivider) -> Self {
+        match val {
+            IpoDivider::_1 => 1,
+            IpoDivider::_2 => 2,
+            IpoDivider::_4 => 4,
+            IpoDivider::_8 => 8,
+            IpoDivider::_16 => 16,
+            IpoDivider::_32 => 32,
+            IpoDivider::_64 => 64,
             #[cfg(feature = "low_frequency")]
-            Self::_128 => 128,
+            IpoDivider::_128 => 128,
         }
     }
 }
@@ -147,19 +147,19 @@ pub enum IsoDivider {
     _128 = 128,
 }
 
-impl Into<u8> for IsoDivider {
-    fn into(self) -> u8 {
-        match self {
-            Self::_1 => 1,
-            Self::_2 => 2,
-            Self::_4 => 4,
-            Self::_8 => 8,
-            Self::_16 => 16,
-            Self::_32 => 32,
+impl From<IsoDivider> for u8 {
+    fn from(val: IsoDivider) -> Self {
+        match val {
+            IsoDivider::_1 => 1,
+            IsoDivider::_2 => 2,
+            IsoDivider::_4 => 4,
+            IsoDivider::_8 => 8,
+            IsoDivider::_16 => 16,
+            IsoDivider::_32 => 32,
             #[cfg(feature = "low_frequency")]
-            Self::_64 => 64,
+            IsoDivider::_64 => 64,
             #[cfg(feature = "low_frequency")]
-            Self::_128 => 128,
+            IsoDivider::_128 => 128,
         }
     }
 }
@@ -186,22 +186,22 @@ pub enum IbroDivider {
     _128 = 128,
 }
 
-impl Into<u8> for IbroDivider {
-    fn into(self) -> u8 {
-        match self {
-            Self::_1 => 1,
-            Self::_2 => 2,
-            Self::_4 => 4,
+impl From<IbroDivider> for u8 {
+    fn from(val: IbroDivider) -> Self {
+        match val {
+            IbroDivider::_1 => 1,
+            IbroDivider::_2 => 2,
+            IbroDivider::_4 => 4,
             #[cfg(feature = "low_frequency")]
-            Self::_8 => 8,
+            IbroDivider::_8 => 8,
             #[cfg(feature = "low_frequency")]
-            Self::_16 => 16,
+            IbroDivider::_16 => 16,
             #[cfg(feature = "low_frequency")]
-            Self::_32 => 32,
+            IbroDivider::_32 => 32,
             #[cfg(feature = "low_frequency")]
-            Self::_64 => 64,
+            IbroDivider::_64 => 64,
             #[cfg(feature = "low_frequency")]
-            Self::_128 => 128,
+            IbroDivider::_128 => 128,
         }
     }
 }
@@ -232,24 +232,24 @@ pub enum InroDivider {
 }
 
 #[cfg(feature = "low_frequency")]
-impl Into<u8> for InroDivider {
-    fn into(self) -> u8 {
-        match self {
-            Self::_1 => 1,
+impl From<InroDivider> for u8 {
+    fn from(val: InroDivider) -> Self {
+        match val {
+            InroDivider::_1 => 1,
             #[cfg(feature = "low_frequency")]
-            Self::_2 => 2,
+            InroDivider::_2 => 2,
             #[cfg(feature = "low_frequency")]
-            Self::_4 => 4,
+            InroDivider::_4 => 4,
             #[cfg(feature = "low_frequency")]
-            Self::_8 => 8,
+            InroDivider::_8 => 8,
             #[cfg(feature = "low_frequency")]
-            Self::_16 => 16,
+            InroDivider::_16 => 16,
             #[cfg(feature = "low_frequency")]
-            Self::_32 => 32,
+            InroDivider::_32 => 32,
             #[cfg(feature = "low_frequency")]
-            Self::_64 => 64,
+            InroDivider::_64 => 64,
             #[cfg(feature = "low_frequency")]
-            Self::_128 => 128,
+            InroDivider::_128 => 128,
         }
     }
 }
