@@ -103,15 +103,17 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
         "Testing spin_bit on RTC peripheral to test if clock is ready to read."
     )
     .unwrap();
-    clock.ctrl().write(|w| w.wr_en().variant(WR_EN_A::PENDING));
+    clock
+        .ctrl()
+        .modify(|_, w| w.wr_en().variant(WR_EN_A::PENDING));
     // SAFETY: Safe as we are passing in a peripheral address in bit-banding space
     // (0x4000_6010), bit 3 (RTC_CTRL.busy) is a writable bit of a valid register
     // (page 288 of user guide).
     unsafe {
         spin_bit(clock.ctrl().as_ptr(), 3, false);
     }
-    clock.ctrl().write(|w| w.en().variant(EN_A::EN));
-    clock.ctrl().write(|w| w.rdy().variant(RDY_A::BUSY));
+    clock.ctrl().modify(|_, w| w.en().variant(EN_A::EN));
+    clock.ctrl().modify(|_, w| w.rdy().variant(RDY_A::BUSY));
     writeln!(
         stdout,
         "set clock ready bit to BUSY, waiting for it to become ready again..."
@@ -126,5 +128,7 @@ fn test_spin_bit(stdout: &mut hio::HostStream, clock: &RTC) {
 
     writeln!(stdout, "Caught the clock ready bit!").unwrap();
     writeln!(stdout, "Disabling RTC write enable").unwrap();
-    clock.ctrl().write(|w| w.wr_en().variant(WR_EN_A::INACTIVE));
+    clock
+        .ctrl()
+        .modify(|_, w| w.wr_en().variant(WR_EN_A::INACTIVE));
 }

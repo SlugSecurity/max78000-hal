@@ -2,3 +2,4 @@
 
 pub mod bit_band_tests;
 pub mod trng_tests;
+pub mod watchdog_tests;
