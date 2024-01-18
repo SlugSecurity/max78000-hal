@@ -219,19 +219,12 @@ impl From<IbroDivider> for u8 {
 /// Can be converted into a u8 integer.
 pub enum InroDivider {
     _1 = 1,
-    #[cfg(feature = "low_frequency")]
     _2 = 2,
-    #[cfg(feature = "low_frequency")]
     _4 = 4,
-    #[cfg(feature = "low_frequency")]
     _8 = 8,
-    #[cfg(feature = "low_frequency")]
     _16 = 16,
-    #[cfg(feature = "low_frequency")]
     _32 = 32,
-    #[cfg(feature = "low_frequency")]
     _64 = 64,
-    #[cfg(feature = "low_frequency")]
     _128 = 128,
 }
 
@@ -270,18 +263,18 @@ pub type ErtcoDivider = InroDivider;
 /// registers. The GCR's clkctrl register is used turn on certain oscillators and
 /// select the system oscillator. The TRIMSIR's inro register is used to configure
 /// the frequency of the inro.
-pub struct SystemClock<'a> {
+pub struct SystemClock<'a, 'b> {
     /// Reference to the clkctrl register from the GCR
-    pub gcr_clkctrl_register: &'a CLKCTRL,
+    gcr_clkctrl_register: &'a CLKCTRL,
     /// Reference to the inro register from the TRIMSIR
-    pub trimsir_inro_register: &'a INRO,
+    trimsir_inro_register: &'b INRO,
     /// The current SYS_OSC frequency
-    pub clock_frequency: u32,
+    clock_frequency: u32,
     /// The current SYS_OSC divider
-    pub clock_divider: u8,
+    clock_divider: u8,
 }
 
-impl<'a> SystemClock<'a> {
+impl<'a, 'b> SystemClock<'a, 'b> {
     /// The SystemClock constructor takes in a user defined Oscillator object
     /// and references to the GCR's clkctrl register block and the TRIMSIR's
     /// inro register block. The constructor defines current system clock's
@@ -293,9 +286,9 @@ impl<'a> SystemClock<'a> {
     /// let sys_clk = SystemClock::new(&ipo, clkctrl_peripheral, trimsir_peripheral);
     /// ```
     pub fn new<T: Oscillator + private::Oscillator>(
-        osc: &'a T,
+        osc: &T,
         gcr_clkctrl_peripheral: &'a CLKCTRL,
-        trimsir_inro_peripheral: &'a INRO,
+        trimsir_inro_peripheral: &'b INRO,
     ) -> Self {
         let mut new_sysclk = Self {
             gcr_clkctrl_register: gcr_clkctrl_peripheral,
@@ -311,11 +304,21 @@ impl<'a> SystemClock<'a> {
     /// Sets the desired oscillator as the system oscillator using the
     /// set_sysclk function of the oscillator type. In addition, it updates the
     /// clock_frequency and clock_divider fields of the SystemClock struct.
-    pub fn set_sysclk<T: Oscillator + private::Oscillator>(&mut self, osc: &'a T) {
+    pub fn set_sysclk<T: Oscillator + private::Oscillator>(&mut self, osc: &T) {
         osc.set_sysclk(self.gcr_clkctrl_register);
         osc.set_divider(self.gcr_clkctrl_register, self.trimsir_inro_register);
         self.clock_frequency = osc.get_freq().into();
         self.clock_divider = osc.get_div().into();
+    }
+
+    /// Returns the clock divider of the SYS_OSC
+    pub fn get_div(&self) -> u8 {
+        self.clock_divider
+    }
+
+    /// Returns the frequency of the SYS_OSC
+    pub fn get_freq(&self) -> u32 {
+        self.clock_frequency
     }
 }
 
@@ -328,6 +331,10 @@ pub trait Oscillator {
 
     /// Oscillator type constructor
     fn new(frequency: Self::Frequency, divider: Self::Divider) -> Self;
+    /// Returns the frequency of the oscillator
+    fn get_freq(&self) -> Self::Frequency;
+    /// Returns the divider of the system clock
+    fn get_div(&self) -> Self::Divider;
 }
 
 pub(crate) mod private {
@@ -348,10 +355,6 @@ pub(crate) mod private {
         fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL);
         /// Sets the bits in the GCR clkctrl register to select the clock divider and frequency
         fn set_divider(&self, gcr_clkctrl: &CLKCTRL, trimsir_inro: &INRO);
-        /// Returns the frequency of the oscillator
-        fn get_freq(&self) -> Self::Frequency;
-        /// Returns the divider of the system clock
-        fn get_div(&self) -> Self::Divider;
     }
 }
 /// The Internal Primary Oscillator structure which conforms to the oscillator trait
@@ -366,6 +369,14 @@ impl Oscillator for Ipo {
 
     fn new(frequency: IpoFrequency, divider: IpoDivider) -> Self {
         Self { frequency, divider }
+    }
+
+    fn get_div(&self) -> Self::Divider {
+        self.divider
+    }
+
+    fn get_freq(&self) -> Self::Frequency {
+        self.frequency
     }
 }
 
@@ -413,14 +424,6 @@ impl private::Oscillator for Ipo {
             }
         }
     }
-
-    fn get_div(&self) -> Self::Divider {
-        self.divider
-    }
-
-    fn get_freq(&self) -> Self::Frequency {
-        self.frequency
-    }
 }
 
 /// The Internal Secondary Oscillator structure which conforms to the oscillator trait
@@ -435,6 +438,14 @@ impl Oscillator for Iso {
 
     fn new(frequency: IsoFrequency, divider: IsoDivider) -> Self {
         Self { frequency, divider }
+    }
+
+    fn get_div(&self) -> Self::Divider {
+        self.divider
+    }
+
+    fn get_freq(&self) -> Self::Frequency {
+        self.frequency
     }
 }
 
@@ -483,14 +494,6 @@ impl private::Oscillator for Iso {
             }
         }
     }
-
-    fn get_div(&self) -> Self::Divider {
-        self.divider
-    }
-
-    fn get_freq(&self) -> Self::Frequency {
-        self.frequency
-    }
 }
 
 /// The Internal Baud Rate Oscillator structure which conforms to the oscillator trait
@@ -506,16 +509,21 @@ impl Oscillator for Ibro {
     fn new(frequency: IbroFrequency, divider: IbroDivider) -> Self {
         Self { frequency, divider }
     }
+
+    fn get_div(&self) -> Self::Divider {
+        self.divider
+    }
+
+    fn get_freq(&self) -> Self::Frequency {
+        self.frequency
+    }
 }
 
 impl private::Oscillator for Ibro {
     type Frequency = IbroFrequency;
     type Divider = IbroDivider;
 
-    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
-        gcr_clkctrl.modify(|_, w| w.ibro_en().en());
-        while !gcr_clkctrl.read().ibro_rdy().bit_is_set() {}
-    }
+    fn enable(&self, _gcr_clkctrl: &CLKCTRL) {}
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
@@ -556,14 +564,6 @@ impl private::Oscillator for Ibro {
             }
         }
     }
-
-    fn get_div(&self) -> Self::Divider {
-        self.divider
-    }
-
-    fn get_freq(&self) -> Self::Frequency {
-        self.frequency
-    }
 }
 
 #[cfg(feature = "low_frequency")]
@@ -580,6 +580,14 @@ impl Oscillator for Inro {
 
     fn new(frequency: InroFrequency, divider: InroDivider) -> Self {
         Self { frequency, divider }
+    }
+
+    fn get_div(&self) -> Self::Divider {
+        self.divider
+    }
+
+    fn get_freq(&self) -> Self::Frequency {
+        self.frequency
     }
 }
 
@@ -615,43 +623,28 @@ impl private::Oscillator for Inro {
             InroDivider::_1 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_2 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_4 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_8 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_16 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_32 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_64 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
             }
-            #[cfg(feature = "low_frequency")]
             InroDivider::_128 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
-    }
-
-    fn get_div(&self) -> Self::Divider {
-        self.divider
-    }
-
-    fn get_freq(&self) -> Self::Frequency {
-        self.frequency
     }
 }
 
@@ -669,6 +662,14 @@ impl Oscillator for Ertco {
 
     fn new(frequency: ErtcoFrequency, divider: ErtcoDivider) -> Self {
         Self { frequency, divider }
+    }
+
+    fn get_div(&self) -> Self::Divider {
+        self.divider
+    }
+
+    fn get_freq(&self) -> Self::Frequency {
+        self.frequency
     }
 }
 
@@ -693,42 +694,27 @@ impl private::Oscillator for Ertco {
             ErtcoDivider::_1 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div1());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_2 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div2());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_4 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div4());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_8 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div8());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_16 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div16());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_32 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div32());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_64 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div64());
             }
-            #[cfg(feature = "low_frequency")]
             ErtcoDivider::_128 => {
                 gcr_clkctrl.modify(|_, w| w.sysclk_div().div128());
             }
         }
-    }
-
-    fn get_div(&self) -> Self::Divider {
-        self.divider
-    }
-
-    fn get_freq(&self) -> Self::Frequency {
-        self.frequency
     }
 }

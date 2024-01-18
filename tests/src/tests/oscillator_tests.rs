@@ -184,23 +184,23 @@ fn test_divider_64(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
 fn test_frequency_before(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     let sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert!(sys_clk.clock_frequency == 100_000_000);
+    assert!(sys_clk.get_freq() == 100_000_000);
 }
 
 fn test_divider_before(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     let sys_clk = SystemClock::new(&ipo, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert!(sys_clk.clock_divider == 1);
+    assert!(sys_clk.get_div() == 1);
 }
 
 fn test_frequency_after(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_8);
     let sys_clk = SystemClock::new(&iso, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert!(sys_clk.clock_frequency == 60_000_000);
+    assert!(sys_clk.get_freq() == 60_000_000);
 }
 
 fn test_divider_after(gcr_clkctrl_reg: &CLKCTRL, trimsir_inro_reg: &INRO) {
     let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_8);
     let sys_clk = SystemClock::new(&iso, gcr_clkctrl_reg, trimsir_inro_reg);
-    assert!(sys_clk.clock_divider == 8);
+    assert!(sys_clk.get_div() == 8);
 }
