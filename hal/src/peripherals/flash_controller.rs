@@ -249,7 +249,7 @@ impl<'a> FlashController<'a> {
         FlcWriteErr::Succ
     }
 
-    /// Erases a page of flash. FLC_ADDR[12:0] is ignored to ensure the address
+    /// Erases a page of flash. FLC_ADDR\[12:0\] is ignored to ensure the address
     /// is page-aligned.
     pub fn page_erase(&self, address: u32) -> FlcEraseErr {
         if !self.check_address_bounds(address) {
@@ -271,5 +271,10 @@ impl<'a> FlashController<'a> {
         self.lock_write_protection();
         self.flush_icc();
         FlcEraseErr::Succ
+    }
+
+    /// Erases the entire flash.
+    pub fn mass_erase(&self) -> FlcEraseErr {
+        todo!()
     }
 }

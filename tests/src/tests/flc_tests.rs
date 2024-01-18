@@ -4,27 +4,27 @@ use max78000_hal::max78000::{FLC, GCR, ICC0};
 use max78000_hal::peripherals::flash_controller::FlashController;
 
 /// Runs all flash controller tests: [`flash_write`], [`flash_write_large`],
-/// [`flash_write_extra_large`], and [`flash_mass_erase`].
+/// [`flash_write_extra_large`].
 pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR) {
     writeln!(stdout, "Starting flash tests...").unwrap();
     let flash_controller = FlashController::new(flc, icc0, gcr);
 
     writeln!(stdout, "Test flash write...").unwrap();
-    test_flash_write(&flash_controller);
+    flash_write(&flash_controller);
 
     writeln!(stdout, "Test flash write large...").unwrap();
-    test_flash_write_large(&flash_controller);
+    flash_write_large(&flash_controller);
 
     writeln!(stdout, "Test flash write extra large...").unwrap();
-    test_flash_write_extra_large(&flash_controller);
+    flash_write_extra_large(&flash_controller);
 
     writeln!(stdout, "Test flash write unaligned...").unwrap();
-    test_flash_write_unaligned(&flash_controller);
+    flash_write_unaligned(&flash_controller);
 
     writeln!(stdout, "Flash Controller tests complete!").unwrap();
 }
 
-fn test_flash_write(flash_controller: &FlashController) {
+fn flash_write(flash_controller: &FlashController) {
     let test_addr: u32 = 0x1007DFF0;
     let test_val: u32 = 0xCAFEBABE;
 
@@ -40,7 +40,7 @@ fn test_flash_write(flash_controller: &FlashController) {
     flash_controller.enable_icc0();
 }
 
-fn test_flash_write_large(flash_controller: &FlashController) {
+fn flash_write_large(flash_controller: &FlashController) {
     let test_addr: u32 = 0x1007DF00;
     let test_data: [u8; 20] = [b'A'; 20];
 
@@ -56,7 +56,7 @@ fn test_flash_write_large(flash_controller: &FlashController) {
     flash_controller.enable_icc0();
 }
 
-fn test_flash_write_extra_large(flash_controller: &FlashController) {
+fn flash_write_extra_large(flash_controller: &FlashController) {
     let test_addr: u32 = 0x1007DF00;
     let test_data: [u8; 100] = [b'A'; 100];
 
@@ -72,7 +72,7 @@ fn test_flash_write_extra_large(flash_controller: &FlashController) {
     flash_controller.enable_icc0();
 }
 
-fn test_flash_write_unaligned(flash_controller: &FlashController) {
+fn flash_write_unaligned(flash_controller: &FlashController) {
     let test_addr: u32 = 0x1007DF0A;
     let test_data: [u8; 10] = [b'A'; 10];
 
