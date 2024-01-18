@@ -138,9 +138,12 @@ impl WatchdogTimer {
     ///
     /// Note: Will RESET the wdt0 peripheral
     pub fn new(wdt_regs: WDT, gcr_regs: GCR) -> Self {
+        // enable global peripheral clock for wdt0
         gcr_regs.pclkdis1().modify(|_, w| w.wdt0().variant(UART2_A::EN));
+        // reset the wdt0 peripheral
         gcr_regs.rst0().modify(|_, w| w.wdt0().variant(RESET_A::BUSY));
         while !gcr_regs.rst0().read().wdt0().bit() {};
+
         Self { wdt_regs, gcr_regs }
     }
 
@@ -164,7 +167,7 @@ impl WatchdogTimer {
         /*if self.is_enabled() {
             self.disable();
         }*/
-        self.reset();
+        //self.reset();
         self.disable();
 
         self.wdt_regs.clksel().modify(|_, w| {
@@ -336,7 +339,7 @@ impl WatchdogTimer {
                         self.wdt_regs
                             .ctrl()
                             .modify(|_, w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
-                        //self.poll_clkrdy();
+                        self.poll_clkrdy();
                     //}
                 }
                 FeedSequenceOperation::Enable => {
@@ -344,7 +347,7 @@ impl WatchdogTimer {
                     self.wdt_regs
                         .ctrl()
                         .modify(|_, w| w.en().variant(EN_A::EN).clkrdy_ie().variant(false));
-                    //self.poll_clkrdy();
+                    self.poll_clkrdy();
                 }
                 FeedSequenceOperation::Kick => (),
             }
