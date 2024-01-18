@@ -5,9 +5,10 @@ use max78000::trimsir::INRO;
 
 /// Acceptable Internal Primary Oscillator frequency. Can be converted into a
 /// u32 integer representing a value in hertz.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum IpoFrequency {
     /// 100 megahertz
+    #[default]
     _100MHz,
 }
 
@@ -21,9 +22,10 @@ impl From<IpoFrequency> for u32 {
 
 /// Acceptable Internal Secondary Oscillator frequency. Can be converted into a
 /// u32 integer representing a value in hertz.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum IsoFrequency {
     /// 60 megahertz
+    #[default]
     _60MHz,
 }
 
@@ -61,9 +63,10 @@ impl From<InroFrequency> for u32 {
 
 /// Acceptable Internal Baud Rate Oscillator frequency. Can be converted into
 /// a u32 integer representing a value in hertz.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum IbroFrequency {
     /// 7.3728 megahertz
+    #[default]
     _7_3728MHz,
 }
 
@@ -78,9 +81,10 @@ impl From<IbroFrequency> for u32 {
 /// Acceptable External Real-Time Clock Oscillator frequency. Can be converted into
 /// a u32 integer representing a value in hertz.
 #[cfg(feature = "low_frequency")]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum ErtcoFrequency {
     /// 32.768 kilohertz
+    #[default]
     _32_768kHz,
 }
 
