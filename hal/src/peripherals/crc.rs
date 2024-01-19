@@ -193,10 +193,10 @@ impl<Width: CrcWidth> CrcCalculator<Width> {
 
             // step 2: place padded chunk in CRC register
             if !self.crc._crc.ctrl().read().busy().bit() {
-            self.crc
-                ._crc
-                .datain32()
-                .write(|w| w.data().variant(u32::from_ne_bytes(padded_bytes)));
+                self.crc
+                    ._crc
+                    .datain32()
+                    .write(|w| w.data().variant(u32::from_ne_bytes(padded_bytes)));
             }
 
             // do nothing while computation is ongoing
@@ -204,13 +204,14 @@ impl<Width: CrcWidth> CrcCalculator<Width> {
         }
 
         // convert to generic type from u32, need num-traits for this
-        let (a, _) = Width::OutWidth::overflowing_cast_from(self.crc._crc.val().read().bits() ^ self.xorout);
+        let (a, _) =
+            Width::OutWidth::overflowing_cast_from(self.crc._crc.val().read().bits() ^ self.xorout);
 
         a
     }
 
     /// Debug function
-    pub fn val_reg_bits(&self) -> u32{
+    pub fn val_reg_bits(&self) -> u32 {
         self.crc._crc.val().read().bits()
     }
 }
