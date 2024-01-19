@@ -9,7 +9,7 @@ use core::fmt::Write;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::Peripherals;
-use tests::{bit_band_tests, trng_tests};
+use tests::{bit_band_tests, oscillator_tests, trng_tests};
 
 extern crate panic_halt;
 
@@ -25,6 +25,12 @@ fn main() -> ! {
     let peripherals = Peripherals::take().unwrap();
 
     bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
+
+    oscillator_tests::run_oscillator_tests(
+        peripherals.GCR.clkctrl(),
+        peripherals.TRIMSIR.inro(),
+        &mut stdout,
+    );
 
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
 
