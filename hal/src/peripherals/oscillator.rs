@@ -1,4 +1,7 @@
-//! Oscillator peripheral
+//! Oscillator peripheral.
+//!
+//! \[low_frequency\] features should not be used if the flc is also in use
+//! because the FLC_CLK needs to be 1MHz.
 
 use max78000::gcr::CLKCTRL;
 use max78000::trimsir::INRO;
@@ -100,9 +103,7 @@ impl From<ErtcoFrequency> for u32 {
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
 #[non_exhaustive]
-/// Acceptable Internal Primary Oscillator dividers. Can not set the divider
-/// above 64 because that would make the clock signal to the flash controller
-/// lower than 1MHz.
+/// Acceptable Internal Primary Oscillator dividers.
 /// Can be converted into a u8 integer.
 pub enum IpoDivider {
     _1 = 1,
@@ -134,9 +135,7 @@ impl From<IpoDivider> for u8 {
 
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
-/// Acceptable Internal Secondary Oscillator dividers. Can not set the divider
-/// above 32 because that would make the clock signal to the flash controller
-/// lower than 1MHz.
+/// Acceptable Internal Secondary Oscillator dividers.
 /// Can be converted into a u8 integer.
 pub enum IsoDivider {
     _1 = 1,
@@ -170,9 +169,7 @@ impl From<IsoDivider> for u8 {
 
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
-/// Acceptable Internal Baud Rate Oscillator dividers. Can not set the divider
-/// above 4 because that would make the clock signal to the flash controller
-/// lower than 1MHz.
+/// Acceptable Internal Baud Rate Oscillator dividers.
 /// Can be converted into a u8 integer.
 pub enum IbroDivider {
     _1 = 1,
@@ -213,9 +210,7 @@ impl From<IbroDivider> for u8 {
 #[cfg(feature = "low_frequency")]
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
-/// Acceptable Internal Nano Ring Oscillator dividers. The frequency of the INRO
-/// is below 1MHz so it should never be used. The divider is set to 1, but this
-/// is arbitrary.
+/// Acceptable Internal Nano Ring Oscillator dividers.
 /// Can be converted into a u8 integer.
 pub enum InroDivider {
     _1 = 1,
@@ -252,9 +247,7 @@ impl From<InroDivider> for u8 {
 }
 
 #[cfg(feature = "low_frequency")]
-/// Acceptable External Real Time Clock dividers. The frequency of the INRO
-/// is below 1MHz so it should never be used. The divider is set to 1, but this
-/// is arbitrary.
+/// Acceptable External Real Time Clock dividers.
 /// Can be converted into a u8 integer.
 pub type ErtcoDivider = InroDivider;
 
@@ -316,7 +309,7 @@ impl<'a, 'b> SystemClock<'a, 'b> {
         self.clock_divider
     }
 
-    /// Returns the frequency of the SYS_OSC
+    /// Returns the frequency of the SYS_OSC in hertz
     pub fn get_freq(&self) -> u32 {
         self.clock_frequency
     }
@@ -523,7 +516,9 @@ impl private::Oscillator for Ibro {
     type Frequency = IbroFrequency;
     type Divider = IbroDivider;
 
-    fn enable(&self, _gcr_clkctrl: &CLKCTRL) {}
+    fn enable(&self, gcr_clkctrl: &CLKCTRL) {
+        while !gcr_clkctrl.read().ibro_rdy().bit_is_set() {}
+    }
 
     fn set_sysclk(&self, gcr_clkctrl: &CLKCTRL) {
         self.enable(gcr_clkctrl);
