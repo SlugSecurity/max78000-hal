@@ -1,11 +1,12 @@
 //! Tests for the CRC peripheral.
+// #[cfg(test)]
 
 use core::fmt::Write;
-
+// use bitvec::prelude::*;
 use cortex_m_semihosting::hio; // not needed?
 use max78000_hal::{
     max78000::CRC,
-    peripherals::crc::{CrcCalculator, CrcDataU16, CrcDataU32, CrcDataU8},
+    peripherals::crc::{CrcCalculator, CrcDataU32},
 };
 
 /// run crc tests
