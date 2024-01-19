@@ -192,7 +192,7 @@ impl<Width: CrcWidth> CrcCalculator<Width> {
             padded_bytes[..len].copy_from_slice(chunk);
 
             // step 2: place padded chunk in CRC register
-            if(self.crc._crc.ctrl().read().busy().bit() == false){
+            if self.crc._crc.ctrl().read().busy().bit() == false {
             self.crc
                 ._crc
                 .datain32()
