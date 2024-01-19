@@ -192,7 +192,7 @@ impl<Width: CrcWidth> CrcCalculator<Width> {
             padded_bytes[..len].copy_from_slice(chunk);
 
             // step 2: place padded chunk in CRC register
-            if self.crc._crc.ctrl().read().busy().bit() == false {
+            if !self.crc._crc.ctrl().read().busy().bit() {
             self.crc
                 ._crc
                 .datain32()
@@ -200,7 +200,7 @@ impl<Width: CrcWidth> CrcCalculator<Width> {
             }
 
             // do nothing while computation is ongoing
-            while !(self.crc._crc.ctrl().read().busy().bit() == false) {}
+            while self.crc._crc.ctrl().read().busy().bit() {}
         }
 
         // convert to generic type from u32, need num-traits for this
@@ -209,6 +209,7 @@ impl<Width: CrcWidth> CrcCalculator<Width> {
         a
     }
 
+    /// Debug function
     pub fn val_reg_bits(&self) -> u32{
         self.crc._crc.val().read().bits()
     }
