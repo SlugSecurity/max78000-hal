@@ -1,5 +1,6 @@
 //! Flash controller peripheral API.
 
+use crate::peripherals::oscillator::SystemClock;
 use max78000::{FLC, GCR, ICC0};
 
 /// Flash memory base address.
@@ -74,9 +75,17 @@ impl<'a> FlashController<'a> {
     /// clock frequency is 1 MHz.
     ///
     /// This MUST be called before any non-read flash controller operations.
-    fn set_clock_divisor(&self) {
-        todo!()
-        // TODO: Finish.
+    pub fn set_clock_divisor(&self, sys_clk: &SystemClock) {
+        let numerator = match sys_clk.get_freq() {
+            100_000_000 => 100,
+            60_000_000 => 60,
+            7_372_800 => 7,
+            _ => unreachable!("The frequency of the system oscillator is too low"),
+        };
+
+        self.flc
+            .clkdiv()
+            .modify(|_, w| w.clkdiv().variant(numerator / sys_clk.get_div()));
     }
 
     /// Flushes the flash line buffer and arm instruction cache.
@@ -129,7 +138,7 @@ impl<'a> FlashController<'a> {
     }
 
     /// Write arbitary number of bytes of data to flash.
-    pub fn write(&self, address: u32, data: &[u8]) -> FlcWriteErr {
+    pub fn write(&self, address: u32, data: &[u8], sys_clk: &SystemClock) -> FlcWriteErr {
         // Check address bounds
         if !self.check_address_bounds(address) {
             return FlcWriteErr::PtrBoundsErr;
@@ -153,6 +162,7 @@ impl<'a> FlashController<'a> {
             self.write_lt_128(
                 physical_addr,
                 &data[0..core::cmp::min(bytes_unaligned, data.len())],
+                sys_clk,
             );
 
             physical_addr += bytes_unaligned as u32;
@@ -160,7 +170,7 @@ impl<'a> FlashController<'a> {
 
         // If data left is less than 128 bits (16 bytes)
         if bytes_unaligned < data.len() && data[bytes_unaligned_idx..].len() < 16 {
-            self.write_lt_128(physical_addr, &data[bytes_unaligned_idx..]);
+            self.write_lt_128(physical_addr, &data[bytes_unaligned_idx..], sys_clk);
             return FlcWriteErr::Succ;
         } else if bytes_unaligned >= data.len() {
             return FlcWriteErr::Succ;
@@ -177,7 +187,7 @@ impl<'a> FlashController<'a> {
         for (idx, word) in chunk_32.into_iter().enumerate() {
             // If buffer is filled with user data
             if idx != 0 && idx % 4 == 0 {
-                self.write128(physical_addr, &buffer_128_bits);
+                self.write128(physical_addr, &buffer_128_bits, sys_clk);
                 bytes_written += 16;
                 physical_addr += 16;
             }
@@ -187,16 +197,16 @@ impl<'a> FlashController<'a> {
 
         // remainder from chunks
         if bytes_written < data.len() {
-            self.write_lt_128(physical_addr, &data[bytes_written..]);
+            self.write_lt_128(physical_addr, &data[bytes_written..], sys_clk);
         } else if !chunk_8.remainder().is_empty() {
-            self.write_lt_128(physical_addr, chunk_8.remainder());
+            self.write_lt_128(physical_addr, chunk_8.remainder(), sys_clk);
         }
 
         FlcWriteErr::Succ
     }
 
     /// Writes less than 128 bits (16 bytes) of data to flash.
-    fn write_lt_128(&self, address: u32, data: &[u8]) -> FlcWriteErr {
+    fn write_lt_128(&self, address: u32, data: &[u8], sys_clk: &SystemClock) -> FlcWriteErr {
         // Get byte idx within 128-bit word
         let byte_idx = (address & 0xF) as usize;
 
@@ -218,20 +228,18 @@ impl<'a> FlashController<'a> {
                 new_data[idx] = u32::from_le_bytes(word_chunk.try_into().unwrap())
             });
 
-        self.write128(aligned_addr, &new_data)
+        self.write128(aligned_addr, &new_data, sys_clk)
     }
 
     /// Writes 128 bits (16 bytes) of data to flash.
     // make sure to disable ICC with ICC_Disable(); before Running this function
-    fn write128(&self, address: u32, data: &[u32; 4]) -> FlcWriteErr {
+    fn write128(&self, address: u32, data: &[u32; 4], sys_clk: &SystemClock) -> FlcWriteErr {
         // Check if adddress is 128-bit aligned
         if address & 0xF > 0 {
             return FlcWriteErr::AddressNotAlignedWord;
         }
 
         while self.flc.ctrl().read().pend().is_busy() {}
-
-        self.set_clock_divisor();
 
         self.flc.addr().modify(|_, w| w.addr().variant(address));
         self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
@@ -251,14 +259,12 @@ impl<'a> FlashController<'a> {
 
     /// Erases a page of flash. FLC_ADDR\[12:0\] is ignored to ensure the address
     /// is page-aligned.
-    pub fn page_erase(&self, address: u32) -> FlcEraseErr {
+    pub fn page_erase(&self, address: u32, sys_clk: &SystemClock) -> FlcEraseErr {
         if !self.check_address_bounds(address) {
             return FlcEraseErr::PtrBoundsErr;
         }
 
         while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.set_clock_divisor();
 
         self.flc.addr().modify(|_, w| w.addr().variant(address));
 
