@@ -75,7 +75,7 @@ impl<'a> FlashController<'a> {
     /// clock frequency is 1 MHz.
     ///
     /// This MUST be called before any non-read flash controller operations.
-    pub fn set_clock_divisor(&self, sys_clk: &SystemClock) {
+    fn set_clock_divisor(&self, sys_clk: &SystemClock) {
         let numerator = match sys_clk.get_freq() {
             100_000_000 => 100,
             60_000_000 => 60,
@@ -168,11 +168,14 @@ impl<'a> FlashController<'a> {
             physical_addr += bytes_unaligned as u32;
         }
 
-        // If data left is less than 128 bits (16 bytes)
-        if bytes_unaligned < data.len() && data[bytes_unaligned_idx..].len() < 16 {
+        // If data left after writing unaligned part is less than 128 bits (16
+        // bytes)
+        if data[bytes_unaligned_idx..].len() < 16 {
             self.write_lt_128(physical_addr, &data[bytes_unaligned_idx..], sys_clk);
             return FlcWriteErr::Succ;
-        } else if bytes_unaligned >= data.len() {
+        }
+        // If all data has already been written
+        else if bytes_unaligned == data.len() {
             return FlcWriteErr::Succ;
         }
 
@@ -183,21 +186,23 @@ impl<'a> FlashController<'a> {
             .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()));
 
         let mut buffer_128_bits: [u32; 4] = [0; 4];
-        let mut bytes_written = 0;
+        let mut bytes_in_buffer = 0;
         for (idx, word) in chunk_32.into_iter().enumerate() {
             // If buffer is filled with user data
-            if idx != 0 && idx % 4 == 0 {
-                self.write128(physical_addr, &buffer_128_bits, sys_clk);
-                bytes_written += 16;
-                physical_addr += 16;
-            }
-
             buffer_128_bits[idx % 4] = word;
+            bytes_in_buffer += 4;
+
+            if bytes_in_buffer == 16 {
+                self.write128(physical_addr, &buffer_128_bits, sys_clk);
+                physical_addr += 16;
+                bytes_in_buffer = 0;
+            }
         }
 
         // remainder from chunks
-        if bytes_written < data.len() {
-            self.write_lt_128(physical_addr, &data[bytes_written..], sys_clk);
+        let data_left_idx = (physical_addr - address) as usize;
+        if bytes_in_buffer > 0 {
+            self.write_lt_128(physical_addr, &data[data_left_idx..], sys_clk);
         } else if !chunk_8.remainder().is_empty() {
             self.write_lt_128(physical_addr, chunk_8.remainder(), sys_clk);
         }
@@ -239,7 +244,12 @@ impl<'a> FlashController<'a> {
             return FlcWriteErr::AddressNotAlignedWord;
         }
 
+        // Clear stale errors
+        self.flc.intr().modify(|_, w| w.af().clear_bit());
+
         while self.flc.ctrl().read().pend().is_busy() {}
+
+        self.set_clock_divisor(sys_clk);
 
         self.flc.addr().modify(|_, w| w.addr().variant(address));
         self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
@@ -265,6 +275,8 @@ impl<'a> FlashController<'a> {
         }
 
         while !self.flc.ctrl().read().pend().bit_is_clear() {}
+
+        self.set_clock_divisor(sys_clk);
 
         self.flc.addr().modify(|_, w| w.addr().variant(address));
 
