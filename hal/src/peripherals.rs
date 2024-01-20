@@ -59,6 +59,7 @@ pub mod gpio;
 pub mod serial;
 pub mod timer;
 pub mod trng;
+pub mod uart;
 pub mod watchdog;
 
 // Non embedded HAL peripherals.
