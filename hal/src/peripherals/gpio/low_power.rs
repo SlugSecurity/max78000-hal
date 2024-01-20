@@ -62,6 +62,18 @@ impl<'a, 'mcr, const PIN_CT: usize>
     type Error = Infallible;
 
     fn into_input_pin(self) -> Result<LowPowerInputPin<'a, 'mcr, PIN_CT>, Self::Error> {
+        if self.pin_idx == 0 {
+            self.port
+                .regs
+                .gpio3_ctrl()
+                .modify(|_, w| w.p30_oe().clear_bit());
+        } else {
+            self.port
+                .regs
+                .gpio3_ctrl()
+                .modify(|_, w| w.p31_oe().clear_bit());
+        }
+
         Ok(LowPowerInputPin(self))
     }
 
@@ -69,6 +81,18 @@ impl<'a, 'mcr, const PIN_CT: usize>
         self,
         state: PinState,
     ) -> Result<LowPowerOutputPin<'a, 'mcr, PIN_CT>, Self::Error> {
+        if self.pin_idx == 0 {
+            self.port
+                .regs
+                .gpio3_ctrl()
+                .modify(|_, w| w.p30_oe().set_bit());
+        } else {
+            self.port
+                .regs
+                .gpio3_ctrl()
+                .modify(|_, w| w.p31_oe().set_bit());
+        }
+
         let mut output_pin = LowPowerOutputPin(self);
         output_pin.set_state(state)?;
 
@@ -93,10 +117,12 @@ impl<'a, 'mcr, const PIN_CT: usize>
         let r = self.port.regs.outen();
 
         match (mode, self.pin_idx, self.get_io_mode()) {
-            (PinOperatingMode::DigitalIo, 0, _) => r.write(|w| w.pdown_out_en().clear_bit()),
-            (PinOperatingMode::DigitalIo, 1, _) => r.write(|w| w.sqwout_en().clear_bit()),
-            (PinOperatingMode::AltFunction1, 0, Output) => r.write(|w| w.pdown_out_en().set_bit()),
-            (PinOperatingMode::AltFunction1, 1, Output) => r.write(|w| w.sqwout_en().set_bit()),
+            (PinOperatingMode::DigitalIo, 0, _) => r.modify(|_, w| w.pdown_out_en().clear_bit()),
+            (PinOperatingMode::DigitalIo, 1, _) => r.modify(|_, w| w.sqwout_en().clear_bit()),
+            (PinOperatingMode::AltFunction1, 0, Output) => {
+                r.modify(|_, w| w.pdown_out_en().set_bit())
+            }
+            (PinOperatingMode::AltFunction1, 1, Output) => r.modify(|_, w| w.sqwout_en().set_bit()),
 
             // Pin is in input mode when AltFunction1 was requested
             (PinOperatingMode::AltFunction1, _, _) => return Err(WrongIoMode),
@@ -178,8 +204,8 @@ impl<'a, 'mcr, const PIN_CT: usize> LowPowerInputPin<'a, 'mcr, PIN_CT> {
         let reg = self.0.port.regs.gpio3_ctrl();
 
         match self.0.pin_idx == 0 {
-            true => reg.write(|w| w.p30_pe().bit(enable)),
-            false => reg.write(|w| w.p31_pe().bit(enable)),
+            true => reg.modify(|_, w| w.p30_pe().bit(enable)),
+            false => reg.modify(|_, w| w.p31_pe().bit(enable)),
         }
     }
 }
@@ -250,8 +276,8 @@ impl<'a, 'mcr, const PIN_CT: usize> OutputPin for LowPowerOutputPin<'a, 'mcr, PI
     fn set_low(&mut self) -> Result<(), Self::Error> {
         let reg = self.0.port.regs.gpio3_ctrl();
         match self.0.pin_idx == 0 {
-            true => reg.write(|w| w.p30_do().clear_bit()),
-            false => reg.write(|w| w.p31_do().clear_bit()),
+            true => reg.modify(|_, w| w.p30_do().clear_bit()),
+            false => reg.modify(|_, w| w.p31_do().clear_bit()),
         };
 
         Ok(())
@@ -260,8 +286,8 @@ impl<'a, 'mcr, const PIN_CT: usize> OutputPin for LowPowerOutputPin<'a, 'mcr, PI
     fn set_high(&mut self) -> Result<(), Self::Error> {
         let reg = self.0.port.regs.gpio3_ctrl();
         match self.0.pin_idx == 0 {
-            true => reg.write(|w| w.p30_do().set_bit()),
-            false => reg.write(|w| w.p31_do().set_bit()),
+            true => reg.modify(|_, w| w.p30_do().set_bit()),
+            false => reg.modify(|_, w| w.p31_do().set_bit()),
         };
 
         Ok(())
