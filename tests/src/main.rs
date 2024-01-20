@@ -29,6 +29,7 @@ fn main() -> ! {
         peripherals.FLC,
         &peripherals.ICC0,
         &peripherals.GCR,
+        peripherals.TRIMSIR.inro(),
     );
 
     bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);

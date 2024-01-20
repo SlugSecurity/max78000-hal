@@ -114,7 +114,7 @@ fn flash_write_after_sys_osc_switch(flash_controller: &FlashController, sys_clk:
     let test_data = TEST_STR.as_bytes();
 
     flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, &test_data, sys_clk);
+    flash_controller.write(test_addr, test_data, sys_clk);
     let mut read_data: [u8; TEST_STR.len()] = [0; TEST_STR.len()];
     flash_controller.read_bytes(test_addr, &mut read_data);
 
@@ -130,7 +130,7 @@ fn flash_write_after_sys_clk_div_changes(
     let test_data = TEST_STR.as_bytes();
 
     flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, &test_data, sys_clk);
+    flash_controller.write(test_addr, test_data, sys_clk);
     let mut read_data: [u8; TEST_STR.len()] = [0; TEST_STR.len()];
     flash_controller.read_bytes(test_addr, &mut read_data);
 
