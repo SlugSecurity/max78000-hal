@@ -1,4 +1,5 @@
-//! GPIO0-GPIO2 pin manipulation.
+//! GPIO0 - GPIO2 pin manipulation.
+//! This module contains trait implementations for the common GPIO ports.
 //!
 //! # Examples
 //!

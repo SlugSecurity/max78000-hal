@@ -1,4 +1,5 @@
 //! GPIO3 pin manipulation.
+//! This module contains trait implementations for the low power GPIO port.
 //!
 //! # Examples
 //!

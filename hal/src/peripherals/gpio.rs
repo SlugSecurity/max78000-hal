@@ -16,12 +16,8 @@ use self::{
 
 pub mod pin_traits;
 
-/// Contains implementations of traits defined in this module for the common
-/// GPIO ports (GPIO0 - GPIO2).
 pub mod common;
 
-/// Contains implementations of traits defined in this module for the low power
-/// GPIO port (GPIO3).
 pub mod low_power;
 
 /// Error type for GPIO operations
