@@ -25,11 +25,8 @@ fn main() -> ! {
     let peripherals = Peripherals::take().unwrap();
 
     bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
-
+    watchdog_tests::run_watchdog_tests(&mut stdout, peripherals.WDT, &peripherals.GCR);
     trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
-
-    watchdog_tests::run_watchdog_tests(&mut stdout, peripherals.WDT, peripherals.GCR);
-
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 

@@ -1,20 +1,18 @@
 //! Watchdog timer peripheral API.
-//! TODO: documentation
 
+use crate::peripherals::bit_banding::{change_bit};
+use core::ptr::{write_volatile};
 use cortex_m::interrupt::free;
 use max78000::gcr::pclkdis1::UART2_A;
-use max78000::wdt::ctrl::EN_A;
-use max78000::wdt::ctrl::{INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WIN_EN_A};
-use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_LATE_VAL_A};
-use max78000::wdt::rst::RESET_AW;
-use max78000::{GCR, WDT};
 use max78000::gcr::rst0::RESET_A;
-use max78000::wdt1::ctrl::{WDT_INT_EN_A, WDT_RST_EN_A};
+use max78000::wdt::ctrl::{EN_A, INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WDT_INT_EN_A, WDT_RST_EN_A, WIN_EN_A};
+use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_LATE_VAL_A};
+use max78000::{GCR, WDT};
+use max78000::wdt::rst::RESET_AW;
 
 /// The Watchdog Timer peripheral struct. Obtain an instance of one with `WatchDogTimer::new`
 pub struct WatchdogTimer {
-    wdt_regs: WDT,
-    gcr_regs: GCR
+    wdt_regs: WDT
 }
 
 /// Clock source for the watchdog timer
@@ -127,30 +125,39 @@ enum FeedSequenceOperation {
     Kick,
 }
 
-pub enum WatchdogStatus {
-    DISABLED,
-    PENDING,
-    ENABLED
-}
+static WDT_BASE: u32 = 0x4000_3000;
+static WDT_CTRL: u32 = WDT_BASE;
+static WDT_RST: u32 = WDT_BASE + 0x04;
+// static WDT_CLKSEL: u32 = WDT_BASE + 0x08;
+// static WDT_CNT: u32 = WDT_BASE + 0x0c;
 
 impl WatchdogTimer {
     /// Creates a new instance of the Watchdog Timer peripheral.
-    ///
-    /// Note: Will RESET the wdt0 peripheral
-    pub fn new(wdt_regs: WDT, gcr_regs: GCR) -> Self {
-        // enable global peripheral clock for wdt0
-        gcr_regs.pclkdis1().modify(|_, w| w.wdt0().variant(UART2_A::EN));
-        // reset the wdt0 peripheral
-        gcr_regs.rst0().modify(|_, w| w.wdt0().variant(RESET_A::BUSY));
-        while !gcr_regs.rst0().read().wdt0().bit() {};
-
-        Self { wdt_regs, gcr_regs }
+    /// Ensure peripheral clock is enabled
+    pub fn new(wdt_regs: WDT) -> Self {
+        Self { wdt_regs }
     }
 
-    /// Reset the WDT peripheral
-    pub fn reset(&mut self) {
-        self.gcr_regs.rst0().modify(|_, w| w.wdt0().variant(RESET_A::BUSY));
-        while !self.gcr_regs.rst0().read().wdt0().bit() {};
+    /// Enable the peripheral clock for WDT0
+    pub fn enable_peripheral_clock(gcr_regs: &GCR) {
+        gcr_regs
+            .pclkdis1()
+            .modify(|_, w| w.wdt0().variant(UART2_A::EN))
+    }
+
+    /// Disable the peripheral clock for
+    pub fn disable_peripheral_clock(gcr_regs: &GCR) {
+        gcr_regs
+            .pclkdis1()
+            .modify(|_, w| w.wdt0().variant(UART2_A::DIS))
+    }
+
+    /// Reset the WDT peripheral using GCR_RST0 register
+    pub fn reset_peripheral(gcr_regs: &GCR) {
+        gcr_regs
+            .rst0()
+            .modify(|_, w| w.wdt0().variant(RESET_A::BUSY));
+        while !gcr_regs.rst0().read().wdt0().bit() {}
     }
 
     /// Kicks the watchdog
@@ -164,11 +171,13 @@ impl WatchdogTimer {
     ///
     /// Provide reasonable values, otherwise you risk bricking the system
     pub fn configure(&mut self, options: Configuration) {
+        //let mut wdt_ctrl_state = unsafe {read_volatile(WDT_CTRL as *mut u32)};
+        //wdt_ctrl_state = wdt_ctrl_state;
         /*if self.is_enabled() {
             self.disable();
         }*/
         //self.reset();
-        self.disable();
+        //self.disable();
 
         self.wdt_regs.clksel().modify(|_, w| {
             w.source().variant(match options.clock_source {
@@ -182,8 +191,18 @@ impl WatchdogTimer {
                 .variant(into_threshold!(options.interrupt_late_val, INT_LATE_VAL_A))
                 .rst_late_val()
                 .variant(into_threshold!(options.reset_late_val, RST_LATE_VAL_A))
-                .wdt_int_en().variant(if options.watchdog_interrupt_enable {WDT_INT_EN_A::EN} else {WDT_INT_EN_A::DIS})
-                .wdt_rst_en().variant(if options.watchdog_reset_enable {WDT_RST_EN_A::EN} else {WDT_RST_EN_A::DIS})
+                .wdt_int_en()
+                .variant(if options.watchdog_interrupt_enable {
+                    WDT_INT_EN_A::EN
+                } else {
+                    WDT_INT_EN_A::DIS
+                })
+                .wdt_rst_en()
+                .variant(if options.watchdog_reset_enable {
+                    WDT_RST_EN_A::EN
+                } else {
+                    WDT_RST_EN_A::DIS
+                })
         });
 
         match options.windowed_mode {
@@ -211,7 +230,8 @@ impl WatchdogTimer {
 
     /// Returns if the watchdog timer peripheral is enabled
     pub fn is_enabled(&self) -> bool {
-        while !self.wdt_regs.ctrl().read().clkrdy().bit() {};
+        //self.kick();
+        while !self.wdt_regs.ctrl().read().clkrdy().bit() {}
         self.wdt_regs.ctrl().read().en().bit()
     }
 
@@ -234,7 +254,9 @@ impl WatchdogTimer {
     /// Enables the watchdog timer peripheral
     pub fn enable(&mut self) {
         //if !self.is_enabled() {self.feed_sequence(FeedSequenceOperation::Enable)};
+        self.clear_all_flags();
         self.feed_sequence(FeedSequenceOperation::Enable)
+        //self.feed_sequence(FeedSequenceOperation::Enable)
     }
 
     /// Returns whether or not the Reset Late event flag is active
@@ -311,7 +333,7 @@ impl WatchdogTimer {
         });
     }
 
-    fn poll_clkrdy(&mut self) {
+    /* fn poll_clkrdy(&mut self) {
         // SAFETY: safe, as we are passing in a peripheral address in bit-banding space,
         // (0x4000_3000), bit 28 (WDT0_CTRL.clkrdy) is a readable bit of a valid register
         // (page 336 of the user guide)
@@ -319,11 +341,40 @@ impl WatchdogTimer {
             spin_bit(self.wdt_regs.ctrl().as_ptr(), 28, true);
         }*/
         while !self.wdt_regs.ctrl().read().clkrdy().bit() {}
-    }
+    } */
 
     fn feed_sequence(&mut self, feed_sequence_operation: FeedSequenceOperation) {
         // run in an interrupt-free context
         free(|_| {
+            /*match feed_sequence_operation {
+                FeedSequenceOperation::Disable => {
+                    unsafe {
+                        // SAFETY: copied from the MSDK so probably safe
+                        // TODO: write actual safety comment
+                        write_volatile(WDT_RST as *mut u32, 0xDE);
+                        write_volatile(WDT_RST as *mut u32, 0xAD);
+                        change_bit(WDT_CTRL as *mut u32, 8, false);
+                    }
+                }
+                FeedSequenceOperation::Kick => {
+                    unsafe {
+                        // SAFETY: copied from the MSDK so probably safe
+                        // TODO: write actual safety comment
+                        write_volatile(WDT_RST as *mut u32, 0xA5);
+                        write_volatile(WDT_RST as *mut u32, 0x5A);
+                    }
+                }
+                FeedSequenceOperation::Enable => {
+                    unsafe {
+                        // SAFETY: copied from the MSDK so probably safe
+                        // TODO: write actual safety comment
+                        write_volatile(WDT_RST as *mut u32, 0xFE);
+                        write_volatile(WDT_RST as *mut u32, 0xED);
+                        change_bit(WDT_CTRL as *mut u32, 8, true);
+                    }
+                }
+            }*/
+
             // First value to be written to enable WDT (0xa5)
             self.wdt_regs
                 .rst()
@@ -335,19 +386,19 @@ impl WatchdogTimer {
 
             match feed_sequence_operation {
                 FeedSequenceOperation::Disable => {
-                    //if self.is_enabled() {
-                        self.wdt_regs
-                            .ctrl()
-                            .modify(|_, w| w.en().variant(EN_A::DIS).clkrdy_ie().variant(false));
-                        self.poll_clkrdy();
-                    //}
+                    self.wdt_regs
+                        .ctrl()
+                        .modify(|_, w| w.en().variant(EN_A::DIS));
+                    // sanity check - is it actually disabling it?
+                    assert!(!self.wdt_regs.ctrl().read().en().bit())
                 }
                 FeedSequenceOperation::Enable => {
                     self.clear_all_flags();
                     self.wdt_regs
                         .ctrl()
-                        .modify(|_, w| w.en().variant(EN_A::EN).clkrdy_ie().variant(false));
-                    self.poll_clkrdy();
+                        .modify(|_, w| w.en().variant(EN_A::EN));
+                    // sanity check - is it actually enabling it?
+                    assert!(self.wdt_regs.ctrl().read().en().bit())
                 }
                 FeedSequenceOperation::Kick => (),
             }
