@@ -151,12 +151,6 @@ impl<'a> FlashController<'a> {
             0
         };
 
-        let bytes_unaligned_idx = if bytes_unaligned > 0 {
-            bytes_unaligned - 1
-        } else {
-            0
-        };
-
         // Write unaligned data
         if bytes_unaligned > 0 {
             self.write_lt_128(
@@ -170,8 +164,8 @@ impl<'a> FlashController<'a> {
 
         // If data left after writing unaligned part is less than 128 bits (16
         // bytes)
-        if data[bytes_unaligned_idx..].len() < 16 {
-            self.write_lt_128(physical_addr, &data[bytes_unaligned_idx..], sys_clk);
+        if data[bytes_unaligned..].len() < 16 {
+            self.write_lt_128(physical_addr, &data[bytes_unaligned..], sys_clk);
             return FlcWriteErr::Succ;
         }
         // If all data has already been written
@@ -180,7 +174,7 @@ impl<'a> FlashController<'a> {
         }
 
         // If data left is more than 128 bits (16 bytes)
-        let chunk_8 = data[bytes_unaligned_idx..].chunks_exact(4);
+        let chunk_8 = data[bytes_unaligned..].chunks_exact(4);
         let chunk_32 = chunk_8
             .clone()
             .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()));
@@ -244,12 +238,14 @@ impl<'a> FlashController<'a> {
             return FlcWriteErr::AddressNotAlignedWord;
         }
 
+        self.set_clock_divisor(sys_clk);
+
+        self.unlock_write_protection();
+
         // Clear stale errors
         self.flc.intr().modify(|_, w| w.af().clear_bit());
 
-        while self.flc.ctrl().read().pend().is_busy() {}
-
-        self.set_clock_divisor(sys_clk);
+        while !self.flc.ctrl().read().pend().bit_is_clear() {}
 
         self.flc.addr().modify(|_, w| w.addr().variant(address));
         self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
@@ -257,13 +253,12 @@ impl<'a> FlashController<'a> {
         self.flc.data(2).modify(|_, w| w.data().variant(data[2]));
         self.flc.data(3).modify(|_, w| w.data().variant(data[3]));
 
-        self.unlock_write_protection();
-
         self.flc.ctrl().modify(|_, w| w.wr().set_bit());
         while !self.flc.ctrl().read().wr().is_complete() {}
 
         self.lock_write_protection();
         self.flush_icc();
+
         FlcWriteErr::Succ
     }
 
@@ -274,13 +269,17 @@ impl<'a> FlashController<'a> {
             return FlcEraseErr::PtrBoundsErr;
         }
 
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
         self.set_clock_divisor(sys_clk);
+
+        self.unlock_write_protection();
+
+        // Clear stale errors
+        self.flc.intr().modify(|_, w| w.af().clear_bit());
+
+        while !self.flc.ctrl().read().pend().bit_is_clear() {}
 
         self.flc.addr().modify(|_, w| w.addr().variant(address));
 
-        self.unlock_write_protection();
         self.flc.ctrl().modify(|_, w| w.erase_code().erase_page());
         self.flc.ctrl().modify(|_, w| w.pge().set_bit());
 
@@ -288,6 +287,7 @@ impl<'a> FlashController<'a> {
 
         self.lock_write_protection();
         self.flush_icc();
+
         FlcEraseErr::Succ
     }
 

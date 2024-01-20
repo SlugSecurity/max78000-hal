@@ -40,9 +40,7 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
         .unwrap();
         let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_1);
         sys_clk.set_sysclk(&iso);
-        flash_controller.disable_icc0();
         flash_write_after_sys_osc_switch(&flash_controller, &sys_clk);
-        flash_controller.enable_icc0();
     }
 
     {
@@ -99,12 +97,12 @@ fn flash_write_extra_large(flash_controller: &FlashController, sys_clk: &SystemC
 }
 
 fn flash_write_unaligned(flash_controller: &FlashController, sys_clk: &SystemClock) {
-    let test_addr: u32 = 0x10070F0B;
-    let test_data: [u8; 10] = [b'A'; 10];
+    let test_addr: u32 = 0x10070F0A;
+    let test_data: [u8; 13] = [b'B'; 13];
 
     flash_controller.page_erase(test_addr, sys_clk);
     flash_controller.write(test_addr, &test_data, sys_clk);
-    let mut read_data: [u8; 10] = [0; 10];
+    let mut read_data: [u8; 13] = [0; 13];
     flash_controller.read_bytes(test_addr, &mut read_data);
 
     assert!(test_data == read_data);
@@ -127,10 +125,8 @@ fn flash_write_after_sys_clk_div_changes(
     flash_controller: &FlashController,
     sys_clk: &SystemClock,
 ) {
-    // using 0x1007DF0A breaks the whole test ... using another unaligned
-    // address breaks this test
     let test_addr: u32 = 0x10070F0A;
-    const TEST_STR: &str = "SYS_CLK DIVIDER CHANGED"; // len = 23
+    const TEST_STR: &str = "SYS_CLK DIVIDER CHANGED";
     let test_data = TEST_STR.as_bytes();
 
     flash_controller.page_erase(test_addr, sys_clk);
