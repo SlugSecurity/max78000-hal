@@ -215,7 +215,7 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             ToggleableModule::I2S => self.gcr.rst1().write(|w| w.i2s().bit(true)),
             ToggleableModule::SPI0 => self.gcr.rst1().write(|w| w.spi0().bit(true)),
             ToggleableModule::AES => self.gcr.rst1().write(|w| w.aes().bit(true)),
-            ToggleableModule::CPU1 => todo!("CPU1 reset not implemented due to inconsistent documentation, see SlugSecurity/max78000-hal#49"),
+            ToggleableModule::CPU1 => todo!("CPU1 reset not implemented due to inconsistent documentation, see slugSecurity/max78000#11"),
         }
     }
 
