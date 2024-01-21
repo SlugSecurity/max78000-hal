@@ -106,6 +106,7 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
 
     /// Gets a pin handle based on the provided index. Returns an Err if the
     /// pin index is out of bounds or a pin handle has already been taken out.
+    // TODO: Statically constrain the pin index according to PIN_CT
     pub fn get_pin_handle(
         &'t self,
         idx: usize,
@@ -124,29 +125,25 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
 }
 
 /// Creates a new [`GpioPort`] representing GPIO0.
-///
-/// Note: should be made pub(crate) when peripheral manager is made
+// TODO: Make this pub(crate) when peripheral manager is made
 pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, CommonGpio<GpioZero>, 31> {
     GpioPort::<CommonGpio<GpioZero>, 31>::new(gpio0)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO1.
-///
-/// Note: should be made pub(crate) when peripheral manager is made
+// TODO: Make this pub(crate) when peripheral manager is made
 pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, CommonGpio<GpioOne>, 10> {
     GpioPort::<CommonGpio<GpioOne>, 10>::new(gpio1)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO2.
-///
-/// Note: should be made pub(crate) when peripheral manager is made
+// TODO: Make this pub(crate) when peripheral manager is made
 pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, CommonGpio<GpioTwo>, 8> {
     GpioPort::<CommonGpio<GpioTwo>, 8>::new(gpio2)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO3.
-///
-/// Note: should be made pub(crate) when peripheral manager is made
+// TODO: Make this pub(crate) when peripheral manager is made
 pub fn new_gpio3<'a>(gpio3: &'a MCR) -> GpioPort<'a, LowPowerGpio<'a>, 2> {
     GpioPort::<LowPowerGpio<'a>, 2>::new(gpio3)
 }

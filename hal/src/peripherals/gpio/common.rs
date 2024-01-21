@@ -208,6 +208,7 @@ impl<'a, Port: GpioPortNum + 'static, const PIN_CT: usize>
     GeneralIoPin<CommonInputPin<'a, Port, PIN_CT>, CommonOutputPin<'a, Port, PIN_CT>>
     for CommonPinHandle<'a, Port, PIN_CT>
 {
+    // TODO: Statically constrain the pin operating mode according to PIN_CT and the pin index
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
         const A1_RX: u8 = 0b0001;
         const A1_TX: u8 = 0b0010;
