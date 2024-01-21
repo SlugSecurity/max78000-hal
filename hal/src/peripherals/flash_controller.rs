@@ -15,15 +15,22 @@ pub const FLASH_PAGE_SIZE: u32 = 0x2000;
 /// Error values a flash write operation throws.
 #[derive(Debug)]
 pub enum FlashErr {
+    /// The pointer argument is not word (4 bytes) aligned.
     AddressNotAlignedWord,
+    /// The pointer argument is not a valid flash address.
     PtrBoundsErr,
+    /// The flash controller clock could not be set to 1MHz
     FlcClkErr,
+    /// Flash read operation succeeded.
     Succ,
 }
 
+/// Error values setting the flash clock operation throws.
 #[derive(Debug)]
 pub enum FlashClkErr {
-    SYS_CLK_TOO_LOW,
+    /// The system oscillator frequency is too low
+    SysClkLow,
+    /// Flash clock set to 1MHz
     Succ,
 }
 
@@ -77,8 +84,8 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let sys_clk_freq = sys_clk.get_freq() / sys_clk.get_div() as u32;
         let flc_clkdiv = sys_clk_freq / 1_000_000;
 
-        if flc_clkdiv <= 0 {
-            return Err(FlashClkErr::SYS_CLK_TOO_LOW);
+        if flc_clkdiv == 0 {
+            return Err(FlashClkErr::SysClkLow);
         }
 
         self.flc
@@ -97,7 +104,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         // Clear the line fill buffer by reading 2 pages from flash
         let ptr = FLASH_MEM_BASE;
-        let mut empty_buffer = [16; 0];
+        let mut empty_buffer = [];
         if let Err(why) = self.read_bytes(ptr, &mut empty_buffer) {
             match why {
                 FlashErr::AddressNotAlignedWord => panic!("Address {} not aligned with word", ptr),
@@ -168,6 +175,10 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     }
 
     /// Write arbitary number of bytes of data to flash.
+    ///
+    /// # Safety
+    ///
+    /// Writes must not corrupt potentially executable instructions of the program.
     pub unsafe fn write(
         &self,
         address: u32,
@@ -188,24 +199,18 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         // Write unaligned data
         if bytes_unaligned > 0 {
-            if let Err(why) = self.write_lt_128(
+            self.write_lt_128(
                 physical_addr,
                 &data[0..core::cmp::min(bytes_unaligned, data.len())],
                 sys_clk,
-            ) {
-                return Err(why);
-            }
-
+            )?;
             physical_addr += bytes_unaligned as u32;
         }
 
         // If data left after writing unaligned part is less than 128 bits (16
         // bytes)
         if data[bytes_unaligned..].len() < 16 {
-            if let Err(why) = self.write_lt_128(physical_addr, &data[bytes_unaligned..], sys_clk) {
-                return Err(why);
-            }
-            return Ok(FlashErr::Succ);
+            self.write_lt_128(physical_addr, &data[bytes_unaligned..], sys_clk)?;
         }
         // If all data has already been written
         else if bytes_unaligned == data.len() {
@@ -226,9 +231,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             bytes_in_buffer += 4;
 
             if bytes_in_buffer == 16 {
-                if let Err(why) = self.write128(physical_addr, &buffer_128_bits, sys_clk) {
-                    return Err(why);
-                }
+                self.write128(physical_addr, &buffer_128_bits, sys_clk)?;
                 physical_addr += 16;
                 bytes_in_buffer = 0;
             }
@@ -237,13 +240,9 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         // remainder from chunks
         let data_left_idx = (physical_addr - address) as usize;
         if bytes_in_buffer > 0 {
-            if let Err(why) = self.write_lt_128(physical_addr, &data[data_left_idx..], sys_clk) {
-                return Err(why);
-            }
+            self.write_lt_128(physical_addr, &data[data_left_idx..], sys_clk)?;
         } else if !chunk_8.remainder().is_empty() {
-            if let Err(why) = self.write_lt_128(physical_addr, chunk_8.remainder(), sys_clk) {
-                return Err(why);
-            }
+            self.write_lt_128(physical_addr, chunk_8.remainder(), sys_clk)?;
         }
 
         Ok(FlashErr::Succ)
@@ -263,9 +262,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let aligned_addr = address & !0xF;
 
         let mut current_bytes: [u8; 16] = [0; 16];
-        if let Err(why) = self.read_bytes(aligned_addr, &mut current_bytes[..]) {
-            return Err(why);
-        }
+        self.read_bytes(aligned_addr, &mut current_bytes[..])?;
 
         // construct 128 bits of data to write back to flash
         current_bytes[byte_idx..(byte_idx + data.len())].copy_from_slice(data);
@@ -295,7 +292,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             return Err(FlashErr::PtrBoundsErr);
         }
 
-        if let Err(_) = self.set_clock_divisor(sys_clk) {
+        if self.set_clock_divisor(sys_clk).is_err() {
             return Err(FlashErr::FlcClkErr);
         };
 
@@ -323,6 +320,10 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
     /// Erases a page of flash. FLC_ADDR\[12:0\] is ignored to ensure the address
     /// is page-aligned.
+    ///
+    /// # Safety
+    ///
+    /// Erases must not corrupt potentially executable instructions of the program.
     pub unsafe fn page_erase(
         &self,
         address: u32,
@@ -332,7 +333,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             return Err(FlashErr::PtrBoundsErr);
         }
 
-        if let Err(_) = self.set_clock_divisor(sys_clk) {
+        if self.set_clock_divisor(sys_clk).is_err() {
             return Err(FlashErr::FlcClkErr);
         }
 
