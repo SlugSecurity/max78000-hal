@@ -50,7 +50,6 @@ impl<'gcr, 'icc> Drop for FlashController<'gcr, 'icc> {
 impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Creates a new flash controller peripheral.
     pub fn new(flc: FLC, icc: &'icc ICC0, gcr: &'gcr GCR) -> Self {
-        // TODO: Make this function pub(crate) when the peripheral API is available. Tests needs it public until then.
         let new_flc = Self { flc, icc, gcr };
         new_flc.disable_icc0();
 
@@ -98,41 +97,29 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Flushes the flash line buffer and arm instruction cache.
     ///
     /// This MUST be called after any write/erase flash controller operations.
-    fn flush_icc(&self) {
+    fn flush_icc(&self) -> Result<FlashErr, FlashErr> {
         self.icc.invalidate().modify(|_, w| w.invalid().variant(1));
         while !self.icc.ctrl().read().rdy().bit_is_set() {}
 
         // Clear the line fill buffer by reading 2 pages from flash
         let ptr = FLASH_MEM_BASE;
         let mut empty_buffer = [];
-        if let Err(why) = self.read_bytes(ptr, &mut empty_buffer) {
-            match why {
-                FlashErr::AddressNotAlignedWord => panic!("Address {} not aligned with word", ptr),
-                FlashErr::PtrBoundsErr => panic!("Address {} is not a valid flash address", ptr),
-                _ => (),
-            }
-        }
-
-        if let Err(why) = self.read_bytes(ptr + FLASH_PAGE_SIZE, &mut empty_buffer) {
-            match why {
-                FlashErr::AddressNotAlignedWord => panic!("Address {} not aligned with word", ptr),
-                FlashErr::PtrBoundsErr => panic!("Address {} is not a valid flash address", ptr),
-                _ => (),
-            }
-        }
+        self.read_bytes(ptr, &mut empty_buffer)?;
+        self.read_bytes(ptr + FLASH_PAGE_SIZE, &mut empty_buffer)?;
+        return Ok(FlashErr::Succ);
     }
 
     /// Disables instruction cache.
     ///
     /// This MUST be called before any non-read flash controller operations.
-    pub fn disable_icc0(&self) {
+    fn disable_icc0(&self) {
         self.icc.ctrl().modify(|_, w| w.en().dis());
     }
 
     /// Disables instruction cache.
     ///
     /// This MUST be called after any non-read flash controller operations.
-    pub fn enable_icc0(&self) {
+    fn enable_icc0(&self) {
         // ensure the cache is invalidated when enabled
         self.disable_icc0();
 
@@ -313,7 +300,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         while !self.flc.ctrl().read().wr().is_complete() {}
 
         self.lock_write_protection();
-        self.flush_icc();
+        self.flush_icc()?;
 
         Ok(FlashErr::Succ)
     }
@@ -352,13 +339,17 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         while !self.flc.ctrl().read().pend().bit_is_clear() {}
 
         self.lock_write_protection();
-        self.flush_icc();
+        self.flush_icc()?;
 
         Ok(FlashErr::Succ)
     }
 
     /// Erases the entire flash.
-    pub fn mass_erase(&self) -> Result<FlashErr, FlashErr> {
+    ///
+    /// # Safety
+    ///
+    /// Mass erase clears the whole flash. Program must be executed from SRAM.
+    pub unsafe fn mass_erase(&self) -> Result<FlashErr, FlashErr> {
         todo!()
     }
 }
