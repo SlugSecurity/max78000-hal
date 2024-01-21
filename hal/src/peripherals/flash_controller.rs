@@ -75,7 +75,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// This MUST be called before any non-read flash controller operations.
     fn set_clock_divisor(&self, sys_clk: &SystemClock) -> Result<FlashClkErr, FlashClkErr> {
         let sys_clk_freq = sys_clk.get_freq() / sys_clk.get_div() as u32;
-        let flc_clkdiv = 1 / sys_clk_freq;
+        let flc_clkdiv = sys_clk_freq / 1_000_000;
 
         if flc_clkdiv <= 0 {
             return Err(FlashClkErr::SYS_CLK_TOO_LOW);
@@ -97,7 +97,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         // Clear the line fill buffer by reading 2 pages from flash
         let ptr = FLASH_MEM_BASE;
-        let mut empty_buffer = [];
+        let mut empty_buffer = [16; 0];
         if let Err(why) = self.read_bytes(ptr, &mut empty_buffer) {
             match why {
                 FlashErr::AddressNotAlignedWord => panic!("Address {} not aligned with word", ptr),
@@ -118,14 +118,14 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Disables instruction cache.
     ///
     /// This MUST be called before any non-read flash controller operations.
-    fn disable_icc0(&self) {
+    pub fn disable_icc0(&self) {
         self.icc.ctrl().modify(|_, w| w.en().dis());
     }
 
     /// Disables instruction cache.
     ///
     /// This MUST be called after any non-read flash controller operations.
-    fn enable_icc0(&self) {
+    pub fn enable_icc0(&self) {
         // ensure the cache is invalidated when enabled
         self.disable_icc0();
 
@@ -142,8 +142,26 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             return Err(FlashErr::PtrBoundsErr);
         }
 
-        unsafe {
-            data.copy_from_slice(core::ptr::read_volatile(address as *const &[u8]));
+        let mut next_read_address = address;
+
+        // read from flash in word chunks
+        let word_chunk = data.chunks_mut(4);
+        for word in word_chunk {
+            if word.len() == 4 {
+                unsafe {
+                    word.copy_from_slice(
+                        &(core::ptr::read_volatile(next_read_address as *const u32).to_le_bytes()),
+                    );
+                }
+                next_read_address += 4;
+            } else {
+                for byte in word {
+                    unsafe {
+                        *byte = core::ptr::read_volatile(next_read_address as *const u8);
+                    }
+                    next_read_address += 1;
+                }
+            }
         }
 
         Ok(FlashErr::Succ)
