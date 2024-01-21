@@ -73,12 +73,11 @@ fn test_common_port<const PIN_CT: usize>(
     assert!(pin.is_set_high().unwrap());
     drop(pin);
 
-    let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
+    let _pin = port.get_pin_handle(PIN_CT - 1).unwrap();
     assert!(matches!(
         port.get_pin_handle(PIN_CT - 1),
         Err(GpioError::HandleAlreadyTaken)
     ));
-    drop(pin);
 }
 
 fn test_low_power_port<'a, const PIN_CT: usize>(port: GpioPort<'a, LowPowerGpio<'a>, PIN_CT>) {
@@ -105,10 +104,9 @@ fn test_low_power_port<'a, const PIN_CT: usize>(port: GpioPort<'a, LowPowerGpio<
     assert!(pin.is_set_high().unwrap());
     drop(pin);
 
-    let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
+    let _pin = port.get_pin_handle(PIN_CT - 1).unwrap();
     assert!(matches!(
         port.get_pin_handle(PIN_CT - 1),
         Err(GpioError::HandleAlreadyTaken)
     ));
-    drop(pin);
 }
