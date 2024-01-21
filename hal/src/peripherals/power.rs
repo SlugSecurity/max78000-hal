@@ -62,6 +62,18 @@ pub enum ToggleableModule {
     SMPHR,
     /// True random number generator
     TRNG,
+    /// Watchdog timer 0
+    WDT0,
+    /// I2C2
+    I2C2,
+    /// Audio interface
+    I2S,
+    /// SPI 0
+    SPI0,
+    /// AES block
+    AES,
+    /// CPU1 (RISC-V core)
+    CPU1,
 }
 
 /// Indicate a module that can be reset but not enabled or disabled
@@ -74,22 +86,12 @@ pub enum NonToggleableModule {
     SOFT,
     /// RTC reset
     RTC,
-    /// Watchdog timer 0
-    WDT0,
     /// Single Inductor Multiple Output
     SIMO,
     /// Dynamic Voltage Scaling
     DVS,
-    /// I2C2
-    I2C2,
-    /// Audio interface
-    I2S,
     /// Semaphore block
     SMPHR,
-    /// SPI 0
-    SPI0,
-    /// AES block
-    AES,
 }
 
 impl<'r, 'l> PowerControl<'r, 'l> {
@@ -130,6 +132,12 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             ToggleableModule::SMPHR => self.gcr.pclkdis1().write(|w| w.smphr().en()),
             ToggleableModule::TRNG => self.gcr.pclkdis1().write(|w| w.trng().en()),
             ToggleableModule::UART2 => self.gcr.pclkdis1().write(|w| w.uart2().en()),
+            ToggleableModule::WDT0 => self.gcr.pclkdis1().write(|w| w.wdt0().en()),
+            ToggleableModule::I2C2 => self.gcr.pclkdis1().write(|w| w.i2c2().en()),
+            ToggleableModule::I2S => self.gcr.pclkdis1().write(|w| w.i2s().en()),
+            ToggleableModule::SPI0 => self.gcr.pclkdis1().write(|w| w.spi0().en()),
+            ToggleableModule::AES => self.gcr.pclkdis1().write(|w| w.aes().en()),
+            ToggleableModule::CPU1 => self.gcr.pclkdis1().write(|w| w.cpu1().en()),
         }
     }
 
@@ -164,6 +172,12 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             ToggleableModule::SMPHR => self.gcr.pclkdis1().write(|w| w.smphr().dis()),
             ToggleableModule::TRNG => self.gcr.pclkdis1().write(|w| w.trng().dis()),
             ToggleableModule::UART2 => self.gcr.pclkdis1().write(|w| w.uart2().dis()),
+            ToggleableModule::WDT0 => self.gcr.pclkdis1().write(|w| w.wdt0().dis()),
+            ToggleableModule::I2C2 => self.gcr.pclkdis1().write(|w| w.i2c2().dis()),
+            ToggleableModule::I2S => self.gcr.pclkdis1().write(|w| w.i2s().dis()),
+            ToggleableModule::SPI0 => self.gcr.pclkdis1().write(|w| w.spi0().dis()),
+            ToggleableModule::AES => self.gcr.pclkdis1().write(|w| w.aes().dis()),
+            ToggleableModule::CPU1 => self.gcr.pclkdis1().write(|w| w.cpu1().dis()),
         }
     }
 
@@ -198,6 +212,12 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             ToggleableModule::SMPHR => self.gcr.rst1().write(|w| w.smphr().bit(true)),
             ToggleableModule::TRNG => self.gcr.rst0().write(|w| w.trng().bit(true)),
             ToggleableModule::UART2 => self.gcr.rst0().write(|w| w.uart2().bit(true)),
+            ToggleableModule::WDT0 => self.gcr.rst0().write(|w| w.wdt0().bit(true)),
+            ToggleableModule::I2C2 => self.gcr.rst1().write(|w| w.i2c2().bit(true)),
+            ToggleableModule::I2S => self.gcr.rst1().write(|w| w.i2s().bit(true)),
+            ToggleableModule::SPI0 => self.gcr.rst1().write(|w| w.spi0().bit(true)),
+            ToggleableModule::AES => self.gcr.rst1().write(|w| w.aes().bit(true)),
+            ToggleableModule::CPU1 => todo!("CPU1 reset not implemented due to inconsistent documentation, see SlugSecurity/max78000-hal#49"),
         }
     }
 
@@ -208,14 +228,9 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             NonToggleableModule::PERIPH => self.gcr.rst0().write(|w| w.periph().bit(true)),
             NonToggleableModule::SOFT => self.gcr.rst0().write(|w| w.soft().bit(true)),
             NonToggleableModule::RTC => self.gcr.rst0().write(|w| w.rtc().bit(true)),
-            NonToggleableModule::WDT0 => self.gcr.rst0().write(|w| w.wdt0().bit(true)),
             NonToggleableModule::SIMO => self.gcr.rst1().write(|w| w.simo().bit(true)),
             NonToggleableModule::DVS => self.gcr.rst1().write(|w| w.dvs().bit(true)),
-            NonToggleableModule::I2C2 => self.gcr.rst1().write(|w| w.i2c2().bit(true)),
-            NonToggleableModule::I2S => self.gcr.rst1().write(|w| w.i2s().bit(true)),
             NonToggleableModule::SMPHR => self.gcr.rst1().write(|w| w.smphr().bit(true)),
-            NonToggleableModule::SPI0 => self.gcr.rst1().write(|w| w.spi0().bit(true)),
-            NonToggleableModule::AES => self.gcr.rst1().write(|w| w.aes().bit(true)),
         }
     }
 }
