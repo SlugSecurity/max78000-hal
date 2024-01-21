@@ -18,8 +18,6 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
     let mut sys_clk = SystemClock::new(&ipo, gcr.clkctrl(), inro);
     let flash_controller = FlashController::new(flc, icc0, gcr);
 
-    flash_controller.disable_icc0();
-
     writeln!(stdout, "Test flash write...").unwrap();
     flash_write(&flash_controller, &sys_clk);
 
@@ -55,18 +53,22 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
     }
 
     writeln!(stdout, "Flash Controller tests complete!").unwrap();
-
-    flash_controller.enable_icc0();
 }
 
 fn flash_write(flash_controller: &FlashController, sys_clk: &SystemClock) {
     let test_addr: u32 = 0x10070FF0;
     let test_val: u32 = 0xCAFEBABE;
-
-    flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, &u32::to_le_bytes(test_val), sys_clk);
     let mut data_read: [u8; 4] = [0; 4];
-    flash_controller.read_bytes(test_addr, &mut data_read);
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        flash_controller
+            .write(test_addr, &u32::to_le_bytes(test_val), sys_clk)
+            .unwrap();
+        flash_controller
+            .read_bytes(test_addr, &mut data_read)
+            .unwrap();
+    }
 
     assert!(u32::from_le_bytes(data_read) == test_val);
 }
@@ -74,11 +76,17 @@ fn flash_write(flash_controller: &FlashController, sys_clk: &SystemClock) {
 fn flash_write_large(flash_controller: &FlashController, sys_clk: &SystemClock) {
     let test_addr: u32 = 0x10070F00;
     let test_data: [u8; 20] = [b'A'; 20];
-
-    flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, &test_data, sys_clk);
     let mut read_data: [u8; 20] = [0; 20];
-    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        flash_controller
+            .write(test_addr, &test_data, sys_clk)
+            .unwrap();
+        flash_controller
+            .read_bytes(test_addr, &mut read_data)
+            .unwrap();
+    }
 
     assert!(test_data == read_data);
 }
@@ -86,12 +94,17 @@ fn flash_write_large(flash_controller: &FlashController, sys_clk: &SystemClock) 
 fn flash_write_extra_large(flash_controller: &FlashController, sys_clk: &SystemClock) {
     let test_addr: u32 = 0x10070F00;
     let test_data: [u8; 100] = [b'A'; 100];
-
-    flash_controller.page_erase(test_addr, sys_clk);
-
-    flash_controller.write(test_addr, &test_data, sys_clk);
     let mut read_data: [u8; 100] = [0; 100];
-    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        flash_controller
+            .write(test_addr, &test_data, sys_clk)
+            .unwrap();
+        flash_controller
+            .read_bytes(test_addr, &mut read_data)
+            .unwrap();
+    }
 
     assert!(test_data == read_data);
 }
@@ -99,11 +112,17 @@ fn flash_write_extra_large(flash_controller: &FlashController, sys_clk: &SystemC
 fn flash_write_unaligned(flash_controller: &FlashController, sys_clk: &SystemClock) {
     let test_addr: u32 = 0x10070F0A;
     let test_data: [u8; 13] = [b'B'; 13];
-
-    flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, &test_data, sys_clk);
     let mut read_data: [u8; 13] = [0; 13];
-    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        flash_controller
+            .write(test_addr, &test_data, sys_clk)
+            .unwrap();
+        flash_controller
+            .read_bytes(test_addr, &mut read_data)
+            .unwrap();
+    }
 
     assert!(test_data == read_data);
 }
@@ -112,11 +131,17 @@ fn flash_write_after_sys_osc_switch(flash_controller: &FlashController, sys_clk:
     let test_addr: u32 = 0x10070F00;
     const TEST_STR: &str = "SYS_OSC CHANGED";
     let test_data = TEST_STR.as_bytes();
-
-    flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, test_data, sys_clk);
     let mut read_data: [u8; TEST_STR.len()] = [0; TEST_STR.len()];
-    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        flash_controller
+            .write(test_addr, test_data, sys_clk)
+            .unwrap();
+        flash_controller
+            .read_bytes(test_addr, &mut read_data)
+            .unwrap();
+    }
 
     assert!(test_data == read_data);
 }
@@ -128,11 +153,17 @@ fn flash_write_after_sys_clk_div_changes(
     let test_addr: u32 = 0x10070F0A;
     const TEST_STR: &str = "SYS_CLK DIVIDER CHANGED";
     let test_data = TEST_STR.as_bytes();
-
-    flash_controller.page_erase(test_addr, sys_clk);
-    flash_controller.write(test_addr, test_data, sys_clk);
     let mut read_data: [u8; TEST_STR.len()] = [0; TEST_STR.len()];
-    flash_controller.read_bytes(test_addr, &mut read_data);
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        flash_controller
+            .write(test_addr, test_data, sys_clk)
+            .unwrap();
+        flash_controller
+            .read_bytes(test_addr, &mut read_data)
+            .unwrap();
+    }
 
     assert!(test_data == read_data);
 }
