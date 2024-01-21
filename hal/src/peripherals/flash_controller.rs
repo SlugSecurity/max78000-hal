@@ -106,7 +106,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let mut empty_buffer = [];
         self.read_bytes(ptr, &mut empty_buffer)?;
         self.read_bytes(ptr + FLASH_PAGE_SIZE, &mut empty_buffer)?;
-        return Ok(FlashErr::Succ);
+        Ok(FlashErr::Succ)
     }
 
     /// Disables instruction cache.
@@ -139,23 +139,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let mut next_read_address = address;
 
         // read from flash in word chunks
-        let word_chunk = data.chunks_mut(4);
-        for word in word_chunk {
-            if word.len() == 4 {
-                unsafe {
-                    word.copy_from_slice(
-                        &(core::ptr::read_volatile(next_read_address as *const u32).to_le_bytes()),
-                    );
-                }
-                next_read_address += 4;
-            } else {
-                for byte in word {
-                    unsafe {
-                        *byte = core::ptr::read_volatile(next_read_address as *const u8);
-                    }
-                    next_read_address += 1;
-                }
+        for word in data.chunks_mut(4) {
+            unsafe {
+                let buffer = core::ptr::read_volatile(next_read_address as *const u32);
+                word.copy_from_slice(&buffer.to_le_bytes()[0..word.len()]);
             }
+            next_read_address += 4;
         }
 
         Ok(FlashErr::Succ)
