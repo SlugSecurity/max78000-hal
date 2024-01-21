@@ -90,8 +90,6 @@ pub enum NonToggleableModule {
     SIMO,
     /// Dynamic Voltage Scaling
     DVS,
-    /// Semaphore block
-    SMPHR,
 }
 
 impl<'r, 'l> PowerControl<'r, 'l> {
@@ -230,7 +228,6 @@ impl<'r, 'l> PowerControl<'r, 'l> {
             NonToggleableModule::RTC => self.gcr.rst0().write(|w| w.rtc().bit(true)),
             NonToggleableModule::SIMO => self.gcr.rst1().write(|w| w.simo().bit(true)),
             NonToggleableModule::DVS => self.gcr.rst1().write(|w| w.dvs().bit(true)),
-            NonToggleableModule::SMPHR => self.gcr.rst1().write(|w| w.smphr().bit(true)),
         }
     }
 }
