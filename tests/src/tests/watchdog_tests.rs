@@ -14,8 +14,7 @@ static mut INTERRUPT_COUNT: u32 = 0;
 fn WWDT() {
     free(|_| {
         // SAFETY: safe;
-        let mut watchdog_timer: WatchdogTimer =
-            WatchdogTimer::new(unsafe { WDT::steal() });
+        let mut watchdog_timer: WatchdogTimer = WatchdogTimer::new(unsafe { WDT::steal() });
         let mut stdout = hio::hstdout().unwrap();
 
         writeln!(stdout, "WWDT INT: Inside WWDT interrupt!").unwrap();
@@ -29,12 +28,16 @@ fn WWDT() {
             watchdog_timer.clear_interrupt_late_flag();
         }
         if watchdog_timer.interrupt_early_event() {
-            writeln!(stdout, "Clearing late interrupt flag...").unwrap();
+            writeln!(stdout, "WWDT INT: Clearing late interrupt flag...").unwrap();
             watchdog_timer.clear_interrupt_early_flag();
         }
         if watchdog_timer.reset_early_event() {
-            writeln!(stdout, "Clearing early reset flag. ").unwrap();
+            writeln!(stdout, "WWDT INT: Clearing early reset flag.").unwrap();
             watchdog_timer.clear_reset_early_flag();
+        }
+        if watchdog_timer.reset_late_event() {
+            writeln!(stdout, "WWDT INT: Clearing late reset flag.").unwrap();
+            watchdog_timer.clear_reset_late_flag();
         }
     });
 }
@@ -62,7 +65,7 @@ pub fn run_watchdog_tests(stdout: &mut hio::HostStream, wdt_regs: WDT, gcr_regs:
         windowed_mode: None,
         reset_late_val: Threshold::_2POW31,
         interrupt_late_val: Threshold::_2POW16,
-        watchdog_reset_enable: true,
+        watchdog_reset_interrupt_enable: true,
         watchdog_interrupt_enable: true,
     });
 
@@ -72,17 +75,13 @@ pub fn run_watchdog_tests(stdout: &mut hio::HostStream, wdt_regs: WDT, gcr_regs:
 
     writeln!(
         stdout,
-        "WDT: Enabled watchdog timer. Stalling a bit before kicking it..."
+        "WDT: Enabled watchdog timer. Stalling a bit to let the late interrupt trigger..."
     )
     .unwrap();
 
     for _ in 0..65536 {
         nop();
     }
-
-    writeln!(stdout, "WDT: Kicking watchdog...").unwrap();
-
-    watchdog_timer.kick();
 
     if unsafe { INTERRUPT_COUNT } == 0 {
         writeln!(

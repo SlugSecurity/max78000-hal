@@ -1,18 +1,18 @@
 //! Watchdog timer peripheral API.
 
-use crate::peripherals::bit_banding::{change_bit};
-use core::ptr::{write_volatile};
 use cortex_m::interrupt::free;
 use max78000::gcr::pclkdis1::UART2_A;
 use max78000::gcr::rst0::RESET_A;
-use max78000::wdt::ctrl::{EN_A, INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WDT_INT_EN_A, WDT_RST_EN_A, WIN_EN_A};
+use max78000::wdt::ctrl::{
+    EN_A, INT_EARLY_A, INT_LATE_A, RST_EARLY_A, RST_LATE_A, WDT_INT_EN_A, WDT_RST_EN_A, WIN_EN_A,
+};
 use max78000::wdt::ctrl::{INT_EARLY_VAL_A, INT_LATE_VAL_A, RST_EARLY_VAL_A, RST_LATE_VAL_A};
-use max78000::{GCR, WDT};
 use max78000::wdt::rst::RESET_AW;
+use max78000::{GCR, WDT};
 
 /// The Watchdog Timer peripheral struct. Obtain an instance of one with `WatchDogTimer::new`
 pub struct WatchdogTimer {
-    wdt_regs: WDT
+    wdt_regs: WDT,
 }
 
 /// Clock source for the watchdog timer
@@ -91,10 +91,12 @@ macro_rules! into_threshold {
 /// if the watchdog is kicked too early.
 pub struct WindowedConfiguration {
     /// Threshold for an early interrupt - if the watchdog is kicked before this value
-    /// but after `reset_early_val`, it will trigger an interrupt.
+    /// but after `reset_early_val`, it will trigger an interrupt if `watchdog_interrupt_enable`
+    /// is true.
     pub interrupt_early_val: Threshold,
     /// Threshold for an early reset - if the watchdog is kicked before this value,
-    /// the system will be reset.
+    /// the system will be reset. After the reset, if `watchdog_reset_interrupt_enable` is true,
+    /// an interrupt will fire.
     pub reset_early_val: Threshold,
 }
 
@@ -102,20 +104,22 @@ pub struct WindowedConfiguration {
 pub struct Configuration {
     /// Clock source for the watchdog timer to use.
     pub clock_source: ClockSource,
-    /// Threshold for a late interrupt - if the watchdog is kicked after this value
-    /// but before `reset_late_val`, it will trigger an interrupt.
+    /// Threshold for a late interrupt - if the watchdog isn't kicked after this value, it will
+    /// trigger a late interrupt event if `watchdog_interrupt_enable` is true.
     pub interrupt_late_val: Threshold,
     /// Threshold for a late reset - if the watchdog isn't kicked for this many cycles,
-    /// the system will be reset.
+    /// the system will be reset, and once done, a late reset interrupt will fire if
+    /// `watchdog_reset_interrupt_enable` is true.
     pub reset_late_val: Threshold,
-    /// Set to `true` to actually enable an interrupt when the watchdog is kicked past `interrupt_late_val`,
-    /// and/or `interrupt_early_val` if `windowed_mode` is provided.
+    /// Set to `true` to actually enable an interrupt when the watchdog isn't kicked past
+    /// `interrupt_late_val`,
+    /// and if it is kicked after `interrupt_early_val` if `windowed_mode` is provided.
     pub watchdog_interrupt_enable: bool,
-    /// Set to `true` to enable an interrupt when the watchdog is kicked past `interrupt_late_val`,
-    /// and/or `interrupt_early_val` if `windowed_mode` is provided
-    pub watchdog_reset_enable: bool,
+    /// Set to `true` to actually enable an interrupt when the system is reset due to the watchdog
+    /// not being kicked before `reset_late_val`, and if it is kicked before `reset_early_val`
+    pub watchdog_reset_interrupt_enable: bool,
     /// Configuration for windowed mode - leave `None` if you don't wish to use the windowed mode
-    /// of the watchdog timer, pass in `Some<WindowedConfiguration` if you do.
+    /// of the watchdog timer, pass in `Some<WindowedConfiguration>` if you do.
     pub windowed_mode: Option<WindowedConfiguration>,
 }
 
@@ -124,12 +128,6 @@ enum FeedSequenceOperation {
     Enable,
     Kick,
 }
-
-static WDT_BASE: u32 = 0x4000_3000;
-static WDT_CTRL: u32 = WDT_BASE;
-static WDT_RST: u32 = WDT_BASE + 0x04;
-// static WDT_CLKSEL: u32 = WDT_BASE + 0x08;
-// static WDT_CNT: u32 = WDT_BASE + 0x0c;
 
 impl WatchdogTimer {
     /// Creates a new instance of the Watchdog Timer peripheral.
@@ -171,14 +169,6 @@ impl WatchdogTimer {
     ///
     /// Provide reasonable values, otherwise you risk bricking the system
     pub fn configure(&mut self, options: Configuration) {
-        //let mut wdt_ctrl_state = unsafe {read_volatile(WDT_CTRL as *mut u32)};
-        //wdt_ctrl_state = wdt_ctrl_state;
-        /*if self.is_enabled() {
-            self.disable();
-        }*/
-        //self.reset();
-        //self.disable();
-
         self.wdt_regs.clksel().modify(|_, w| {
             w.source().variant(match options.clock_source {
                 ClockSource::PCLK => 1,
@@ -198,7 +188,7 @@ impl WatchdogTimer {
                     WDT_INT_EN_A::DIS
                 })
                 .wdt_rst_en()
-                .variant(if options.watchdog_reset_enable {
+                .variant(if options.watchdog_reset_interrupt_enable {
                     WDT_RST_EN_A::EN
                 } else {
                     WDT_RST_EN_A::DIS
@@ -230,33 +220,18 @@ impl WatchdogTimer {
 
     /// Returns if the watchdog timer peripheral is enabled
     pub fn is_enabled(&self) -> bool {
-        //self.kick();
-        while !self.wdt_regs.ctrl().read().clkrdy().bit() {}
         self.wdt_regs.ctrl().read().en().bit()
     }
 
-    /*pub fn status(&self) -> WatchdogStatus {
-        if !self.wdt_regs.ctrl().read().clkrdy().bit() {
-            WatchdogStatus::PENDING
-        } else if self.wdt_regs.ctrl().read().en().bit() {
-            WatchdogStatus::ENABLED
-        } else {
-            WatchdogStatus::DISABLED
-        }
-    }*/
-
     /// Disables the watchdog timer peripheral
     pub fn disable(&mut self) {
-        //if self.is_enabled() {self.feed_sequence(FeedSequenceOperation::Disable)};
         self.feed_sequence(FeedSequenceOperation::Disable)
     }
 
-    /// Enables the watchdog timer peripheral
+    /// Clears all flags and enables the watchdog timer peripheral
     pub fn enable(&mut self) {
-        //if !self.is_enabled() {self.feed_sequence(FeedSequenceOperation::Enable)};
         self.clear_all_flags();
         self.feed_sequence(FeedSequenceOperation::Enable)
-        //self.feed_sequence(FeedSequenceOperation::Enable)
     }
 
     /// Returns whether or not the Reset Late event flag is active
@@ -333,48 +308,9 @@ impl WatchdogTimer {
         });
     }
 
-    /* fn poll_clkrdy(&mut self) {
-        // SAFETY: safe, as we are passing in a peripheral address in bit-banding space,
-        // (0x4000_3000), bit 28 (WDT0_CTRL.clkrdy) is a readable bit of a valid register
-        // (page 336 of the user guide)
-        /*unsafe {
-            spin_bit(self.wdt_regs.ctrl().as_ptr(), 28, true);
-        }*/
-        while !self.wdt_regs.ctrl().read().clkrdy().bit() {}
-    } */
-
     fn feed_sequence(&mut self, feed_sequence_operation: FeedSequenceOperation) {
-        // run in an interrupt-free context
+        // Run in an interrupt-free context as stated in the user guide, page 335
         free(|_| {
-            /*match feed_sequence_operation {
-                FeedSequenceOperation::Disable => {
-                    unsafe {
-                        // SAFETY: copied from the MSDK so probably safe
-                        // TODO: write actual safety comment
-                        write_volatile(WDT_RST as *mut u32, 0xDE);
-                        write_volatile(WDT_RST as *mut u32, 0xAD);
-                        change_bit(WDT_CTRL as *mut u32, 8, false);
-                    }
-                }
-                FeedSequenceOperation::Kick => {
-                    unsafe {
-                        // SAFETY: copied from the MSDK so probably safe
-                        // TODO: write actual safety comment
-                        write_volatile(WDT_RST as *mut u32, 0xA5);
-                        write_volatile(WDT_RST as *mut u32, 0x5A);
-                    }
-                }
-                FeedSequenceOperation::Enable => {
-                    unsafe {
-                        // SAFETY: copied from the MSDK so probably safe
-                        // TODO: write actual safety comment
-                        write_volatile(WDT_RST as *mut u32, 0xFE);
-                        write_volatile(WDT_RST as *mut u32, 0xED);
-                        change_bit(WDT_CTRL as *mut u32, 8, true);
-                    }
-                }
-            }*/
-
             // First value to be written to enable WDT (0xa5)
             self.wdt_regs
                 .rst()
@@ -394,9 +330,7 @@ impl WatchdogTimer {
                 }
                 FeedSequenceOperation::Enable => {
                     self.clear_all_flags();
-                    self.wdt_regs
-                        .ctrl()
-                        .modify(|_, w| w.en().variant(EN_A::EN));
+                    self.wdt_regs.ctrl().modify(|_, w| w.en().variant(EN_A::EN));
                     // sanity check - is it actually enabling it?
                     assert!(self.wdt_regs.ctrl().read().en().bit())
                 }
