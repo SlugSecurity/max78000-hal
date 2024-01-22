@@ -118,12 +118,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     ///
     /// This MUST be called after any write/erase flash controller operations.
     fn flush_icc(&self) -> Result<(), FlashErr> {
-        self.icc.invalidate().modify(|_, w| w.invalid().variant(1));
-        while !self.icc.ctrl().read().rdy().bit_is_set() {}
+        self.gcr.sysctrl().modify(|_, w| w.icc0_flush().flush());
+        while !self.gcr.sysctrl().read().icc0_flush().is_flush() {}
 
         // Clear the line fill buffer by reading 2 pages from flash
         let ptr = FLASH_MEM_BASE;
-        let mut empty_buffer = [1; 0];
+        let mut empty_buffer = [0; 4];
         self.read_bytes(ptr, &mut empty_buffer)?;
         self.read_bytes(ptr + FLASH_PAGE_SIZE, &mut empty_buffer)?;
         Ok(())
@@ -136,18 +136,18 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         self.icc.ctrl().modify(|_, w| w.en().dis());
     }
 
-    /// Disables instruction cache.
+    /// Enables instruction cache.
     ///
     /// This MUST be called after any non-read flash controller operations.
     fn enable_icc0(&self) {
         // ensure the cache is invalidated when enabled
         self.disable_icc0();
 
-        self.icc.ctrl().modify(|_, w| w.en().en());
+        self.icc.invalidate().modify(|_, w| w.invalid().variant(1));
         while !self.icc.ctrl().read().rdy().bit_is_set() {}
 
-        // zeroize the icc instance
-        self.gcr.memz().modify(|_, w| w.icc0().set_bit());
+        self.icc.ctrl().modify(|_, w| w.en().en());
+        while !self.icc.ctrl().read().rdy().bit_is_set() {}
     }
 
     /// Reads data from flash.
@@ -202,12 +202,13 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// # Safety
     ///
     /// Writes must not corrupt potentially executable instructions of the program.
-    /// Behavior is undefined if any of the following conditions are violated:
-    /// * `data` must be initialize.
+    /// Callers must ensure that the following condition is met:
+    /// * If `address` points to a portion of the program's instructions, `data` must
+    ///   contain valid instructions that does not introduce undefined behavior.
     ///
-    /// * `address..address+data.len()` must be in a valid flash address range
-    ///
-    /// * `flc_clk` must be 1MHz
+    /// It is very difficult to define what would cause undefined behavior when
+    /// modifying program instructions. This would almost certainly result
+    /// in unwanted and likely undefined behavior. Do so at your own risk.
 
     pub unsafe fn write(
         &self,
@@ -216,6 +217,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         sys_clk: &SystemClock,
     ) -> Result<(), FlashErr> {
         self.check_address_bounds(address..(address + data.len() as u32))?;
+
+        if self.set_clock_divisor(sys_clk).is_err() {
+            return Err(FlashErr::FlcClkErr);
+        };
+
+        self.disable_icc0();
 
         // Check alignment
         let mut physical_addr = address;
@@ -228,7 +235,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         // Write unaligned data
         if bytes_unaligned > 0 {
             let unaligned_data = &data[0..core::cmp::min(bytes_unaligned, data.len())];
-            self.write_lt_128_unaligned(physical_addr, unaligned_data, sys_clk)?;
+            self.write_lt_128_unaligned(physical_addr, unaligned_data)?;
             physical_addr += unaligned_data.len() as u32;
         }
 
@@ -245,7 +252,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             bytes_in_buffer += 4;
 
             if bytes_in_buffer == 16 {
-                self.write128(physical_addr, &buffer_128_bits, sys_clk)?;
+                self.write128(physical_addr, &buffer_128_bits)?;
                 physical_addr += 16;
                 bytes_in_buffer = 0;
             }
@@ -254,21 +261,20 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         // remainder from chunks
         let data_left_idx = (physical_addr - address) as usize;
         if bytes_in_buffer > 0 {
-            self.write_lt_128_unaligned(physical_addr, &data[data_left_idx..], sys_clk)?;
+            self.write_lt_128_unaligned(physical_addr, &data[data_left_idx..])?;
         } else if !chunk_8.remainder().is_empty() {
-            self.write_lt_128_unaligned(physical_addr, chunk_8.remainder(), sys_clk)?;
+            self.write_lt_128_unaligned(physical_addr, chunk_8.remainder())?;
         }
+
+        self.flush_icc()?;
+
+        self.enable_icc0();
 
         Ok(())
     }
 
     /// Writes less than 128 bits (16 bytes) of data to flash.
-    fn write_lt_128_unaligned(
-        &self,
-        address: u32,
-        data: &[u8],
-        sys_clk: &SystemClock,
-    ) -> Result<(), FlashErr> {
+    fn write_lt_128_unaligned(&self, address: u32, data: &[u8]) -> Result<(), FlashErr> {
         // Get byte idx within 128-bit word
         let byte_idx = (address & 0xF) as usize;
 
@@ -290,27 +296,16 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
                 new_data[idx] = u32::from_le_bytes(word_chunk.try_into().unwrap())
             });
 
-        self.write128(aligned_addr, &new_data, sys_clk)
+        self.write128(aligned_addr, &new_data)
     }
 
     /// Writes 128 bits (16 bytes) of data to flash.
     // make sure to disable ICC with ICC_Disable(); before Running this function
-    fn write128(
-        &self,
-        address: u32,
-        data: &[u32; 4],
-        sys_clk: &SystemClock,
-    ) -> Result<(), FlashErr> {
+    fn write128(&self, address: u32, data: &[u32; 4]) -> Result<(), FlashErr> {
         // Check if adddress is 128-bit aligned
         if address & 0xF > 0 {
             return Err(FlashErr::AddressNotAligned128);
         }
-
-        if self.set_clock_divisor(sys_clk).is_err() {
-            return Err(FlashErr::FlcClkErr);
-        };
-
-        self.disable_icc0();
 
         self.unlock_write_protection();
 
@@ -330,10 +325,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         self.lock_write_protection();
 
-        self.flush_icc()?;
-
-        self.enable_icc0();
-
         Ok(())
     }
 
@@ -345,8 +336,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Erases must not corrupt potentially executable instructions of the program.
     /// Behavior is undefined if any of the following conditions are violated:
     /// * `address` must be in a valid flash page
-    ///
-    /// * `flc_clk` must be 1MHz
     pub unsafe fn page_erase(&self, address: u32, sys_clk: &SystemClock) -> Result<(), FlashErr> {
         self.check_address_bounds(address..address)?;
 
