@@ -3,17 +3,18 @@
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
 use max78000_hal::max78000::{trimsir::INRO, FLC, GCR, ICC0};
-use max78000_hal::peripherals::flash_controller::FlashController;
+use max78000_hal::peripherals::flash_controller::{FlashController, FlashErr};
 use max78000_hal::peripherals::oscillator::{
-    Ipo, IpoDivider, IpoFrequency, Iso, IsoDivider, IsoFrequency, Oscillator, SystemClock,
+    Ibro, IbroDivider, IbroFrequency, Ipo, IpoDivider, IpoFrequency, Iso, IsoDivider, IsoFrequency,
+    Oscillator, SystemClock,
 };
 
 /// Runs all flash controller tests: [`flash_write`], [`flash_write_large`],
 /// [`flash_write_extra_large`], [`flash_write_after_sys_osc_switch`],
-/// [`flash_write_after_sys_clk_div_changes`], [`flash_write_full_outbounds`],
+/// [`flash_write_after_sys_clk_div_changes`], [`flash_write_invalid_clk_div`],
+/// [`flash_write_full_outbounds`],
 /// [`flash_write_paritially_outbound_beginning`],
-/// [`flash_write_full_paritially_outbound_end`],
-/// [`flash_write_full_outbound_fully_before_and_after`]
+/// [`flash_write_full_paritially_outbound_end`].
 pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR, inro: &INRO) {
     writeln!(stdout, "Starting flash tests...").unwrap();
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
@@ -31,6 +32,13 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
 
     writeln!(stdout, "Test flash write unaligned...").unwrap();
     flash_write_unaligned(&flash_controller, &sys_clk);
+
+    {
+        writeln!(stdout, "Test flash write after invalid clock divider...").unwrap();
+        let ibro = Ibro::new(IbroFrequency::_7_3728MHz, IbroDivider::_2);
+        sys_clk.set_sysclk(&ibro);
+        flash_write_invalid_clk_div(&flash_controller, &sys_clk);
+    }
 
     {
         writeln!(
@@ -53,6 +61,23 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
         sys_clk.set_sysclk(&iso);
         flash_write_after_sys_clk_div_changes(&flash_controller, &sys_clk);
     }
+
+    writeln!(stdout, "Test flash write address fully out of bounds").unwrap();
+    flash_write_full_outbounds(&flash_controller, &sys_clk);
+
+    writeln!(
+        stdout,
+        "Test flash write address paritally out of bounds beginning"
+    )
+    .unwrap();
+    flash_write_paritially_outbound_beginning(&flash_controller, &sys_clk);
+
+    writeln!(
+        stdout,
+        "Test flash write address paritally out of bounds end"
+    )
+    .unwrap();
+    flash_write_full_paritially_outbound_end(&flash_controller, &sys_clk);
 
     writeln!(stdout, "Flash Controller tests complete!").unwrap();
 }
@@ -129,6 +154,20 @@ fn flash_write_unaligned(flash_controller: &FlashController, sys_clk: &SystemClo
     assert!(test_data == read_data);
 }
 
+/// Invalid flash clock divider is detect by the page_erase function
+fn flash_write_invalid_clk_div(flash_controller: &FlashController, sys_clk: &SystemClock) {
+    let test_addr: u32 = 0x10070F00;
+
+    unsafe {
+        if let Err(why) = flash_controller.page_erase(test_addr, sys_clk) {
+            match why {
+                FlashErr::FlcClkErr => (),
+                _ => panic!("Not FlcClk Err"),
+            }
+        }
+    }
+}
+
 fn flash_write_after_sys_osc_switch(flash_controller: &FlashController, sys_clk: &SystemClock) {
     let test_addr: u32 = 0x10070F00;
     const TEST_STR: &str = "SYS_OSC CHANGED";
@@ -168,4 +207,59 @@ fn flash_write_after_sys_clk_div_changes(
     }
 
     assert!(test_data == read_data);
+}
+
+/// Fully out of bound addresses are caught by the page_erase function which
+/// checks if the start address page is in bounds
+fn flash_write_full_outbounds(flash_controller: &FlashController, sys_clk: &SystemClock) {
+    let test_addr: u32 = 0x0FFF_FFFF;
+
+    unsafe {
+        if let Err(why) = flash_controller.page_erase(test_addr, sys_clk) {
+            match why {
+                FlashErr::PtrBoundsErr => (),
+                _ => panic!("Not Bounds Err"),
+            }
+        }
+    }
+}
+
+/// Flash writes which have the start address bellow the start of a valid flash
+/// address range are caught by the page_erase function which checks if the
+/// start address page is in bounds
+fn flash_write_paritially_outbound_beginning(
+    flash_controller: &FlashController,
+    sys_clk: &SystemClock,
+) {
+    let test_addr: u32 = 0x0FFF_FF00;
+
+    unsafe {
+        if let Err(why) = flash_controller.page_erase(test_addr, sys_clk) {
+            match why {
+                FlashErr::PtrBoundsErr => (),
+                _ => panic!("Not Bounds Err"),
+            }
+        }
+    }
+}
+
+/// Flash writes which have the end address above the end of a valid flash
+/// address range are caught by the write function which checks if the
+/// end address is in bounds
+fn flash_write_full_paritially_outbound_end(
+    flash_controller: &FlashController,
+    sys_clk: &SystemClock,
+) {
+    let test_addr: u32 = 0x1007_FFFA;
+    let test_data: [u8; 10] = [b'A'; 10];
+
+    unsafe {
+        flash_controller.page_erase(test_addr, sys_clk).unwrap();
+        if let Err(why) = flash_controller.write(test_addr, &test_data, sys_clk) {
+            match why {
+                FlashErr::PtrBoundsErr => (),
+                _ => panic!("Not Bounds Err"),
+            }
+        }
+    }
 }

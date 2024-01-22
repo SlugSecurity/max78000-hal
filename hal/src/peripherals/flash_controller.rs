@@ -161,27 +161,31 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let mut word_chunk = data.chunks_exact_mut(4);
         for word in word_chunk.borrow_mut() {
             // SAFETY:
-            // - src is valid for reads. Because read range is checked at the
+            // * src is valid for reads. Because read range is checked at the
             // beginning of function.
-            // - src is properly aligned. Because pointer is cast to an array of
+            //
+            // * src is properly aligned. Because pointer is cast to an array of
             // u8s which is guaranteed to be aligned to 1.
-            // - src is pointing to a properly initialized value of type
+            //
+            // * src is pointing to a properly initialized value of type
             // T. Reading initialized mapped peripheral memory which is within
             // bounds of the flash memory space.
             unsafe {
                 let buffer = core::ptr::read_volatile(next_read_address as *const [u8; 4]);
-                word.copy_from_slice(&buffer[0..word.len()]);
+                word.copy_from_slice(&buffer);
             }
             next_read_address += 4;
         }
 
         for byte in word_chunk.into_remainder() {
             // SAFETY:
-            // - src is valid for reads. Because read range is checked at the
+            // * src is valid for reads. Because read range is checked at the
             // beginning of function.
-            // - src is properly aligned. Because pointer is cast to an array of
+            //
+            // * src is properly aligned. Because pointer is cast to an array of
             // u8s which is guaranteed to be aligned to 1.
-            // - src is pointing to a properly initialized value of type
+            //
+            // * src is pointing to a properly initialized value of type
             // T. Reading initialized mapped peripheral memory which is within
             // bounds of the flash memory space.
             unsafe {
@@ -198,7 +202,13 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// # Safety
     ///
     /// Writes must not corrupt potentially executable instructions of the program.
-    /// Need to write a contract for function to be used soundly (specific)
+    /// Behavior is undefined if any of the following conditions are violated:
+    /// * `data` must be initialize.
+    ///
+    /// * `address..address+data.len()` must be in a valid flash address range
+    ///
+    /// * `flc_clk` must be 1MHz
+
     pub unsafe fn write(
         &self,
         address: u32,
@@ -206,8 +216,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         sys_clk: &SystemClock,
     ) -> Result<(), FlashErr> {
         self.check_address_bounds(address..(address + data.len() as u32))?;
-
-        self.disable_icc0();
 
         // Check alignment
         let mut physical_addr = address;
@@ -251,9 +259,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             self.write_lt_128_unaligned(physical_addr, chunk_8.remainder(), sys_clk)?;
         }
 
-        self.flush_icc()?;
-
-        self.enable_icc0();
         Ok(())
     }
 
@@ -305,6 +310,8 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             return Err(FlashErr::FlcClkErr);
         };
 
+        self.disable_icc0();
+
         self.unlock_write_protection();
 
         // Clear stale errors
@@ -323,6 +330,10 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         self.lock_write_protection();
 
+        self.flush_icc()?;
+
+        self.enable_icc0();
+
         Ok(())
     }
 
@@ -332,10 +343,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// # Safety
     ///
     /// Erases must not corrupt potentially executable instructions of the program.
+    /// Behavior is undefined if any of the following conditions are violated:
+    /// * `address` must be in a valid flash page
+    ///
+    /// * `flc_clk` must be 1MHz
     pub unsafe fn page_erase(&self, address: u32, sys_clk: &SystemClock) -> Result<(), FlashErr> {
         self.check_address_bounds(address..address)?;
-
-        self.disable_icc0();
 
         if self.set_clock_divisor(sys_clk).is_err() {
             return Err(FlashErr::FlcClkErr);
@@ -359,7 +372,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         self.flush_icc()?;
 
-        self.enable_icc0();
         Ok(())
     }
 
