@@ -5,13 +5,15 @@ use cortex_m_semihosting::hio;
 use max78000_hal::max78000::{trimsir::INRO, FLC, GCR, ICC0};
 use max78000_hal::peripherals::flash_controller::FlashController;
 use max78000_hal::peripherals::oscillator::{
-    Ibro, IbroDivider, IbroFrequency, Ipo, IpoDivider, IpoFrequency, Iso, IsoDivider, IsoFrequency,
-    Oscillator, SystemClock,
+    Ipo, IpoDivider, IpoFrequency, Iso, IsoDivider, IsoFrequency, Oscillator, SystemClock,
 };
 
 /// Runs all flash controller tests: [`flash_write`], [`flash_write_large`],
 /// [`flash_write_extra_large`], [`flash_write_after_sys_osc_switch`],
-/// [`flash_write_after_sys_clk_div_changes`].
+/// [`flash_write_after_sys_clk_div_changes`], [`flash_write_full_outbounds`],
+/// [`flash_write_paritially_outbound_beginning`],
+/// [`flash_write_full_paritially_outbound_end`],
+/// [`flash_write_full_outbound_fully_before_and_after`]
 pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR, inro: &INRO) {
     writeln!(stdout, "Starting flash tests...").unwrap();
     let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
@@ -47,8 +49,8 @@ pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &
             "Test flash write after system clock divider changes..."
         )
         .unwrap();
-        let ibro = Ibro::new(IbroFrequency::_7_3728MHz, IbroDivider::_4);
-        sys_clk.set_sysclk(&ibro);
+        let iso = Iso::new(IsoFrequency::_60MHz, IsoDivider::_4);
+        sys_clk.set_sysclk(&iso);
         flash_write_after_sys_clk_div_changes(&flash_controller, &sys_clk);
     }
 
