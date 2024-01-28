@@ -2,4 +2,5 @@
 
 pub mod bit_band_tests;
 pub mod oscillator_tests;
+pub mod timer_tests;
 pub mod trng_tests;

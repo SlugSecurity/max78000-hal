@@ -9,7 +9,7 @@ use core::fmt::Write;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use max78000_hal::{max78000::Peripherals, peripherals::power::PowerControl};
-use tests::{bit_band_tests, oscillator_tests, trng_tests};
+use tests::{bit_band_tests, oscillator_tests, timer_tests, trng_tests};
 
 extern crate panic_halt;
 
@@ -34,6 +34,13 @@ fn main() -> ! {
 
     // TODO: Assuming peripheral API will initialize this later.
     let power = PowerControl::new(&peripherals.GCR, &peripherals.LPGCR);
+
+    timer_tests::run_timer_tests(
+        &mut stdout,
+        peripherals.TMR,
+        peripherals.TMR1,
+        &peripherals.GCR,
+    );
 
     trng_tests::run_trng_tests(peripherals.TRNG, &power, &mut stdout);
 
