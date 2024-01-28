@@ -1,6 +1,7 @@
 //! Peripheral API for Timers
 
 use core::ops::Deref;
+use max78000::gcr::clkctrl::ERTCO_EN_A;
 use max78000::gcr::pclkdis0::GPIO0_A;
 use max78000::gcr::rst0::RESET_A;
 use max78000::tmr;
@@ -69,8 +70,10 @@ pub enum Oscillator {
 /// Instance of a timer. Internally keeps clock start and end values, and a reference to the clock
 /// that created it.
 pub struct Timer<'a, T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> {
-    start: u32,
-    end: u32,
+    /// Start timestamp
+    pub start: u32,
+    /// End timestamp
+    pub end: u32,
     clock: &'a Clock<T>,
     finished: bool,
 }
@@ -97,7 +100,7 @@ impl<'a, T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Tim
             let cnt = self.clock.get_count();
             cnt >= self.end && cnt < self.start
         } else {
-            self.end >= self.clock.get_count()
+            self.clock.get_count() >= self.end
         };
         if res {
             self.finished = true;
@@ -226,6 +229,20 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
                 .variant(true)
         });
 
+        // enable underlying oscillator
+
+        match oscillator {
+            Oscillator::ERTCO => gcr_registers
+                .clkctrl()
+                .modify(|_, w| w.ertco_en().variant(ERTCO_EN_A::EN)),
+            Oscillator::ISO => gcr_registers
+                .clkctrl()
+                .modify(|_, w| w.iso_en().variant(ERTCO_EN_A::EN)),
+            Oscillator::IBRO => gcr_registers
+                .clkctrl()
+                .modify(|_, w| w.ibro_en().variant(ERTCO_EN_A::EN)),
+        }
+
         // Figure out conversion factor between ticks and milliseconds
         let clkdiv = match prescaler {
             Prescaler::_1 => 1f64,
@@ -261,6 +278,10 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         // enable the timer clock
         this.tmr_registers
             .ctrl0()
+            .modify(|_, w| w.clken_a().variant(true));
+        while !this.tmr_registers.ctrl1().read().clkrdy_a().bit() {}
+        this.tmr_registers
+            .ctrl0()
             .modify(|_, w| w.en_a().variant(true));
         while !this.tmr_registers.ctrl0().read().en_a().bit() {}
 
@@ -287,7 +308,8 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         self.tmr_registers
     }
 
-    fn get_count(&self) -> u32 {
+    /// Return raw clk count val
+    pub fn get_count(&self) -> u32 {
         self.tmr_registers.cnt().read().count().bits()
     }
 
