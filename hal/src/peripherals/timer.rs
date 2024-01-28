@@ -52,6 +52,23 @@ gen_impl_tpgcr!(TMR3, tmr3);
 
 /// `Clock` struct. This will take ownership of the timer peripheral registers and is generic to
 /// `TMR`, `TMR1`, `TMR2`, and `TMR3`. With it you can start timers using [`Clock::new_timer`]
+///
+/// # Example
+///
+/// ```rust
+/// use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
+/// use max78000_hal::max78000::{Peripherals};
+///
+/// let peripherals = Peripherals::take().unwrap();
+/// // create the clock
+/// let mut clock = Clock::new(peripherals.TMR, &peripherals.GCR, Oscillator::IBRO, Prescaler::_1024);
+///
+/// // spawn a new timer
+/// let mut timer = clock.new_timer(Time::Milliseconds(5000));
+///
+/// // will stall for 5 seconds
+/// while !timer.poll() {};
+/// ```
 pub struct Clock<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> {
     tmr_registers: T,
     ticks_per_ms: f64,
@@ -267,7 +284,7 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
             Oscillator::ERTCO => 32.768, // 32.768 Khz
         };
 
-        this.ticks_per_ms = clks_per_ms * clkdiv;
+        this.ticks_per_ms = clks_per_ms / clkdiv;
 
         // Set time to repeat every 2^32 ticks (basically highest period possible)
         this.tmr_registers
@@ -313,11 +330,13 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         self.tmr_registers.cnt().read().count().bits()
     }
 
-    fn ms_to_ticks(&self, ms: u32) -> u32 {
+    /// Convert milliseconds to ticks
+    pub fn ms_to_ticks(&self, ms: u32) -> u32 {
         ((ms as f64) * self.ticks_per_ms) as u32
     }
 
-    fn ticks_to_ms(&self, ticks: u32) -> u32 {
+    /// Convert ticks to milliseconds
+    pub fn ticks_to_ms(&self, ticks: u32) -> u32 {
         (ticks as f64 / self.ticks_per_ms) as u32
     }
 
