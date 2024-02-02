@@ -236,20 +236,17 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
         // Write aligned data in 128 bit chunks
         let mut chunk_8 = data[bytes_unaligned..].chunks_exact(16);
-        let chunk_32 = chunk_8
-            .by_ref()
-            .step_by(4)
-            .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()));
+        let flc_words_chunks = chunk_8.by_ref().map(|word| {
+            word.chunks_exact(4)
+                .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()))
+        });
 
-        let mut buffer_128_bits: [u32; 4] = [0; 4];
-        for (idx, word) in chunk_32.enumerate() {
-            buffer_128_bits[idx % 4] = word;
-
-            // zero based index horrors ...
-            if idx >= 3 && idx % 4 == 3 {
-                self.write128(physical_addr, &buffer_128_bits)?;
-                physical_addr += 16;
-            }
+        for word in flc_words_chunks {
+            let mut buffer_128_bits: [u32; 4] = [0; 4];
+            word.enumerate()
+                .for_each(|(idx, chunk)| buffer_128_bits[idx] = chunk);
+            self.write128(physical_addr, &buffer_128_bits)?;
+            physical_addr += 16;
         }
 
         // remainder from chunks
