@@ -40,7 +40,10 @@ fn main() -> ! {
         &mut stdout,
     );
 
-    trng_tests::run_trng_tests(peripherals.TRNG, &peripherals.GCR, &mut stdout);
+    // TODO: Assuming peripheral API will initialize this later.
+    let power = PowerControl::new(&peripherals.GCR, &peripherals.LPGCR);
+
+    trng_tests::run_trng_tests(peripherals.TRNG, &power, &mut stdout);
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
