@@ -181,7 +181,7 @@ impl<'a, 'mcr, const PIN_CT: usize> PinHandle<'a> for LowPowerPinHandle<'a, 'mcr
     type Port = GpioPort<'mcr, LowPowerGpio<'mcr>, PIN_CT>;
 
     fn new(_private: NonConstructible, port: &'a Self::Port, pin_idx: usize) -> Self {
-        // We can't get rid of the const generic here or otherwise prevent a bad pin count
+        // TODO: We can't get rid of the const generic here or otherwise prevent a bad pin count
         // from being entered until more complex exprs can be evaluated in const generics stably.
         // So there are asserts here to ensure they can't be constructed. The construction of these
         // handles are done privately and not able to be done externally so this is fine.
