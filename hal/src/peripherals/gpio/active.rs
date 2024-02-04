@@ -1,5 +1,5 @@
 //! GPIO0 - GPIO2 pin manipulation.
-//! This module contains trait implementations for the common GPIO ports.
+//! This module contains trait implementations for the active GPIO ports.
 //!
 //! # Examples
 //!
@@ -56,26 +56,26 @@ pub mod port_num_types;
 //     [ ] on the super module with examples of how to use the API (can tell user to see user guide and datasheet too)
 //     [ ] improve existing comments in entire driver to add more detail
 // [x] add unit tests for acquiring handles, releasing handles and recaquiring
-// [ ] add unit tests for each public function in the common pin API
+// [ ] add unit tests for each public function in the active pin API
 
 /// Marker struct implementing `GpioPortMetadata` for
-/// common GPIO ports.
-pub struct CommonGpio<PortNum: GpioPortNum>(PhantomData<PortNum>);
+/// active GPIO ports.
+pub struct ActiveGpio<PortNum: GpioPortNum>(PhantomData<PortNum>);
 
 #[sealed]
-impl<PortNum: GpioPortNum + 'static> GpioPortMetadata<'static> for CommonGpio<PortNum> {
-    type PinHandleType<'a, const PIN_CT: usize> = CommonPinHandle<'a, PortNum, PIN_CT>;
+impl<PortNum: GpioPortNum + 'static> GpioPortMetadata<'static> for ActiveGpio<PortNum> {
+    type PinHandleType<'a, const PIN_CT: usize> = ActivePinHandle<'a, PortNum, PIN_CT>;
     type GpioRegs = PortNum::Peripheral;
 }
 
-/// `PinHandle` implementation for common GPIO ports.
-pub struct CommonPinHandle<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> {
-    port: &'a GpioPort<'static, CommonGpio<PortNum>, PIN_CT>,
+/// `PinHandle` implementation for active GPIO ports.
+pub struct ActivePinHandle<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> {
+    port: &'a GpioPort<'static, ActiveGpio<PortNum>, PIN_CT>,
     pin_idx: usize,
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> Drop
-    for CommonPinHandle<'a, PortNum, PIN_CT>
+    for ActivePinHandle<'a, PortNum, PIN_CT>
 {
     fn drop(&mut self) {
         // When handle is dropped, allow the pin to be taken again.
@@ -85,16 +85,16 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> Drop
 
 #[sealed]
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> PinHandle<'a>
-    for CommonPinHandle<'a, PortNum, PIN_CT>
+    for ActivePinHandle<'a, PortNum, PIN_CT>
 {
-    type Port = GpioPort<'static, CommonGpio<PortNum>, PIN_CT>;
+    type Port = GpioPort<'static, ActiveGpio<PortNum>, PIN_CT>;
 
     fn new(_private: NonConstructible, port: &'a Self::Port, pin_idx: usize) -> Self {
         // TODO: We can't get rid of the const generic here or otherwise prevent a bad pin count
         // from being entered until more complex exprs can be evaluated in const generics stably.
         // So there are asserts here to ensure they can't be constructed. The construction of these
         // handles are done privately and not able to be done externally so this is fine.
-        assert!(PIN_CT <= 32); // Any common port can have up to 32 pins based on the registers
+        assert!(PIN_CT <= 32); // Any active port can have up to 32 pins based on the registers
         assert!(pin_idx < PIN_CT);
 
         Self { port, pin_idx }
@@ -105,13 +105,13 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> PinHandle<'a>
     }
 }
 
-/// `InputPin` implementation for common GPIO ports.
-pub struct CommonInputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>(
-    CommonPinHandle<'a, PortNum, PIN_CT>,
+/// `InputPin` implementation for active GPIO ports.
+pub struct ActiveInputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>(
+    ActivePinHandle<'a, PortNum, PIN_CT>,
 );
 
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> InputPin
-    for CommonInputPin<'_, PortNum, PIN_CT>
+    for ActiveInputPin<'_, PortNum, PIN_CT>
 {
     type Error = Infallible;
 
@@ -124,13 +124,13 @@ impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> InputPin
     }
 }
 
-/// `OutputPin` implementation for common GPIO ports.
-pub struct CommonOutputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>(
-    CommonPinHandle<'a, PortNum, PIN_CT>,
+/// `OutputPin` implementation for active GPIO ports.
+pub struct ActiveOutputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>(
+    ActivePinHandle<'a, PortNum, PIN_CT>,
 );
 
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
-    for CommonOutputPin<'_, PortNum, PIN_CT>
+    for ActiveOutputPin<'_, PortNum, PIN_CT>
 {
     type Error = Infallible;
 
@@ -154,7 +154,7 @@ impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
 }
 
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> StatefulOutputPin
-    for CommonOutputPin<'_, PortNum, PIN_CT>
+    for ActiveOutputPin<'_, PortNum, PIN_CT>
 {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         Ok(self.0.port.regs.out().read().bits() & (1 << self.0.pin_idx) != 0)
@@ -166,12 +166,12 @@ impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> StatefulOutputPin
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    IoPin<CommonInputPin<'a, PortNum, PIN_CT>, CommonOutputPin<'a, PortNum, PIN_CT>>
-    for CommonPinHandle<'a, PortNum, PIN_CT>
+    IoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
+    for ActivePinHandle<'a, PortNum, PIN_CT>
 {
     type Error = Infallible;
 
-    fn into_input_pin(self) -> Result<CommonInputPin<'a, PortNum, PIN_CT>, Self::Error> {
+    fn into_input_pin(self) -> Result<ActiveInputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.port
             .regs
             .outen_clr()
@@ -180,13 +180,13 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
             .regs
             .inen()
             .modify(|r, w| w.gpio_inen().variant(r.bits() | (1 << self.pin_idx)));
-        Ok(CommonInputPin(self))
+        Ok(ActiveInputPin(self))
     }
 
     fn into_output_pin(
         self,
         state: PinState,
-    ) -> Result<CommonOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
+    ) -> Result<ActiveOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.port
             .regs
             .inen()
@@ -195,7 +195,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
             .regs
             .outen_set()
             .write(|w| w.all().variant(1 << self.pin_idx));
-        let mut pin = CommonOutputPin(self);
+        let mut pin = ActiveOutputPin(self);
         match state {
             PinState::Low => pin.set_low()?,
             PinState::High => pin.set_high()?,
@@ -205,8 +205,8 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    GeneralIoPin<CommonInputPin<'a, PortNum, PIN_CT>, CommonOutputPin<'a, PortNum, PIN_CT>>
-    for CommonPinHandle<'a, PortNum, PIN_CT>
+    GeneralIoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
+    for ActivePinHandle<'a, PortNum, PIN_CT>
 {
     // TODO: Statically constrain the pin operating mode according to PIN_CT and the pin index
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
@@ -343,26 +343,26 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    IoPin<CommonInputPin<'a, PortNum, PIN_CT>, CommonOutputPin<'a, PortNum, PIN_CT>>
-    for CommonInputPin<'a, PortNum, PIN_CT>
+    IoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
+    for ActiveInputPin<'a, PortNum, PIN_CT>
 {
     type Error = Infallible;
 
-    fn into_input_pin(self) -> Result<CommonInputPin<'a, PortNum, PIN_CT>, Self::Error> {
+    fn into_input_pin(self) -> Result<ActiveInputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_input_pin()
     }
 
     fn into_output_pin(
         self,
         state: PinState,
-    ) -> Result<CommonOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
+    ) -> Result<ActiveOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_output_pin(state)
     }
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    GeneralIoPin<CommonInputPin<'a, PortNum, PIN_CT>, CommonOutputPin<'a, PortNum, PIN_CT>>
-    for CommonInputPin<'a, PortNum, PIN_CT>
+    GeneralIoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
+    for ActiveInputPin<'a, PortNum, PIN_CT>
 {
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
         self.0.set_operating_mode(mode)
@@ -378,26 +378,26 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    IoPin<CommonInputPin<'a, PortNum, PIN_CT>, CommonOutputPin<'a, PortNum, PIN_CT>>
-    for CommonOutputPin<'a, PortNum, PIN_CT>
+    IoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
+    for ActiveOutputPin<'a, PortNum, PIN_CT>
 {
     type Error = Infallible;
 
-    fn into_input_pin(self) -> Result<CommonInputPin<'a, PortNum, PIN_CT>, Self::Error> {
+    fn into_input_pin(self) -> Result<ActiveInputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_input_pin()
     }
 
     fn into_output_pin(
         self,
         state: PinState,
-    ) -> Result<CommonOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
+    ) -> Result<ActiveOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_output_pin(state)
     }
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    GeneralIoPin<CommonInputPin<'a, PortNum, PIN_CT>, CommonOutputPin<'a, PortNum, PIN_CT>>
-    for CommonOutputPin<'a, PortNum, PIN_CT>
+    GeneralIoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
+    for ActiveOutputPin<'a, PortNum, PIN_CT>
 {
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
         self.0.set_operating_mode(mode)
@@ -421,7 +421,7 @@ pub enum PowerSupply {
     Vddioh,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> CommonPinHandle<'a, PortNum, PIN_CT> {
+impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'a, PortNum, PIN_CT> {
     /// Sets the pin's associated power supply.
     pub fn set_power_supply(&self, ps: PowerSupply) {
         self.port.regs.vssel().modify(|r, w| match ps {
@@ -455,7 +455,7 @@ pub enum PullMode {
     StrongPulldown,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> CommonInputPin<'a, PortNum, PIN_CT> {
+impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveInputPin<'a, PortNum, PIN_CT> {
     /// Sets the pin's pull mode.
     pub fn set_pull_mode(&self, mode: PullMode) {
         let (padctrl0, padctrl1, ps) = match mode {
@@ -526,7 +526,7 @@ pub enum DriveStrength {
     S3,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> CommonOutputPin<'a, PortNum, PIN_CT> {
+impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveOutputPin<'a, PortNum, PIN_CT> {
     /// Sets the pin's drive strength.
     pub fn set_drive_strength(&self, ds: DriveStrength) {
         let (ds0, ds1) = match ds {

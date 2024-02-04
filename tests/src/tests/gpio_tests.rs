@@ -5,7 +5,7 @@ use cortex_m_semihosting::hio;
 use max78000_hal::{
     max78000::{GCR, GPIO0, GPIO1, GPIO2, LPGCR, MCR},
     peripherals::gpio::{
-        common::{port_num_types::GpioPortNum, CommonGpio},
+        active::{port_num_types::GpioPortNum, ActiveGpio},
         low_power::LowPowerGpio,
         new_gpio0, new_gpio1, new_gpio2, new_gpio3,
         pin_traits::{GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
@@ -39,16 +39,16 @@ pub fn run_gpio_tests(
     // Note: Tests should be made generic over traits like GeneralIoPin, InputPin, and StatefulOutputPin
     // Write sanity checks for now (writing a value then reading it) -- physical tests will come later
 
-    test_common_port(gpio0_port);
-    test_common_port(gpio1_port);
-    test_common_port(gpio2_port);
+    test_active_port(gpio0_port);
+    test_active_port(gpio1_port);
+    test_active_port(gpio2_port);
     test_low_power_port(gpio3_port);
 
     writeln!(stdout, "GPIO peripheral tests complete!\n").unwrap();
 }
 
-fn test_common_port<const PIN_CT: usize>(
-    port: GpioPort<'static, CommonGpio<impl GpioPortNum + 'static>, PIN_CT>,
+fn test_active_port<const PIN_CT: usize>(
+    port: GpioPort<'static, ActiveGpio<impl GpioPortNum + 'static>, PIN_CT>,
 ) {
     let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
     assert!(matches!(

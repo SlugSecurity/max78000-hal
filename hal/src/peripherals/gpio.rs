@@ -6,9 +6,9 @@ use max78000::{GPIO0, GPIO1, GPIO2, MCR};
 use sealed::sealed;
 
 use self::{
-    common::{
+    active::{
         port_num_types::{GpioOne, GpioTwo, GpioZero},
-        CommonGpio,
+        ActiveGpio,
     },
     low_power::LowPowerGpio,
     private::NonConstructible,
@@ -16,7 +16,7 @@ use self::{
 
 pub mod pin_traits;
 
-pub mod common;
+pub mod active;
 
 pub mod low_power;
 
@@ -126,20 +126,20 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
 
 /// Creates a new [`GpioPort`] representing GPIO0.
 // TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, CommonGpio<GpioZero>, 31> {
-    GpioPort::<CommonGpio<GpioZero>, 31>::new(gpio0)
+pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, ActiveGpio<GpioZero>, 31> {
+    GpioPort::<ActiveGpio<GpioZero>, 31>::new(gpio0)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO1.
 // TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, CommonGpio<GpioOne>, 10> {
-    GpioPort::<CommonGpio<GpioOne>, 10>::new(gpio1)
+pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, ActiveGpio<GpioOne>, 10> {
+    GpioPort::<ActiveGpio<GpioOne>, 10>::new(gpio1)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO2.
 // TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, CommonGpio<GpioTwo>, 8> {
-    GpioPort::<CommonGpio<GpioTwo>, 8>::new(gpio2)
+pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, ActiveGpio<GpioTwo>, 8> {
+    GpioPort::<ActiveGpio<GpioTwo>, 8>::new(gpio2)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO3.

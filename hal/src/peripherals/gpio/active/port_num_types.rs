@@ -1,4 +1,4 @@
-//! Contains types used to enumerate the common GPIO ports.
+//! Contains types used to enumerate the active GPIO ports.
 
 use core::ops::Deref;
 
@@ -6,7 +6,7 @@ use max78000::gpio0::RegisterBlock;
 use max78000::{GPIO0, GPIO1, GPIO2};
 use sealed::sealed;
 
-/// Trait to disambiguate between different GPIO ports in the common
+/// Trait to disambiguate between different GPIO ports in the active
 /// GPIO API. GPIO3 is not implemented with this because it's
 /// is accessed in a different way.
 ///
