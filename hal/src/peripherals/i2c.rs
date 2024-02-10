@@ -93,6 +93,64 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2C<T> {
         }
         Ok(())
     }
+
+    fn master_send(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), ErrorKind> {
+
+        // Let's flush the FIFO buffers
+        self.i2c_regs.rxctrl0().modify(|_, w| w.flush().bit(true));
+        self.i2c_regs.txctrl0().modify(|_, w| w.flush().bit(true));
+
+        // stall until flush completes
+        while self.i2c_regs.rxctrl0().read().flush().bit()
+            || self.i2c_regs.txctrl0().read().flush().bit()
+        {}
+
+        // Write the I2C slave address byte to the I2Cn_FIFO register with the R/W bit set to 0
+        self.i2c_regs.fifo().write(|w| w.data().variant(address << 1));
+
+        // Write the desired data bytes to the I2Cn_FIFO register, up to the size of the transmit FIFO. (e.g., If the transmit
+        // FIFO size is 8 bytes, the software may write one address byte and seven data bytes before starting the transaction.)
+        let mut num_written = 0;
+        for i in 0..write.len() {
+            if self.i2c_regs.status().read().tx_full().bit() {break;}
+            self.i2c_regs.fifo().write(|w| w.data().variant(write[i]));
+            num_written += 1;
+        }
+
+        // Send a START condition by setting I2Cn_MSTCTRL.start = 1
+        self.i2c_regs.mstctrl().modify(|_, w| w.start().variant(true));
+
+        // The controller transmits the slave address byte written to the I2Cn_FIFO register
+
+        // The I2C controller receives an ACK from the slave, and the controller sets the address ACK interrupt flag
+        // (I2Cn_INTFL0.addr_ack = 1).
+        // TODO: add operation timeouts using timer module
+
+        // poll addr_ack
+        while !self.i2c_regs.intfl0().read().addr_ack().bit() {};
+
+        while num_written < write.len() {
+            while !self.i2c_regs.status().read().tx_full().bit() {
+                if num_written >= write.len() {break;}
+                self.i2c_regs.fifo().write(|w| w.data().variant(write[num_written]));
+                num_written += 1;
+            };
+        }
+
+        // Once the software writes all the desired bytes to the I2Cn_FIFO register; the software should set either
+        // I2Cn_MSTCTRL.restart or I2Cn_MSTCTRL.stop.
+
+        self.i2c_regs.mstctrl().modify(|_, w| {w.stop().bit(true)});
+
+        // Once the controller sends all the remaining bytes and empties the transmit FIFO, the hardware sets
+        // I2Cn_INTFL0.done and proceeds to send out either a RESTART condition if I2Cn_MSTCTRL.restart was set, or a
+        // STOP condition if I2Cn_MSTCTRL.stop was set.
+
+        while !self.i2c_regs.intfl0().read().done().bit() {};
+
+        Ok(())
+    }
+
 }
 
 impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> ErrorType for I2C<T> {
@@ -111,22 +169,22 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> embedded_hal::i2c::I2c for
     }
 
     fn write(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), Self::Error> {
-        todo!()
+        self.master_send(address, write)
     }
 
     fn write_read(
         &mut self,
-        address: SevenBitAddress,
-        write: &[u8],
-        read: &mut [u8],
+        _address: SevenBitAddress,
+        _write: &[u8],
+        _read: &mut [u8],
     ) -> Result<(), Self::Error> {
         todo!()
     }
 
     fn transaction(
         &mut self,
-        address: SevenBitAddress,
-        operations: &mut [Operation<'_>],
+        _address: SevenBitAddress,
+        _operations: &mut [Operation<'_>],
     ) -> Result<(), Self::Error> {
         todo!()
     }
