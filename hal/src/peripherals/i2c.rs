@@ -3,6 +3,7 @@ use embedded_hal;
 use embedded_hal::i2c::{ErrorKind, ErrorType, Operation, SevenBitAddress};
 use max78000::{i2c0, GCR};
 use max78000::{I2C0, I2C1, I2C2};
+use crate::peripherals::i2c::SlavePollResult::{Received, TransmitNeeded};
 
 pub trait GCRI2C {
     /// Disable peripheral
@@ -40,6 +41,7 @@ gen_impl_gcri2c!(I2C0, i2c0, rst0, pclkdis0);
 gen_impl_gcri2c!(I2C1, i2c1, rst1, pclkdis0);
 gen_impl_gcri2c!(I2C2, i2c2, rst1, pclkdis1);
 
+/*
 /// Master or slave, in the slave case provide a 7 bit address to be used
 /// given it's a u8, the topmost bit will be ignored
 pub enum I2CMode {
@@ -47,16 +49,63 @@ pub enum I2CMode {
     Master,
     /// Function as a slave
     Slave(u8)
+}*/
+
+/// The result of calling slave_poll, Received indicates how many bytes have been read,
+/// and if bytes had to be dropped due to exceeding the buffer size
+///
+/// TransmitNeeded indicates you need to call slave_send with the data needed
+pub enum SlavePollResult {
+    Received(u32, bool),
+    TransmitNeeded
 }
 
-struct I2C<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
+struct I2CMaster<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
     i2c_regs: T,
 }
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2C<T> {
+struct I2CSlave<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
+    i2c_regs: T,
+    address: SevenBitAddress
+}
+
+impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
+    pub fn new(gcr_regs: &GCR, i2c_regs: T, address: SevenBitAddress) -> Self {
+        T::peripheral_clock_enable(gcr_regs);
+        T::reset_peripheral(gcr_regs);
+
+        Self {i2c_regs, address}
+    }
+
+    pub fn slave_poll(&mut self, read_buffer: &mut [u8]) -> Result<SlavePollResult, ErrorKind> {
+        // Wait for I2Cn_INTFL0.addr_match = 1
+        while !self.i2c_regs.intfl0().read().addr_match().bit() {};
+
+        if self.i2c_regs.ctrl().read().read().bit() {
+            let res = self.slave_recv(read_buffer)?;
+            return Ok(Received(res.0, res.1));
+        }
+
+        Ok(TransmitNeeded)
+    }
+
+    fn slave_recv(&mut self, read_buffer: &mut [u8]) -> Result<(u32, bool), ErrorKind> {
+
+    }
+
+    pub fn slave_send(&mut self) {
+        todo!();
+    }
+}
+
+// TODO: write code to initialize relevant registers for both master and slave operation
+
+impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
     pub fn new(gcr_regs: &GCR, i2c_regs: T) -> Self {
         T::peripheral_clock_enable(gcr_regs);
         T::reset_peripheral(gcr_regs);
+
+        // TODO: configure
         Self { i2c_regs }
     }
 
@@ -153,11 +202,11 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2C<T> {
 
 }
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> ErrorType for I2C<T> {
+impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> ErrorType for I2CMaster<T> {
     type Error = ErrorKind;
 }
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> embedded_hal::i2c::I2c for I2C<T> {
+impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> embedded_hal::i2c::I2c for I2CMaster<T> {
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         let bytes_to_read = read.len();
         for i in 0..bytes_to_read/256 {
