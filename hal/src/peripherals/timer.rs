@@ -209,8 +209,8 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         this.tmr_registers
             .ctrl0()
             .modify(|_, w| w.en_b().variant(false));
-        while this.tmr_registers.ctrl0().read().en_a().bit() {}
-        while this.tmr_registers.ctrl0().read().en_b().bit() {}
+        while this.tmr_registers.ctrl1().read().clken_a().bit() {}
+        while this.tmr_registers.ctrl1().read().clken_b().bit() {}
 
         // Configure for continuous mode
         this.tmr_registers.ctrl0().modify(|_, w| {
@@ -300,7 +300,7 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         this.tmr_registers
             .ctrl0()
             .modify(|_, w| w.en_a().variant(true));
-        while !this.tmr_registers.ctrl0().read().en_a().bit() {}
+        while !this.tmr_registers.ctrl0().read().clken_a().bit() {}
 
         this
     }
@@ -309,11 +309,6 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
     fn enable_peripheral(&mut self, gcr_reg: &GCR) {
         T::peripheral_clock_enable(gcr_reg)
     }
-
-    /*/// Disable the peripheral through the GCR_PCLKDIS0 register
-    fn disable_peripheral(&mut self, gcr_reg: &GCR) {
-        T::peripheral_clock_disable(gcr_reg)
-    }*/
 
     /// Reset the peripheral through the GCR_RST0 register
     fn reset_peripheral(&mut self, gcr_reg: &GCR) {
