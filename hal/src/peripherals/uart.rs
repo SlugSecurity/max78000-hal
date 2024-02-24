@@ -10,8 +10,8 @@ use sealed::sealed;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum CommunicationError {
-    RecvError,
-    SendError,
+    RecvError { amount_sent: usize },
+    SendError { amount_sent: usize },
     InternalError,
 }
 
@@ -93,12 +93,23 @@ impl Uart<Uart0> {
 
 impl<T: UartInstance> RxChannel for Uart<T> {
     fn recv(&mut self, dest: &mut [u8]) -> Result<usize> {
-        Ok(0)
+        let mut index: usize = 0;
+        while self.regs.status().read().rx_em().bit() && index < dest.len() {
+            dest[index] = self.regs.fifo().read().data().bits();
+            index += 1;
+        }
+        Ok(index)
     }
 }
 
 impl<T: UartInstance> TxChannel for Uart<T> {
     fn send(&mut self, src: &[u8]) -> Result<()> {
+        for (i, &byte) in src.iter().enumerate() {
+            if self.regs.status().read().tx_full().bit() {
+                return Err(CommunicationError::SendError { amount_sent: i });
+            }
+            self.regs.fifo().write(|w| w.data().variant(byte));
+        }
         Ok(())
     }
 }
