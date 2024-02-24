@@ -22,4 +22,6 @@ pub mod raw;
 pub mod rtc;
 pub mod synchronization;
 
-// TODO: Create peripheral manager and traits.
+pub struct Max78000SvdPeripherals;
+
+pub struct PeripheralManager;
