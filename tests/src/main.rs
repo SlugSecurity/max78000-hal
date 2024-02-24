@@ -77,7 +77,7 @@ fn main() -> ! {
         &mut stdout,
     );
 
-    hello_uart::run_uart_test(&peripherals.UART);
+    hello_uart::run_uart_test(&peripherals.UART, &mut stdout);
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
