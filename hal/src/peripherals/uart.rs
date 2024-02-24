@@ -2,7 +2,7 @@
 //!
 //! TODO: Add example and more desc.
 
-use core::marker::PhantomData;
+use core::{marker::PhantomData, ops::Deref};
 
 use sealed::sealed;
 
@@ -24,44 +24,36 @@ pub trait UartInstance {
     //       the pin handle and (). That trait should have a fn for configuring an instance
     //       of the RxPin or TxPin to be used for UART -- no-op with ()
 
-    /// The GPIO pin to use for UART RX.
-    type RxPin;
-
-    /// The GPIO pin to use for UART TX.
-    type TxPin;
+    /// The register block to use for this UART.
+    type Registers: Deref<Target = max78000::uart::RegisterBlock>;
 }
 
 macro_rules! uart_instance_impl {
-    ($uart:ident, $rx_pin:ty, $tx_pin:ty) => {
+    ($uart:ident, $regs:ty) => {
         /// A UART instance containing types for which RX and TX pins to use
         /// for it.
         pub struct $uart;
 
         #[sealed]
         impl UartInstance for $uart {
-            type RxPin = $rx_pin;
-            type TxPin = $tx_pin;
+            type Registers = $regs;
         }
     };
 }
 
 // TODO: Replace RX and TX pin types when GPIO is merged.
-uart_instance_impl!(Uart0, (), ());
+uart_instance_impl!(Uart0, max78000::UART);
 
 pub struct UartBuilder<T: UartInstance> {
-    tx_pin: T::TxPin,
-    rx_pin: T::RxPin,
+    regs: T::Registers,
 }
 
 impl UartBuilder<Uart0> {
-    pub fn build_with_usb(self) -> Uart<Uart0, (), ()> {
-        todo!()
-    }
-}
-
-impl<T: UartInstance> UartBuilder<T> {
-    pub fn build_with_pins(self) -> Uart<T, T::TxPin, T::RxPin> {
-        todo!()
+    pub fn build(instance: max78000::UART) -> Uart<Uart0> {
+        Uart {
+            regs: instance,
+            _uart_instance: Default::default(),
+        }
     }
 }
 
@@ -77,21 +69,35 @@ pub trait TxChannel {
 
 // make trait for pin configuration for Tx and Rx generic params
 // and call those functions on constructions
-pub struct Uart<T: UartInstance, Tx, Rx> {
-    tx_pin: Tx,
-    rx_pin: Rx,
+pub struct Uart<T: UartInstance> {
+    regs: T::Registers,
     _uart_instance: PhantomData<T>,
 }
 
-impl<T: UartInstance, Tx, Rx> Uart<T, Tx, Rx> {}
+impl Uart<Uart0> {
+    #[rustfmt::skip]
+    pub fn init(self, baud: u32) {
+        const IBRO_FREQUENCY: u32 = 7372800;
+        self.regs.ctrl().write(|w| {
+            w.rx_thd_val().variant(1)
+                .char_size()._8bits()
+                .par_en().variant(false)
+                .stopbits().bit(true)
+                // use IBRO
+                .bclksrc().clk2()
+        });
 
-impl<T: UartInstance, Tx, Rx> RxChannel for Uart<T, Tx, Rx> {
+        self.regs.clkdiv().write(|w| w.clkdiv().variant(IBRO_FREQUENCY.div_ceil(baud)));
+    }
+}
+
+impl<T: UartInstance> RxChannel for Uart<T> {
     fn recv(&mut self, dest: &mut [u8]) -> Result<usize> {
         Ok(0)
     }
 }
 
-impl<T: UartInstance, Tx, Rx> TxChannel for Uart<T, Tx, Rx> {
+impl<T: UartInstance> TxChannel for Uart<T> {
     fn send(&mut self, src: &[u8]) -> Result<()> {
         Ok(())
     }
