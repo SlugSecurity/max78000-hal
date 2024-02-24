@@ -77,6 +77,9 @@ fn main() -> ! {
         &mut stdout,
     );
 
+    // do not run! these 2 lines break the board you run them on
+    // peripherals.GCR.clkctrl().write(|w| w.ibro_en().en());
+    // peripherals.GCR.pclkdis0().write(|w| w.uart0().en());
     hello_uart::run_uart_test(&peripherals.UART, &mut stdout);
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();

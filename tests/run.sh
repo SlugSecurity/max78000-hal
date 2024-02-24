@@ -10,7 +10,7 @@ cd "$(dirname "$0")"
 /opt/MaximSDK/Tools/OpenOCD/openocd -s /opt/MaximSDK/Tools/OpenOCD/scripts \
   -f interface/cmsis-dap.cfg \
   -f target/max78000.cfg \
-  -c "init; reset init" &
+  -c "adapter serial 04440001b4ddc81600000000000000000000000097969906; init; reset init" & # /dev/ttyACM1
 
 # Open tests in GDB.
 cargo run -- -x .runner_gdb
