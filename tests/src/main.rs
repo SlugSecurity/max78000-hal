@@ -16,7 +16,9 @@ use max78000_hal::{
         PeripheralManagerBuilder, SplittablePeripheral,
     },
 };
-use tests::{bit_band_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests};
+use tests::{
+    bit_band_tests, flc_tests, gpio_tests, hello_uart, oscillator_tests, timer_tests, trng_tests,
+};
 
 extern crate panic_semihosting;
 
@@ -74,6 +76,8 @@ fn main() -> ! {
         manager.gpio2(),
         &mut stdout,
     );
+
+    hello_uart::run_uart_test(&peripherals.UART);
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 

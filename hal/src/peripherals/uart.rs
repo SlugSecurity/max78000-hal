@@ -49,7 +49,26 @@ pub struct UartBuilder<T: UartInstance> {
 }
 
 impl UartBuilder<Uart0> {
-    pub fn build(instance: max78000::UART) -> Uart<Uart0> {
+    pub fn build<'a>(instance: &'a max78000::UART, baud: u32) -> Uart<'a, Uart0> {
+        const IBRO_FREQUENCY: u32 = 7372800;
+        instance.ctrl().write(|w| {
+            w.rx_thd_val()
+                .variant(1)
+                .char_size()
+                ._8bits()
+                .par_en()
+                .variant(false)
+                .stopbits()
+                .bit(true)
+                // use IBRO
+                .bclksrc()
+                .clk2()
+        });
+
+        instance
+            .clkdiv()
+            .write(|w| w.clkdiv().variant(IBRO_FREQUENCY.div_ceil(baud)));
+
         Uart {
             regs: instance,
             _uart_instance: Default::default(),
@@ -60,39 +79,22 @@ impl UartBuilder<Uart0> {
 // TODO: Move to its own crate/module
 pub trait RxChannel {
     // TODO: Use timeout versions of these functions with timer API
-    fn recv(&mut self, dest: &mut [u8]) -> Result<usize>;
+    fn recv(&self, dest: &mut [u8]) -> Result<usize>;
 }
 
 pub trait TxChannel {
-    fn send(&mut self, src: &[u8]) -> Result<()>;
+    fn send(&self, src: &[u8]) -> Result<()>;
 }
 
 // make trait for pin configuration for Tx and Rx generic params
 // and call those functions on constructions
-pub struct Uart<T: UartInstance> {
-    regs: T::Registers,
+pub struct Uart<'a, T: UartInstance> {
+    regs: &'a T::Registers,
     _uart_instance: PhantomData<T>,
 }
 
-impl Uart<Uart0> {
-    #[rustfmt::skip]
-    pub fn init(self, baud: u32) {
-        const IBRO_FREQUENCY: u32 = 7372800;
-        self.regs.ctrl().write(|w| {
-            w.rx_thd_val().variant(1)
-                .char_size()._8bits()
-                .par_en().variant(false)
-                .stopbits().bit(true)
-                // use IBRO
-                .bclksrc().clk2()
-        });
-
-        self.regs.clkdiv().write(|w| w.clkdiv().variant(IBRO_FREQUENCY.div_ceil(baud)));
-    }
-}
-
-impl<T: UartInstance> RxChannel for Uart<T> {
-    fn recv(&mut self, dest: &mut [u8]) -> Result<usize> {
+impl<T: UartInstance> RxChannel for Uart<'_, T> {
+    fn recv(&self, dest: &mut [u8]) -> Result<usize> {
         let mut index: usize = 0;
         while self.regs.status().read().rx_em().bit() && index < dest.len() {
             dest[index] = self.regs.fifo().read().data().bits();
@@ -102,8 +104,8 @@ impl<T: UartInstance> RxChannel for Uart<T> {
     }
 }
 
-impl<T: UartInstance> TxChannel for Uart<T> {
-    fn send(&mut self, src: &[u8]) -> Result<()> {
+impl<T: UartInstance> TxChannel for Uart<'_, T> {
+    fn send(&self, src: &[u8]) -> Result<()> {
         for (i, &byte) in src.iter().enumerate() {
             if self.regs.status().read().tx_full().bit() {
                 return Err(CommunicationError::SendError { amount_sent: i });
