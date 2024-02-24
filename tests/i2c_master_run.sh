@@ -10,7 +10,7 @@ cd "$(dirname "$0")"
 /opt/MaximSDK/Tools/OpenOCD/openocd -s /opt/MaximSDK/Tools/OpenOCD/scripts \
   -f interface/cmsis-dap.cfg \
   -f target/max78000.cfg \
-  -c "init; reset init" &
+  -c "adapter serial 0444000158dec8cf00000000000000000000000097969906; init; reset init" &
 
 # Open tests in GDB.
-cargo run --bin max78000-hal-tests -- -x .runner_gdb
+cargo run --bin i2c_master_test -- -x .runner_gdb

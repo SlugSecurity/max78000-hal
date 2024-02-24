@@ -16,7 +16,7 @@ pub mod bootloader;
 pub mod crc;
 pub mod ecc;
 pub mod flash_controller;
-mod i2c;
+pub mod i2c;
 pub mod oscillator;
 pub mod power;
 pub mod raw;

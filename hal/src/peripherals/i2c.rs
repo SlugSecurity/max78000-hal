@@ -88,11 +88,11 @@ pub enum SlavePollResult {
     TransmitNeeded,
 }
 
-struct I2CMaster<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
+pub struct I2CMaster<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
     i2c_regs: T,
 }
 
-struct I2CSlave<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
+pub struct I2CSlave<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
     i2c_regs: T,
     address: SevenBitAddress,
 }
@@ -102,12 +102,65 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         T::peripheral_clock_enable(gcr_regs);
         T::reset_peripheral(gcr_regs);
 
+        i2c_regs.ctrl().modify(|_, w| {
+            w.mst_mode().bit(false)
+                .gc_addr_en().bit(false)
+                .irxm_en().bit(false)
+                .clkstr_dis().bit(false)
+                .hs_en().bit(false)
+        });
+
+        i2c_regs.rxctrl0().modify(|_, w| {
+            w.dnr().bit(true) // TODO: debatable
+        });
+
+        i2c_regs.txctrl0().modify(|_, w| {
+            w.nack_flush_dis().bit(false) // TODO: idk what this does
+                .rd_addr_flush_dis().bit(true)
+                .wr_addr_flush_dis().bit(true)
+                .gc_addr_flush_dis().bit(true)
+                .preload_mode().bit(false)
+        });
+
+        // TODO: j set these values to something that works
+        i2c_regs.clkhi().modify(|_ ,w| {
+            w.hi().variant(1)
+        });
+
+        i2c_regs.clklo().modify(|_, w| {
+            w.lo().variant(2)
+        });
+
+        // TODO: figure out wtf slave_multi does later
+        i2c_regs.slave_multi(0).modify(|_, w| {
+            w.addr().variant(address as u16)
+                .ext_addr_en().bit(false)
+        });
+
+        i2c_regs.slave_multi(1).modify(|_, w| {
+            w.addr().variant(address as u16)
+                .ext_addr_en().bit(false)
+        });
+
+        i2c_regs.slave_multi(2).modify(|_, w| {
+            w.addr().variant(address as u16)
+                .ext_addr_en().bit(false)
+        });
+
+        i2c_regs.slave_multi(3).modify(|_, w| {
+            w.addr().variant(address as u16)
+                .ext_addr_en().bit(false)
+        });
+
+        i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+
         Self { i2c_regs, address }
     }
 
     pub fn slave_poll(&mut self, read_buffer: &mut [u8]) -> Result<SlavePollResult, ErrorKind> {
         self.i2c_regs.flush_fifo();
         // Wait for I2Cn_INTFL0.addr_match = 1
+        self.i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         while !self.i2c_regs.intfl0().read().addr_match().bit() {}
 
@@ -190,6 +243,24 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         T::reset_peripheral(gcr_regs);
 
         // TODO: configure
+        i2c_regs.ctrl().modify(|_, w| {
+            w.mst_mode().bit(true)
+                .gc_addr_en().bit(false)
+                .irxm_en().bit(false)
+                .clkstr_dis().bit(false)
+                .hs_en().bit(false)
+        });
+
+        i2c_regs.clkhi().modify(|_ ,w| {
+            w.hi().variant(1)
+        });
+
+        i2c_regs.clklo().modify(|_, w| {
+            w.lo().variant(2)
+        });
+
+        i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+
         Self { i2c_regs }
     }
 
