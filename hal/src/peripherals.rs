@@ -330,7 +330,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
     /// to the desired oscillator, frequency, and divider. All oscillators used
     /// for timers are configured to [`timer::Oscillator::IBRO`] with a prescaler of
     /// [`Prescaler::_1`]. These timers can be configured individually through the
-    /// appropriate [`configure_*`] methods.
+    /// appropriate `configure_*` methods.
     pub fn new(
         borrowed_periphs: &'a PeripheralsToBorrow,
         consumed_periphs: PeripheralsToConsume,
