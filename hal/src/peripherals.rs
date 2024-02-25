@@ -46,6 +46,7 @@ use crate::peripherals::flash_controller::FlashController;
 use crate::peripherals::oscillator::SystemClock;
 use max78000::*;
 
+use self::gpio::{new_gpio0, new_gpio1, new_gpio2, Gpio0, Gpio1, Gpio2};
 use self::oscillator::{private, Oscillator};
 use self::power::{PowerControl, ToggleableModule};
 use self::timer::{Clock, Prescaler};
@@ -407,6 +408,9 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
             timer_1: timer_field!(self, tmr1, timer_1_cfg),
             timer_2: timer_field!(self, tmr2, timer_2_cfg),
             timer_3: timer_field!(self, tmr3, timer_3_cfg),
+            gpio0: RefCell::new(new_gpio0(self.consumed_periphs.gpio0)),
+            gpio1: RefCell::new(new_gpio1(self.consumed_periphs.gpio1)),
+            gpio2: RefCell::new(new_gpio2(self.consumed_periphs.gpio2)),
             trng: RefCell::new(Trng::new(self.consumed_periphs.trng)),
         }
     }
@@ -442,6 +446,9 @@ pub struct PeripheralManager<'a> {
     power_ctrl: PowerControl<'a, 'a>,
     flash_controller: RefCell<FlashController<'a, 'a>>,
     system_clock: RefCell<SystemClock<'a, 'a>>,
+    gpio0: RefCell<Gpio0>,
+    gpio1: RefCell<Gpio1>,
+    gpio2: RefCell<Gpio2>,
     timer_0: RefCell<Clock<TMR>>,
     timer_1: RefCell<Clock<TMR1>>,
     timer_2: RefCell<Clock<TMR2>>,
@@ -460,6 +467,9 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn!(timer_2, Clock<TMR2>, timer_2);
     no_enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3);
 
+    enable_rst_periph_fn!(gpio0, Gpio0, gpio0, ToggleableModule::GPIO0);
+    enable_rst_periph_fn!(gpio1, Gpio1, gpio1, ToggleableModule::GPIO1);
+    enable_rst_periph_fn!(gpio2, Gpio2, gpio2, ToggleableModule::GPIO2);
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
 }
 

@@ -66,11 +66,9 @@ fn main() -> ! {
 
     trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
     gpio_tests::run_gpio_tests(
-        peripherals.GPIO0,
-        peripherals.GPIO1,
-        peripherals.GPIO2,
-        &peripherals.GCR,
-        &peripherals.LPGCR,
+        manager.gpio0().unwrap(),
+        manager.gpio1().unwrap(),
+        manager.gpio2().unwrap(),
         &mut stdout,
     );
 

@@ -2,49 +2,38 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::{
-    max78000::{GCR, GPIO0, GPIO1, GPIO2, LPGCR},
-    peripherals::gpio::{
+use max78000_hal::peripherals::{
+    gpio::{
         active::{port_num_types::GpioPortNum, ActiveGpio},
-        new_gpio0, new_gpio1, new_gpio2,
         pin_traits::{GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
-        GpioError, GpioPort, PinIoMode,
+        Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode,
     },
+    PeripheralHandle,
 };
 
 /// Runs all GPIO tests.
 pub fn run_gpio_tests(
-    gpio0: GPIO0,
-    gpio1: GPIO1,
-    gpio2: GPIO2,
-    gcr: &GCR,
-    lpgcr: &LPGCR,
+    gpio0_port: PeripheralHandle<'_, Gpio0>,
+    gpio1_port: PeripheralHandle<'_, Gpio1>,
+    gpio2_port: PeripheralHandle<'_, Gpio2>,
     stdout: &mut hio::HostStream,
 ) {
     writeln!(stdout, "Starting GPIO peripheral tests...").unwrap();
 
-    // Enable GPIO port clocks. This will be done by the peripheral API when available.
-    // TODO: Remove this when the peripheral API is available.
-    gcr.pclkdis0().write(|w| w.gpio0().en().gpio1().en());
-    lpgcr.pclkdis().write(|w| w.gpio2().en());
-
     // Run tests.
-    let gpio0_port = new_gpio0(gpio0);
-    let gpio1_port = new_gpio1(gpio1);
-    let gpio2_port = new_gpio2(gpio2);
 
     // Note: Tests should be made generic over traits like GeneralIoPin, InputPin, and StatefulOutputPin
     // Write sanity checks for now (writing a value then reading it) -- physical tests will come later
 
-    test_active_port(gpio0_port);
-    test_active_port(gpio1_port);
-    test_active_port(gpio2_port);
+    test_active_port(&gpio0_port);
+    test_active_port(&gpio1_port);
+    test_active_port(&gpio2_port);
 
     writeln!(stdout, "GPIO peripheral tests complete!\n").unwrap();
 }
 
 fn test_active_port<const PIN_CT: usize>(
-    port: GpioPort<'static, ActiveGpio<impl GpioPortNum + 'static>, PIN_CT>,
+    port: &GpioPort<'static, ActiveGpio<impl GpioPortNum + 'static>, PIN_CT>,
 ) {
     let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
     assert!(matches!(

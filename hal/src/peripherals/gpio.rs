@@ -17,6 +17,15 @@ pub mod pin_traits;
 
 pub mod active;
 
+/// The GPIO port for GPIO 0.
+pub type Gpio0 = GpioPort<'static, ActiveGpio<GpioZero>, 31>;
+
+/// The GPIO port for GPIO 1.
+pub type Gpio1 = GpioPort<'static, ActiveGpio<GpioOne>, 10>;
+
+/// The GPIO port for GPIO 2.
+pub type Gpio2 = GpioPort<'static, ActiveGpio<GpioTwo>, 8>;
+
 /// Error type for GPIO operations
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -122,20 +131,17 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
 }
 
 /// Creates a new [`GpioPort`] representing GPIO0.
-// TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, ActiveGpio<GpioZero>, 31> {
+pub(crate) fn new_gpio0(gpio0: GPIO0) -> Gpio0 {
     GpioPort::<ActiveGpio<GpioZero>, 31>::new(gpio0)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO1.
-// TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, ActiveGpio<GpioOne>, 10> {
+pub(crate) fn new_gpio1(gpio1: GPIO1) -> Gpio1 {
     GpioPort::<ActiveGpio<GpioOne>, 10>::new(gpio1)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO2.
-// TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, ActiveGpio<GpioTwo>, 8> {
+pub(crate) fn new_gpio2(gpio2: GPIO2) -> Gpio2 {
     GpioPort::<ActiveGpio<GpioTwo>, 8>::new(gpio2)
 }
 
