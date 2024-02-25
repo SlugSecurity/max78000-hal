@@ -54,7 +54,7 @@ use self::trng::Trng;
 // Embedded HAL peripherals.
 pub mod adc;
 pub mod delay;
-pub mod digital;
+pub mod gpio;
 pub mod serial;
 pub mod timer;
 pub mod trng;

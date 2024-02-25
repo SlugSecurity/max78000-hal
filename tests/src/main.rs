@@ -16,7 +16,7 @@ use max78000_hal::{
         PeripheralManagerBuilder, SplittablePeripheral,
     },
 };
-use tests::{bit_band_tests, flc_tests, oscillator_tests, timer_tests, trng_tests};
+use tests::{bit_band_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests};
 
 extern crate panic_semihosting;
 
@@ -65,6 +65,14 @@ fn main() -> ! {
     );
 
     trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
+    gpio_tests::run_gpio_tests(
+        peripherals.GPIO0,
+        peripherals.GPIO1,
+        peripherals.GPIO2,
+        &peripherals.GCR,
+        &peripherals.LPGCR,
+        &mut stdout,
+    );
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
