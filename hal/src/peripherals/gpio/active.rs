@@ -22,7 +22,9 @@ use sealed::sealed;
 
 use port_num_types::GpioPortNum;
 
-use super::pin_traits::{GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin};
+use super::pin_traits::{
+    toggleable, GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin,
+};
 use super::private::NonConstructible;
 use super::{
     GpioError, GpioPort, GpioPortMetadata, PinHandle, PinIoMode, PinOperatingMode,
@@ -380,6 +382,11 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     fn get_io_mode(&self) -> PinIoMode {
         self.0.get_io_mode()
     }
+}
+
+impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> toggleable::Default
+    for ActiveOutputPin<'a, PortNum, PIN_CT>
+{
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
