@@ -2,7 +2,7 @@
 
 use core::{array, cell::Cell};
 
-use max78000::{GPIO0, GPIO1, GPIO2};
+use max78000::{GPIO0, GPIO1, GPIO2, MCR};
 use sealed::sealed;
 
 use self::{
@@ -10,12 +10,15 @@ use self::{
         port_num_types::{GpioOne, GpioTwo, GpioZero},
         ActiveGpio,
     },
+    low_power::LowPowerGpio,
     private::NonConstructible,
 };
 
 pub mod pin_traits;
 
 pub mod active;
+
+pub mod low_power;
 
 /// Error type for GPIO operations
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -137,6 +140,12 @@ pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, ActiveGpio<GpioOne>, 10> {
 // TODO: Make this pub(crate) when peripheral manager is made
 pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, ActiveGpio<GpioTwo>, 8> {
     GpioPort::<ActiveGpio<GpioTwo>, 8>::new(gpio2)
+}
+
+/// Creates a new [`GpioPort`] representing GPIO3.
+// TODO: Make this pub(crate) when peripheral manager is made
+pub fn new_gpio3<'a>(gpio3: &'a MCR) -> GpioPort<'a, LowPowerGpio<'a>, 2> {
+    GpioPort::<LowPowerGpio<'a>, 2>::new(gpio3)
 }
 
 /// Represents the I/O mode of a pin.
