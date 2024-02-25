@@ -191,15 +191,16 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
             .regs
             .inen()
             .modify(|r, w| w.gpio_inen().variant(r.bits() & !(1 << self.pin_idx)));
-        self.port
-            .regs
-            .outen_set()
-            .write(|w| w.all().variant(1 << self.pin_idx));
         let mut pin = ActiveOutputPin(self);
         match state {
             PinState::Low => pin.set_low()?,
             PinState::High => pin.set_high()?,
         }
+        pin.0
+            .port
+            .regs
+            .outen_set()
+            .write(|w| w.all().variant(1 << pin.0.pin_idx));
         Ok(pin)
     }
 }
