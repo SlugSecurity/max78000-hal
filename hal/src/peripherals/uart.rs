@@ -64,6 +64,9 @@ impl UartBuilder<Uart0> {
                 .clk2() // use IBRO
         });
 
+        // Set oversampling to 16x (this is when fdm is 0 so needs to be changed if it's not)
+        instance.osr().write(|w| w.osr().variant(5));
+
         instance
             .dma()
             .modify(|_r, w| w.rx_en().variant(true).tx_en().variant(true));
@@ -105,7 +108,8 @@ pub struct Uart<'a, T: UartInstance> {
 impl<T: UartInstance> RxChannel for Uart<'_, T> {
     fn recv(&self, dest: &mut [u8]) -> Result<usize> {
         let mut index: usize = 0;
-        while self.regs.status().read().rx_em().bit() && index < dest.len() {
+        while index < dest.len() {
+            while self.regs.status().read().rx_em().bit() {}
             dest[index] = self.regs.fifo().read().data().bits();
             index += 1;
         }
