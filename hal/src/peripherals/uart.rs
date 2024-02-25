@@ -120,11 +120,8 @@ impl<T: UartInstance> TxChannel for Uart<'_, T> {
             .int_en()
             .modify(|_r, w| w.tx_he().clear_bit().tx_ob().clear_bit());
 
-        for (i, &byte) in src.iter().enumerate() {
-            if self.regs.status().read().tx_full().bit() {
-                return Err(CommunicationError::SendError { amount_sent: i });
-            }
-            // while self.regs.status().read().tx_full().bit() {}
+        for &byte in src.iter() {
+            while self.regs.status().read().tx_full().bit() {}
             self.regs.fifo().modify(|_r, w| w.data().variant(byte));
         }
 
