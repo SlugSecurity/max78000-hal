@@ -1,4 +1,43 @@
 //! Peripheral drivers for the MAX78000.
+//!
+//! This module contains the peripheral manager to interact with the various MAX78000
+//! peripherals. See the below example for how to set it up and use it.
+//!
+//! # Example
+//! ```
+//! use max78000_hal::{
+//!     max78000::Peripherals,
+//!     peripherals::{
+//!         oscillator::{Ipo, IpoDivider, IpoFrequency},
+//!         timer::{Oscillator, Prescaler},
+//!         PeripheralManagerBuilder, SplittablePeripheral,
+//!     },
+//! };
+//!
+//! let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
+//!
+//! // Builds a peripheral manager using Ipo as the system clock oscillator with
+//! // the specified frequency and divider. Also configures the timers' oscillators
+//! // and prescalers according to the values put below.
+//! let manager = PeripheralManagerBuilder::<Ipo>::new(
+//!     &to_borrow,
+//!     to_consume,
+//!     IpoFrequency::_100MHz,
+//!     IpoDivider::_1,
+//! )
+//! .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+//! .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
+//! .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
+//! .build();
+//!
+//! // Gets the peripheral wrapper for timer 0.
+//! let clock = manager.timer_0().unwrap();
+//! let mut timer = clock.new_timer(Time::Milliseconds(3000));
+//!
+//! while !timer.poll() {}
+//!
+//! // 3 seconds has passed.
+//! ```
 
 use core::cell::{BorrowMutError, RefCell, RefMut};
 use core::ops::{Deref, DerefMut};
@@ -137,7 +176,12 @@ pub struct PeripheralsToConsume {
     tmr3: TMR3,
 }
 
+/// Extension trait for splitting peripherals for the [`PeripheralManager`].
 pub trait SplittablePeripheral {
+    /// Splits the peripherals into three parts:
+    /// - the peripherals that are consumed by the [`PeripheralManager`]
+    /// - the peripherals that are borrowed by the [`PeripheralManager`]
+    /// - the remaining peripherals not borrowed or consumed
     fn split(
         self,
     ) -> (
@@ -219,7 +263,8 @@ impl SplittablePeripheral for Peripherals {
 }
 
 /// A handle to a peripheral wrapper. Only one handle can be taken out
-/// at a time for a given peripheral wrapper from the HAL.
+/// at a time for a given peripheral wrapper from the HAL. Once it's
+/// dropped, it can be taken out again.
 pub struct PeripheralHandle<'a, T>(RefMut<'a, T>);
 
 impl<'a, T> PeripheralHandle<'a, T> {
@@ -242,7 +287,8 @@ impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
     }
 }
 
-/// A builder for the [`PeripheralManager]. This builder can be used to
+/// A builder for the [`PeripheralManager]. This builder can be used to configure
+/// the system clock frequency and divider along with timer oscillators and prescalers.
 pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
     borrowed_periphs: &'a PeripheralsToBorrow,
     consumed_periphs: PeripheralsToConsume,
@@ -265,6 +311,8 @@ macro_rules! timer_field {
     };
 }
 
+/// Creates a method to configure a timer with the given function
+/// name and field name. Must be put inside an impl block.
 macro_rules! timer_fn {
     ($fn_name:ident, $field:ident) => {
         /// Configures the timer with the specified oscillator and prescaler.
@@ -300,6 +348,8 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         }
     }
 
+    /// Changes the system clock oscillator along with its frequency
+    /// and divider.
     pub fn configure_sysclk<O: Oscillator + private::Oscillator>(
         self,
         sysclk_osc_freq: <O as oscillator::Oscillator>::Frequency,
@@ -322,6 +372,8 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
     timer_fn!(configure_timer_2, timer_2_cfg);
     timer_fn!(configure_timer_3, timer_3_cfg);
 
+    /// Builds the [`PeripheralManager`] given the system clock
+    /// oscillator settings along with the timer settings.
     pub fn build(self) -> PeripheralManager<'a> {
         // TODO: Lazily initialize timers
         //       For now, they're eagerly intialized.
@@ -385,6 +437,7 @@ macro_rules! enable_rst_periph_fn {
 
 /// The peripheral manager containing all the peripheral abstractions provided by the HAL.
 /// Use [`PeripheralManagerBuilder`] to construct an instance of [`PeripheralManager`].
+/// The methods inside here can be used to interact with the board peripherals.
 pub struct PeripheralManager<'a> {
     power_ctrl: PowerControl<'a, 'a>,
     flash_controller: RefCell<FlashController<'a, 'a>>,
