@@ -34,6 +34,7 @@ pub mod raw;
 pub mod rtc;
 pub mod synchronization;
 
+/// The peripherals that are completely unused by the [`PeripheralManager].
 pub struct RemainingPeripherals {
     /// ADC
     pub adc: ADC,
@@ -109,6 +110,7 @@ pub struct RemainingPeripherals {
     pub wut: WUT,
 }
 
+/// The peripherals that are immutably borrowed by the [`PeripheralManager].
 pub struct PeripheralsToBorrow {
     /// GCR
     pub gcr: GCR,
@@ -122,6 +124,7 @@ pub struct PeripheralsToBorrow {
     pub trimsir: TRIMSIR,
 }
 
+/// The peripherals that are completely consumed and moved by the [`PeripheralManager].
 pub struct PeripheralsToConsume {
     flc: FLC,
     gpio0: GPIO0,
@@ -215,6 +218,8 @@ impl SplittablePeripheral for Peripherals {
     }
 }
 
+/// A handle to a peripheral wrapper. Only one handle can be taken out
+/// at a time for a given peripheral wrapper from the HAL.
 pub struct PeripheralHandle<'a, T>(RefMut<'a, T>);
 
 impl<'a, T> PeripheralHandle<'a, T> {
@@ -237,6 +242,7 @@ impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
     }
 }
 
+/// A builder for the [`PeripheralManager]. This builder can be used to
 pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
     borrowed_periphs: &'a PeripheralsToBorrow,
     consumed_periphs: PeripheralsToConsume,
@@ -317,8 +323,25 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
     timer_fn!(configure_timer_3, timer_3_cfg);
 
     pub fn build(self) -> PeripheralManager<'a> {
+        // TODO: Lazily initialize peripheral wrappers
+        //       For now, they're all eager.
+        let power_ctrl =
+            PowerControl::new(&self.borrowed_periphs.gcr, &self.borrowed_periphs.lpgcr);
+
+        power_ctrl.enable_peripheral(ToggleableModule::TMR0);
+        power_ctrl.enable_peripheral(ToggleableModule::TMR1);
+        power_ctrl.enable_peripheral(ToggleableModule::TMR2);
+        power_ctrl.enable_peripheral(ToggleableModule::TMR3);
+        power_ctrl.enable_peripheral(ToggleableModule::TRNG);
+
+        power_ctrl.reset_toggleable(ToggleableModule::TMR0);
+        power_ctrl.reset_toggleable(ToggleableModule::TMR1);
+        power_ctrl.reset_toggleable(ToggleableModule::TMR2);
+        power_ctrl.reset_toggleable(ToggleableModule::TMR3);
+        power_ctrl.reset_toggleable(ToggleableModule::TRNG);
+
         PeripheralManager {
-            power_ctrl: PowerControl::new(&self.borrowed_periphs.gcr, &self.borrowed_periphs.lpgcr),
+            power_ctrl,
             flash_controller: RefCell::new(FlashController::new(
                 self.consumed_periphs.flc,
                 &self.borrowed_periphs.icc0,
