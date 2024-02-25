@@ -63,7 +63,7 @@ pub struct FlashController<'gcr, 'icc> {
 
 impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Creates a new flash controller peripheral.
-    pub fn new(flc: FLC, icc: &'icc ICC0, gcr: &'gcr GCR) -> Self {
+    pub(crate) fn new(flc: FLC, icc: &'icc ICC0, gcr: &'gcr GCR) -> Self {
         Self { flc, icc, gcr }
     }
 

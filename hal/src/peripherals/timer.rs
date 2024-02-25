@@ -188,7 +188,7 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
     /// a temporary reference to the GCR registers for initial configuration, as
     /// well as config values for the oscillator source and the prescaler value, which will divide
     /// the oscillator source to only increment count once per `prescaler` ticks.
-    pub fn new(
+    pub(crate) fn new(
         tmr_registers: T,
         gcr_registers: &GCR,
         oscillator: Oscillator,

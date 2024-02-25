@@ -8,7 +8,14 @@ use core::fmt::Write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
-use max78000_hal::{max78000::Peripherals, peripherals::power::PowerControl};
+use max78000_hal::{
+    max78000::Peripherals,
+    peripherals::{
+        oscillator::{Ipo, IpoDivider, IpoFrequency},
+        timer::{Oscillator, Prescaler},
+        PeripheralManagerBuilder, SplittablePeripheral,
+    },
+};
 use tests::{bit_band_tests, flc_tests, oscillator_tests, timer_tests, trng_tests};
 
 extern crate panic_semihosting;
@@ -22,35 +29,42 @@ fn main() -> ! {
     writeln!(stdout, "Starting MAX78000 HAL tests...\n").unwrap();
 
     // TODO: Use peripheral API when available.
-    let peripherals = Peripherals::take().unwrap();
+    let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
+    let manager = PeripheralManagerBuilder::<Ipo>::new(
+        &to_borrow,
+        to_consume,
+        IpoFrequency::_100MHz,
+        IpoDivider::_1,
+    )
+    .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+    .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
+    .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
+    .build();
 
     flc_tests::run_flc_tests(
         &mut stdout,
-        peripherals.FLC,
-        &peripherals.ICC0,
-        &peripherals.GCR,
-        peripherals.TRIMSIR.inro(),
+        manager.flash_controller().unwrap(),
+        manager.system_clock().unwrap(),
     );
 
-    bit_band_tests::run_bit_band_tests(&mut stdout, &peripherals.RTC);
+    bit_band_tests::run_bit_band_tests(&mut stdout, &rem.rtc);
 
     oscillator_tests::run_oscillator_tests(
-        peripherals.GCR.clkctrl(),
-        peripherals.TRIMSIR.inro(),
+        to_borrow.gcr.clkctrl(),
+        manager.system_clock().unwrap(),
         &mut stdout,
+        #[cfg(feature = "low_frequency_test")]
+        to_borrow.trimsir.inro(),
     );
-
-    // TODO: Assuming peripheral API will initialize this later.
-    let power = PowerControl::new(&peripherals.GCR, &peripherals.LPGCR);
 
     timer_tests::run_timer_tests(
         &mut stdout,
-        peripherals.TMR,
-        peripherals.TMR1,
-        &peripherals.GCR,
+        manager.timer_0().unwrap(),
+        manager.timer_1().unwrap(),
+        manager.timer_2().unwrap(),
     );
 
-    trng_tests::run_trng_tests(peripherals.TRNG, &power, &mut stdout);
+    trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 

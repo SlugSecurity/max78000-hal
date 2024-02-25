@@ -1,7 +1,7 @@
 //! Peripheral drivers for the MAX78000.
 
 use core::cell::{BorrowMutError, RefCell, RefMut};
-use core::ops::Deref;
+use core::ops::{Deref, DerefMut};
 
 use crate::peripherals::flash_controller::FlashController;
 use crate::peripherals::oscillator::SystemClock;
@@ -231,6 +231,12 @@ impl<'a, T> Deref for PeripheralHandle<'a, T> {
     }
 }
 
+impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
     borrowed_periphs: &'a PeripheralsToBorrow,
     consumed_periphs: PeripheralsToConsume,
@@ -256,7 +262,7 @@ macro_rules! timer_field {
 macro_rules! timer_fn {
     ($fn_name:ident, $field:ident) => {
         /// Configures the timer with the specified oscillator and prescaler.
-        pub fn $fn_name(&mut self, osc: timer::Oscillator, prescaler: Prescaler) -> &mut Self {
+        pub fn $fn_name(mut self, osc: timer::Oscillator, prescaler: Prescaler) -> Self {
             self.$field = (osc, prescaler);
 
             self
@@ -377,3 +383,13 @@ impl<'a> PeripheralManager<'a> {
     enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3, ToggleableModule::TMR3);
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
 }
+
+// TODO: list out issues with timer API, regarding
+// - ticks and ms stuff, should use duration in both Clock and Timer
+// - ownership of timer yet developer needs to provide oscillator and prescaler???
+// - implementation of clock only on tmr0-tmr3, tmr4 and tmr5 are low power but should still be usable right??
+// - consume???? why????
+// - why are there two oscillator traits???  and another oscillator enum?? can't just seal functions you dont want?? thatll also seal the trait from being implemented
+// - por que GUION BAJO 1?????
+// - WHY &oscillator???? just make Oscillator Copy???
+//

@@ -278,7 +278,7 @@ impl<'a, 'b> SystemClock<'a, 'b> {
     /// let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
     /// let sys_clk = SystemClock::new(&ipo, clkctrl_peripheral, trimsir_peripheral);
     /// ```
-    pub fn new<T: Oscillator + private::Oscillator>(
+    pub(crate) fn new<T: Oscillator + private::Oscillator>(
         osc: &T,
         gcr_clkctrl_peripheral: &'a CLKCTRL,
         trimsir_inro_peripheral: &'b INRO,
