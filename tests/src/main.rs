@@ -55,6 +55,7 @@ fn main() -> ! {
         peripherals.GPIO0,
         peripherals.GPIO1,
         peripherals.GPIO2,
+        &peripherals.MCR,
         &peripherals.GCR,
         &peripherals.LPGCR,
         &mut stdout,
