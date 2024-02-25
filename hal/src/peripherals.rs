@@ -323,22 +323,21 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
     timer_fn!(configure_timer_3, timer_3_cfg);
 
     pub fn build(self) -> PeripheralManager<'a> {
-        // TODO: Lazily initialize peripheral wrappers
-        //       For now, they're all eager.
+        // TODO: Lazily initialize timers
+        //       For now, they're eagerly intialized.
         let power_ctrl =
             PowerControl::new(&self.borrowed_periphs.gcr, &self.borrowed_periphs.lpgcr);
 
+        // Timers are eagerly initialized because they are configured upon creation of a Clock.
         power_ctrl.enable_peripheral(ToggleableModule::TMR0);
         power_ctrl.enable_peripheral(ToggleableModule::TMR1);
         power_ctrl.enable_peripheral(ToggleableModule::TMR2);
         power_ctrl.enable_peripheral(ToggleableModule::TMR3);
-        power_ctrl.enable_peripheral(ToggleableModule::TRNG);
 
         power_ctrl.reset_toggleable(ToggleableModule::TMR0);
         power_ctrl.reset_toggleable(ToggleableModule::TMR1);
         power_ctrl.reset_toggleable(ToggleableModule::TMR2);
         power_ctrl.reset_toggleable(ToggleableModule::TMR3);
-        power_ctrl.reset_toggleable(ToggleableModule::TRNG);
 
         PeripheralManager {
             power_ctrl,
@@ -400,10 +399,14 @@ pub struct PeripheralManager<'a> {
 impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn!(flash_controller, FlashController<'_, '_>, flash_controller);
     no_enable_rst_periph_fn!(system_clock, SystemClock<'_, '_>, system_clock);
-    enable_rst_periph_fn!(timer_0, Clock<TMR>, timer_0, ToggleableModule::TMR0);
-    enable_rst_periph_fn!(timer_1, Clock<TMR1>, timer_1, ToggleableModule::TMR1);
-    enable_rst_periph_fn!(timer_2, Clock<TMR2>, timer_2, ToggleableModule::TMR2);
-    enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3, ToggleableModule::TMR3);
+
+    // Timers CANNOT be enabled and reset again after creation because
+    // Clock holds state for it
+    no_enable_rst_periph_fn!(timer_0, Clock<TMR>, timer_0);
+    no_enable_rst_periph_fn!(timer_1, Clock<TMR1>, timer_1);
+    no_enable_rst_periph_fn!(timer_2, Clock<TMR2>, timer_2);
+    no_enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3);
+
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
 }
 
