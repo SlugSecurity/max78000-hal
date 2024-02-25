@@ -51,7 +51,7 @@ pub struct UartBuilder<T: UartInstance> {
 impl UartBuilder<Uart0> {
     pub fn build<'a>(instance: &'a max78000::UART, baud: u32) -> Uart<'a, Uart0> {
         const IBRO_FREQUENCY: u32 = 7372800;
-        instance.ctrl().write(|w| {
+        instance.ctrl().modify(|_r, w| {
             w.rx_thd_val()
                 .variant(1)
                 .char_size()
@@ -66,8 +66,12 @@ impl UartBuilder<Uart0> {
         });
 
         instance
+            .dma()
+            .modify(|_r, w| w.rx_en().variant(true).tx_en().variant(true));
+
+        instance
             .clkdiv()
-            .write(|w| w.clkdiv().variant(IBRO_FREQUENCY.div_ceil(baud)));
+            .modify(|_r, w| w.clkdiv().variant(IBRO_FREQUENCY.div_ceil(baud)));
 
         Uart {
             regs: instance,
@@ -106,12 +110,22 @@ impl<T: UartInstance> RxChannel for Uart<'_, T> {
 
 impl<T: UartInstance> TxChannel for Uart<'_, T> {
     fn send(&self, src: &[u8]) -> Result<()> {
+        self.regs
+            .int_en()
+            .modify(|_r, w| w.tx_he().clear_bit().tx_ob().clear_bit());
+
         for (i, &byte) in src.iter().enumerate() {
             if self.regs.status().read().tx_full().bit() {
                 return Err(CommunicationError::SendError { amount_sent: i });
             }
-            self.regs.fifo().write(|w| w.data().variant(byte));
+            // while self.regs.status().read().tx_full().bit() {}
+            self.regs.fifo().modify(|_r, w| w.data().variant(byte));
         }
+
+        self.regs
+            .int_en()
+            .modify(|_r, w| w.tx_he().set_bit().tx_ob().set_bit());
+
         Ok(())
     }
 }
