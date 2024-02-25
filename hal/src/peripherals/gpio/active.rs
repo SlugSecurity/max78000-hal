@@ -210,14 +210,18 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
 {
     // TODO: Statically constrain the pin operating mode according to PIN_CT and the pin index
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
-        const A1_RX: u8 = 0b0001;
-        const A1_TX: u8 = 0b0010;
-        const A1_AX: u8 = 0b0011;
-        const A2_RX: u8 = 0b0100;
-        const A2_TX: u8 = 0b1000;
-        const A2_AX: u8 = 0b1100;
-        const A2_NA: u8 = 0;
+        const A1_RX: u8 = 0b0001; // means AF1 is valid when this pin is an input pin
+        const A1_TX: u8 = 0b0010; // means AF1 is valid when this pin is an output pin
+        const A1_AX: u8 = 0b0011; // means AF1 is always valid for this pin
 
+        const A2_RX: u8 = 0b0100; // means AF2 is valid when this pin is an input pin
+        const A2_TX: u8 = 0b1000; // means AF2 is valid when this pin is an output pin
+        const A2_AX: u8 = 0b1100; // means AF2 is always valid for this pin
+        const A2_NA: u8 = 0b0000; // means AF2 is never valid for this pin
+
+        // Tables based off of https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf, page 29 to 31 in the `GPIO and Alternate Function` section.
+        // Note that the AF validation checks only covers UART when checking if the RX/TX state is valid.
+        // TODO: check the RX/TX state for more than just UART
         const P0_TABLE: &[u8] = &[
             A1_RX | A2_NA, // P0.0    UART0A_RX           -
             A1_TX | A2_NA, // P0.1    UART0A_TX           -
@@ -282,11 +286,11 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
             _ => &[],
         };
 
-        let entry = table.get(self.pin_idx).copied().unwrap_or_default();
+        let pin_entry = table.get(self.pin_idx).copied().unwrap_or_default();
 
-        let (alt1, alt2) = match self.get_io_mode() {
-            PinIoMode::Input => (entry & A1_RX != 0, entry & A2_RX != 0),
-            PinIoMode::Output => (entry & A1_TX != 0, entry & A2_TX != 0),
+        let (af1_is_valid, af2_is_valid) = match self.get_io_mode() {
+            PinIoMode::Input => (pin_entry & A1_RX != 0, pin_entry & A2_RX != 0),
+            PinIoMode::Output => (pin_entry & A1_TX != 0, pin_entry & A2_TX != 0),
         };
 
         match mode {
@@ -296,7 +300,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
                     .en0_set()
                     .write(|w| w.all().variant(1 << self.pin_idx));
             }
-            PinOperatingMode::AltFunction1 if alt1 => {
+            PinOperatingMode::AltFunction1 if af1_is_valid => {
                 self.port
                     .regs
                     .en1_clr()
@@ -306,7 +310,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
                     .en0_clr()
                     .write(|w| w.all().variant(1 << self.pin_idx));
             }
-            PinOperatingMode::AltFunction2 if alt2 => {
+            PinOperatingMode::AltFunction2 if af2_is_valid => {
                 self.port
                     .regs
                     .en1_set()
