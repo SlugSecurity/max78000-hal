@@ -73,6 +73,12 @@ impl UartBuilder<Uart0> {
             .clkdiv()
             .modify(|_r, w| w.clkdiv().variant(IBRO_FREQUENCY.div_ceil(baud)));
 
+        // Enable the baud clock after setting clock divider.
+        instance.ctrl().modify(|_r, w| w.bclken().set_bit());
+
+        // Wait for baud clock to be ready.
+        while instance.ctrl().read().bclkrdy().bit_is_clear() {}
+
         Uart {
             regs: instance,
             _uart_instance: Default::default(),
