@@ -472,13 +472,3 @@ impl<'a> PeripheralManager<'a> {
     enable_rst_periph_fn!(gpio2, Gpio2, gpio2, ToggleableModule::GPIO2);
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
 }
-
-// TODO: list out issues with timer API, regarding
-// - ticks and ms stuff, should use duration in both Clock and Timer
-// - ownership of timer yet developer needs to provide oscillator and prescaler???
-// - implementation of clock only on tmr0-tmr3, tmr4 and tmr5 are low power but should still be usable right??
-// - consume???? why????
-// - why are there two oscillator traits???  and another oscillator enum?? can't just seal functions you dont want?? thatll also seal the trait from being implemented
-// - por que GUION BAJO 1?????
-// - WHY &oscillator???? just make Oscillator Copy???
-//
