@@ -1,15 +1,28 @@
 //! Contains traits used by pins in the GPIO peripherals API.
 //! Some traits in this module are re-exports from `embedded_hal` for GPIO pins.
 
-pub use embedded_hal::digital::v2::*;
+pub use embedded_hal::digital::*;
 
 use super::{GpioError, PinIoMode, PinOperatingMode};
+
+/// Single pin that can switch from input to output mode, and vice-versa.
+pub trait IoPin<TInput, TOutput>: ErrorType
+where
+    TInput: InputPin + IoPin<TInput, TOutput>,
+    TOutput: OutputPin + IoPin<TInput, TOutput>,
+{
+    /// Convert this pin to input mode.
+    fn into_input_pin(self) -> Result<TInput, Self::Error>;
+
+    /// Convert this pin to output mode with the given initial state.
+    fn into_output_pin(self, state: PinState) -> Result<TOutput, Self::Error>;
+}
 
 /// Trait for any GPIO pin on this board in either input or output mode.
 pub trait GeneralIoPin<TInput, TOutput>: IoPin<TInput, TOutput>
 where
-    TInput: InputPin + IoPin<TInput, TOutput>,
-    TOutput: StatefulOutputPin + IoPin<TInput, TOutput>,
+    TInput: InputPin + GeneralIoPin<TInput, TOutput>,
+    TOutput: StatefulOutputPin + GeneralIoPin<TInput, TOutput>,
 {
     /// Sets what operating mode the pin is in. This can be digital I/O mode
     /// or an alternate function mode. For a list of what each alternate function

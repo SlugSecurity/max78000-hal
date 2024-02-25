@@ -23,7 +23,7 @@ use sealed::sealed;
 use port_num_types::GpioPortNum;
 
 use super::pin_traits::{
-    toggleable, GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin,
+    ErrorType, GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin,
 };
 use super::private::NonConstructible;
 use super::{
@@ -112,16 +112,20 @@ pub struct ActiveInputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usiz
     ActivePinHandle<'a, PortNum, PIN_CT>,
 );
 
-impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> InputPin
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
     for ActiveInputPin<'_, PortNum, PIN_CT>
 {
     type Error = Infallible;
+}
 
-    fn is_high(&self) -> Result<bool, Self::Error> {
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> InputPin
+    for ActiveInputPin<'_, PortNum, PIN_CT>
+{
+    fn is_high(&mut self) -> Result<bool, Self::Error> {
         Ok(self.0.port.regs.in_().read().bits() & (1 << self.0.pin_idx) != 0)
     }
 
-    fn is_low(&self) -> Result<bool, Self::Error> {
+    fn is_low(&mut self) -> Result<bool, Self::Error> {
         self.is_high().map(|x| !x)
     }
 }
@@ -131,11 +135,15 @@ pub struct ActiveOutputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usi
     ActivePinHandle<'a, PortNum, PIN_CT>,
 );
 
-impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
     for ActiveOutputPin<'_, PortNum, PIN_CT>
 {
     type Error = Infallible;
+}
 
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
+    for ActiveOutputPin<'_, PortNum, PIN_CT>
+{
     fn set_high(&mut self) -> Result<(), Self::Error> {
         self.0
             .port
@@ -158,21 +166,25 @@ impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> StatefulOutputPin
     for ActiveOutputPin<'_, PortNum, PIN_CT>
 {
-    fn is_set_high(&self) -> Result<bool, Self::Error> {
+    fn is_set_high(&mut self) -> Result<bool, Self::Error> {
         Ok(self.0.port.regs.out().read().bits() & (1 << self.0.pin_idx) != 0)
     }
 
-    fn is_set_low(&self) -> Result<bool, Self::Error> {
+    fn is_set_low(&mut self) -> Result<bool, Self::Error> {
         self.is_set_high().map(|x| !x)
     }
+}
+
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
+    for ActivePinHandle<'_, PortNum, PIN_CT>
+{
+    type Error = Infallible;
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     IoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
     for ActivePinHandle<'a, PortNum, PIN_CT>
 {
-    type Error = Infallible;
-
     fn into_input_pin(self) -> Result<ActiveInputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.port
             .regs
@@ -353,8 +365,6 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     IoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
     for ActiveInputPin<'a, PortNum, PIN_CT>
 {
-    type Error = Infallible;
-
     fn into_input_pin(self) -> Result<ActiveInputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_input_pin()
     }
@@ -384,17 +394,10 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     }
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> toggleable::Default
-    for ActiveOutputPin<'a, PortNum, PIN_CT>
-{
-}
-
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     IoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
     for ActiveOutputPin<'a, PortNum, PIN_CT>
 {
-    type Error = Infallible;
-
     fn into_input_pin(self) -> Result<ActiveInputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_input_pin()
     }
