@@ -55,14 +55,13 @@ impl UartBuilder<Uart0> {
             w.rx_thd_val()
                 .variant(1)
                 .char_size()
-                ._8bits()
+                ._8bits() // 8-bit character length
                 .par_en()
-                .variant(false)
+                .variant(false) // No parity bit
                 .stopbits()
-                .bit(true)
-                // use IBRO
+                .bit(false) // 1 stop bit
                 .bclksrc()
-                .clk2()
+                .clk2() // use IBRO
         });
 
         instance
