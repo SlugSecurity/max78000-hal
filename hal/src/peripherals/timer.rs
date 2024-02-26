@@ -188,7 +188,7 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
     /// a temporary reference to the GCR registers for initial configuration, as
     /// well as config values for the oscillator source and the prescaler value, which will divide
     /// the oscillator source to only increment count once per `prescaler` ticks.
-    pub fn new(
+    pub(crate) fn new(
         tmr_registers: T,
         gcr_registers: &GCR,
         oscillator: Oscillator,
@@ -198,9 +198,6 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
             tmr_registers,
             ticks_per_ms: 0f64,
         };
-
-        this.enable_peripheral(gcr_registers);
-        this.reset_peripheral(gcr_registers);
 
         // Disable timer
         this.tmr_registers
@@ -303,16 +300,6 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         while !this.tmr_registers.ctrl0().read().clken_a().bit() {}
 
         this
-    }
-
-    /// Enable the peripheral through the GCR_PCLKDIS0 register
-    fn enable_peripheral(&mut self, gcr_reg: &GCR) {
-        T::peripheral_clock_enable(gcr_reg)
-    }
-
-    /// Reset the peripheral through the GCR_RST0 register
-    fn reset_peripheral(&mut self, gcr_reg: &GCR) {
-        T::reset_peripheral(gcr_reg)
     }
 
     /// Consume `Clock`, returning the underlying timer registers

@@ -2,12 +2,11 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::max78000::{trimsir::INRO, FLC, GCR, ICC0};
 use max78000_hal::peripherals::flash_controller::{FlashController, FlashErr};
 use max78000_hal::peripherals::oscillator::{
-    Ibro, IbroDivider, IbroFrequency, Ipo, IpoDivider, IpoFrequency, Iso, IsoDivider, IsoFrequency,
-    Oscillator, SystemClock,
+    Ibro, IbroDivider, IbroFrequency, Iso, IsoDivider, IsoFrequency, Oscillator, SystemClock,
 };
+use max78000_hal::peripherals::PeripheralHandle;
 
 /// Runs all flash controller tests: [`flash_write`], [`flash_write_large`],
 /// [`flash_write_extra_large`], [`flash_write_after_sys_osc_switch`],
@@ -15,12 +14,12 @@ use max78000_hal::peripherals::oscillator::{
 /// [`flash_write_full_outbounds`],
 /// [`flash_write_partially_outbound_beginning`],
 /// [`flash_write_full_partially_outbound_end`].
-pub fn run_flc_tests(stdout: &mut hio::HostStream, flc: FLC, icc0: &ICC0, gcr: &GCR, inro: &INRO) {
+pub fn run_flc_tests(
+    stdout: &mut hio::HostStream,
+    flash_controller: PeripheralHandle<'_, FlashController<'_, '_>>,
+    mut sys_clk: PeripheralHandle<'_, SystemClock<'_, '_>>,
+) {
     writeln!(stdout, "Starting flash tests...").unwrap();
-    let ipo = Ipo::new(IpoFrequency::_100MHz, IpoDivider::_1);
-    let mut sys_clk = SystemClock::new(&ipo, gcr.clkctrl(), inro);
-    let flash_controller = FlashController::new(flc, icc0, gcr);
-
     writeln!(stdout, "Test flash write...").unwrap();
     flash_write(&flash_controller, &sys_clk);
 
