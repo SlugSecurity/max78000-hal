@@ -99,12 +99,12 @@ pub struct I2CSlave<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
 
 impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
     pub fn new(gcr_regs: &GCR, i2c_regs: T, address: SevenBitAddress) -> Self {
-        T::peripheral_clock_enable(gcr_regs);
         T::reset_peripheral(gcr_regs);
+        T::peripheral_clock_enable(gcr_regs);
 
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode().bit(false)
-                .gc_addr_en().bit(false)
+                .gc_addr_en().bit(true)
                 .irxm_en().bit(false)
                 .clkstr_dis().bit(false)
                 .hs_en().bit(false)
@@ -131,8 +131,15 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
             w.lo().variant(2)
         });
 
+        unsafe {
+            i2c_regs.slave0().write(|w| {
+                w.bits(address as u32)
+            });
+        }
+
+
         // TODO: figure out wtf slave_multi does later
-        i2c_regs.slave_multi(0).modify(|_, w| {
+        /*i2c_regs.slave_multi(0).modify(|_, w| {
             w.addr().variant(address as u16)
                 .ext_addr_en().bit(false)
         });
@@ -150,7 +157,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         i2c_regs.slave_multi(3).modify(|_, w| {
             w.addr().variant(address as u16)
                 .ext_addr_en().bit(false)
-        });
+        }); */
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
@@ -239,13 +246,13 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
 
 impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
     pub fn new(gcr_regs: &GCR, i2c_regs: T) -> Self {
-        T::peripheral_clock_enable(gcr_regs);
         T::reset_peripheral(gcr_regs);
+        T::peripheral_clock_enable(gcr_regs);
 
         // TODO: configure
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode().bit(true)
-                .gc_addr_en().bit(false)
+                .gc_addr_en().bit(true)
                 .irxm_en().bit(false)
                 .clkstr_dis().bit(false)
                 .hs_en().bit(false)
@@ -292,9 +299,11 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // The slave address is transmitted by the controller from the I2Cn_FIFO register.
         // The I2C controller receives an ACK from the slave, and the controller sets the address ACK interrupt flag
         // (I2Cn_INTFL0.addr_ack = 1).
+        while !self.i2c_regs.intfl0().read().addr_ack().bit() {};
         // The I2C controller receives data from the slave and automatically ACKs each byte. The software must retrieve this
         // data by reading the I2Cn_FIFO register.
         for cell in read.iter_mut().take(bytes_to_read) {
+            while self.i2c_regs.is_rx_fifo_empty() {}
             *cell = self.i2c_regs.fifo().read().data().bits();
         }
         Ok(())
