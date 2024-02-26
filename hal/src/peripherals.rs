@@ -75,7 +75,7 @@ pub mod raw;
 pub mod rtc;
 pub mod synchronization;
 
-/// The peripherals that are completely unused by the [`PeripheralManager].
+/// The peripherals that are completely unused by the [`PeripheralManager`].
 pub struct RemainingPeripherals {
     /// ADC
     pub adc: ADC,
@@ -151,7 +151,7 @@ pub struct RemainingPeripherals {
     pub wut: WUT,
 }
 
-/// The peripherals that are immutably borrowed by the [`PeripheralManager].
+/// The peripherals that are immutably borrowed by the [`PeripheralManager`].
 pub struct PeripheralsToBorrow {
     /// GCR
     pub gcr: GCR,
@@ -165,7 +165,7 @@ pub struct PeripheralsToBorrow {
     pub trimsir: TRIMSIR,
 }
 
-/// The peripherals that are completely consumed and moved by the [`PeripheralManager].
+/// The peripherals that are completely consumed and moved by the [`PeripheralManager`].
 pub struct PeripheralsToConsume {
     flc: FLC,
     gpio0: GPIO0,
@@ -289,7 +289,7 @@ impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
     }
 }
 
-/// A builder for the [`PeripheralManager]. This builder can be used to configure
+/// A builder for the [`PeripheralManager`]. This builder can be used to configure
 /// the system clock frequency and divider along with timer oscillators and prescalers.
 pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
     borrowed_periphs: &'a PeripheralsToBorrow,
