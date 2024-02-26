@@ -56,7 +56,7 @@ fn test_active_port<const PIN_CT: usize>(
         Err(GpioError::InvalidPinIndex)
     ));
 
-    let pin = pin.into_input_pin().unwrap();
+    let mut pin = pin.into_input_pin().unwrap();
     assert!(matches!(pin.get_io_mode(), PinIoMode::Input));
     assert_ne!(pin.is_low(), pin.is_high());
 
