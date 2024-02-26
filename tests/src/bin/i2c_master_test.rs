@@ -28,7 +28,7 @@ fn main() -> ! {
 
     let peripherals = Peripherals::take().unwrap();
 
-    //let gpio0 = gpio::new_gpio0(peripherals.GPIO0);
+    peripherals.GCR.pclkdis0().modify(|_, w| w.gpio0().bit(false));
 
     peripherals.GPIO0.en0().modify(|r, w| w.gpio_en().variant(
         r.gpio_en().bits() | (((1 << 16) | (1 << 17)))
@@ -42,19 +42,21 @@ fn main() -> ! {
         r.gpio_en2().bits() & (!((1 << 16) | (1 << 17)))
     ));
 
-    /*peripherals.GPIO0.outen().modify(|r, w| w.en().variant(
+    peripherals.GPIO0.outen().modify(|r, w| w.en().variant(
         r.en().bits() & (!((1 << 16) | (1 << 17)))
-    ));*/
+    ));
 
     peripherals.GPIO0.en0().modify(|r, w| w.gpio_en().variant(
         r.gpio_en().bits() & (!((1 << 16) | (1 << 17)))
     ));
 
-    //let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
-    //let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
+    let gpio0 = gpio::new_gpio0(peripherals.GPIO0);
 
-    //sda_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap();
-    //scl_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap();
+    let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
+    let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
+
+    sda_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap();
+    scl_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap();
 
     let mut i2c_master = i2c::I2CMaster::new(&peripherals.GCR, peripherals.I2C1);
     let clock = Clock::new(peripherals.TMR, &peripherals.GCR, Oscillator::IBRO, Prescaler::_64);
@@ -71,7 +73,7 @@ fn main() -> ! {
 
     let mut scl_state = false;
 
-    //let mut scl_output = scl_handle.into_output_pin(PinState::Low).unwrap();
+    let mut scl_output = scl_handle.into_output_pin(PinState::Low).unwrap();
 
     /*loop {
         timer.reset();
@@ -81,7 +83,7 @@ fn main() -> ! {
         scl_state = !scl_state;
     }*/
 
-    i2c_master.write(0, "ping".as_bytes()).unwrap();
+    i2c_master.write(69, "ping".as_bytes()).unwrap();
 
     writeln!(stdout, "Finished i2c master tests!\n").unwrap();
 

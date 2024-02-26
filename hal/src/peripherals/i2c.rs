@@ -1,7 +1,7 @@
 use crate::peripherals::i2c::SlavePollResult::{Received, TransmitNeeded};
 use core::ops::Deref;
 use embedded_hal;
-use embedded_hal::i2c::{ErrorKind, ErrorType, Operation, SevenBitAddress};
+use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
 use max78000::{i2c0, GCR};
 use max78000::{I2C0, I2C1, I2C2};
 // use cortex_m::interrupt::free;
@@ -124,11 +124,11 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
 
         // TODO: j set these values to something that works
         i2c_regs.clkhi().modify(|_ ,w| {
-            w.hi().variant(1)
+            w.hi().variant(120)
         });
 
         i2c_regs.clklo().modify(|_, w| {
-            w.lo().variant(2)
+            w.lo().variant(240)
         });
 
         unsafe {
@@ -170,6 +170,8 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         self.i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         while !self.i2c_regs.intfl0().read().addr_match().bit() {}
+
+        return Ok(TransmitNeeded);
 
         if self.i2c_regs.ctrl().read().read().bit() {
             let res = self.slave_recv(read_buffer)?;
@@ -258,15 +260,25 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
                 .hs_en().bit(false)
         });
 
+        i2c_regs.txctrl0().modify(|_, w| {
+            w.thd_val().variant(2)
+        });
+
+        i2c_regs.rxctrl0().modify(|_, w| {
+            w.thd_lvl().variant(6)
+        });
+
         i2c_regs.clkhi().modify(|_ ,w| {
-            w.hi().variant(1)
+            w.hi().variant(120)
         });
 
         i2c_regs.clklo().modify(|_, w| {
-            w.lo().variant(2)
+            w.lo().variant(240)
         });
 
-        i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+        i2c_regs.ctrl().modify(|_, w| w.en().bit(true).bb_mode().bit(false));
+
+        // i2c_regs.ctrl().modify(|_, w| w.scl_out().bit(false));
 
         Self { i2c_regs }
     }
@@ -274,13 +286,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
     // Reads up to 256 bytes to read slice, in single i2c transaction
     fn master_recv(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
-        self.i2c_regs.rxctrl0().modify(|_, w| w.flush().bit(true));
-        self.i2c_regs.txctrl0().modify(|_, w| w.flush().bit(true));
-
-        // stall until flush completes
-        while self.i2c_regs.rxctrl0().read().flush().bit()
-            || self.i2c_regs.txctrl0().read().flush().bit()
-        {}
+        self.i2c_regs.flush_fifo();
 
         let bytes_to_read = if read.len() >= 256 { 256 } else { read.len() };
 
@@ -311,13 +317,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
 
     fn master_send(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
-        self.i2c_regs.rxctrl0().modify(|_, w| w.flush().bit(true));
-        self.i2c_regs.txctrl0().modify(|_, w| w.flush().bit(true));
-
-        // stall until flush completes
-        while self.i2c_regs.rxctrl0().read().flush().bit()
-            || self.i2c_regs.txctrl0().read().flush().bit()
-        {}
+        self.i2c_regs.flush_fifo();
 
         // Write the I2C slave address byte to the I2Cn_FIFO register with the R/W bit set to 0
         self.i2c_regs
@@ -347,12 +347,15 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // TODO: add operation timeouts using timer module
 
         // poll addr_ack
-        while !self.i2c_regs.intfl0().read().addr_ack().bit() {}
+        while !self.i2c_regs.intfl0().read().addr_ack().bit() && !self.i2c_regs.intfl0().read().data_err().bit() {}
 
         while num_written < write.len() {
             while !self.i2c_regs.status().read().tx_full().bit() {
                 if num_written >= write.len() {
                     break;
+                }
+                if self.i2c_regs.intfl0().read().data_err().bit() {
+                    return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown))
                 }
                 self.i2c_regs
                     .fifo()
