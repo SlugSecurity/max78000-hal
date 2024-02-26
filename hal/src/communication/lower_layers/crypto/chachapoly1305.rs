@@ -186,7 +186,7 @@ impl<T: FramedTxChannel, U: RandomSource> KeyedChannel for XChacha20Poly1305TxCh
 
 impl<T: FramedTxChannel, U: RandomSource> TxChannel for XChacha20Poly1305TxChannel<T, U> {
     /// Sends the data from ``src`` through the channel. Upon an error, a [`CommunicationError`]
-    /// is given.
+    /// is given. The data in this buffer is modified because it is encrypted in place.
     ///
     /// # ERRORS:
     ///

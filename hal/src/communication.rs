@@ -96,7 +96,8 @@ pub trait RxChannel {
 /// more info.
 pub trait TxChannel {
     /// Sends the data from ``src`` through the channel. Upon an error, a [`CommunicationError`]
-    /// is given.
+    /// is given. The data in this buffer is not guaranteed to be intact after this function
+    /// sends the data. In crypto channels for example, encryption can occur in place.
     ///
     /// # ERRORS:
     ///
