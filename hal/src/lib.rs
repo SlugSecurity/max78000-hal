@@ -8,4 +8,5 @@ pub use max78000;
 #[cfg(feature = "rt")]
 pub use cortex_m_rt::interrupt;
 
+pub mod communication;
 pub mod peripherals;
