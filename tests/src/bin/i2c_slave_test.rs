@@ -29,9 +29,9 @@ fn main() -> ! {
 
     let peripherals = Peripherals::take().unwrap();
 
-    let gpio0 = gpio::new_gpio0(peripherals.GPIO0);
+    peripherals.GCR.pclkdis0().modify(|_, w| w.gpio0().bit(false));
 
-    /*peripherals.GPIO0.en0().modify(|r, w| w.gpio_en().variant(
+    peripherals.GPIO0.en0().modify(|r, w| w.gpio_en().variant(
         r.gpio_en().bits() | (((1 << 16) | (1 << 17)))
     ));
 
@@ -45,10 +45,12 @@ fn main() -> ! {
 
     peripherals.GPIO0.en0().modify(|r, w| w.gpio_en().variant(
         r.gpio_en().bits() & (!((1 << 16) | (1 << 17)))
-    ));*/
+    ));
+
+    let gpio0 = gpio::new_gpio0(peripherals.GPIO0);
 
     let mut scl_handle = gpio0.get_pin_handle(16).unwrap().into_input_pin().unwrap();
-    let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
+    let mut sda_handle = gpio0.get_pin_handle(17).unwrap().into_input_pin().unwrap();
 
     sda_handle.set_operating_mode(PinOperatingMode::AltFunction1);
     scl_handle.set_operating_mode(PinOperatingMode::AltFunction1);
@@ -66,15 +68,18 @@ fn main() -> ! {
 
     let mut buf = [0u8; 256];
 
-    let mut scl = scl_handle.is_high(); //peripherals.GPIO0.in_().read().bits() & (1 << 16);
+    let mut scl = scl_handle.is_high().unwrap(); //peripherals.GPIO0.in_().read().bits() & (1 << 16);
+    let mut sda = sda_handle.is_high().unwrap();
     // let mut sda = peripherals.GPIO0.in_().read().bits() & (1 << 17);
 
     // let read_sda = || peripherals.GPIO0.in_().read().bits() & (1 << 17);
     //let mut read_scl = || scl_handle.is_high(); //peripherals.GPIO0.in_().read().bits() & (1 << 16);
 
     loop {
-        while scl_handle.is_high() == scl {};
-        scl = scl_handle.is_high();
+        writeln!(stdout, "SCL line is {}\n", scl).unwrap();
+        while scl_handle.is_high().unwrap() == scl && sda_handle.is_high().unwrap() == sda {};
+        scl = scl_handle.is_high().unwrap();
+        sda = sda_handle.is_high().unwrap();
         writeln!(stdout, "SDA changed!!\n").unwrap();
     }
 
