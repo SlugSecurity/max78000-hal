@@ -9,7 +9,7 @@ use core::fmt::Write;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use embedded_hal::digital::{OutputPin, PinState};
-use max78000_hal::{max78000::Peripherals, peripherals::i2c, peripherals::timer};
+use max78000_hal::{max78000::Peripherals, peripherals::i2c_bitbang, peripherals::timer};
 use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
 use embedded_hal::i2c::I2c;
 use max78000_hal::peripherals::gpio;
@@ -58,8 +58,11 @@ fn main() -> ! {
     sda_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap();
     scl_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap();
 
-    let mut i2c_master = i2c::I2CMaster::new(&peripherals.GCR, peripherals.I2C1);
     let clock = Clock::new(peripherals.TMR, &peripherals.GCR, Oscillator::IBRO, Prescaler::_64);
+
+    let delay_timer = clock.new_timer(Time::Milliseconds(1));
+
+    let mut i2c_master = i2c_bitbang::I2CMaster::new(&peripherals.GCR, peripherals.I2C1, delay_timer);
 
     let mut timer = clock.new_timer(Time::Milliseconds(1000));
 

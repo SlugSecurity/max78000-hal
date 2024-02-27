@@ -22,5 +22,6 @@ pub mod power;
 pub mod raw;
 pub mod rtc;
 pub mod synchronization;
+pub mod i2c_bitbang;
 
 // TODO: Create peripheral manager and traits.
