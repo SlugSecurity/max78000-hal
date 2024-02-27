@@ -2,22 +2,19 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::peripherals::{
-    gpio::{
-        active::{
-            port_num_types::GpioPortNum, ActiveGpio, ActiveInputPinConfig, ActiveOutputPinConfig,
-        },
-        pin_traits::{InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
-        Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode,
+use max78000_hal::peripherals::gpio::{
+    active::{
+        port_num_types::GpioPortNum, ActiveGpio, ActiveInputPinConfig, ActiveOutputPinConfig,
     },
-    PeripheralHandle,
+    pin_traits::{InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
+    Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode,
 };
 
 /// Runs all GPIO tests.
 pub fn run_gpio_tests(
-    gpio0_port: PeripheralHandle<'_, Gpio0>,
-    gpio1_port: PeripheralHandle<'_, Gpio1>,
-    gpio2_port: PeripheralHandle<'_, Gpio2>,
+    gpio0_port: &Gpio0,
+    gpio1_port: &Gpio1,
+    gpio2_port: &Gpio2,
     stdout: &mut hio::HostStream,
 ) {
     writeln!(stdout, "Starting GPIO peripheral tests...").unwrap();
@@ -27,9 +24,9 @@ pub fn run_gpio_tests(
     // Note: Tests should be made generic over traits like GeneralIoPin, InputPin, and StatefulOutputPin
     // Write sanity checks for now (writing a value then reading it) -- physical tests will come later
 
-    test_active_port(&gpio0_port);
-    test_active_port(&gpio1_port);
-    test_active_port(&gpio2_port);
+    test_active_port(gpio0_port);
+    test_active_port(gpio1_port);
+    test_active_port(gpio2_port);
 
     writeln!(stdout, "GPIO peripheral tests complete!\n").unwrap();
 }

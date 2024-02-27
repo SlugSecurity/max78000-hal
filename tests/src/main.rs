@@ -66,9 +66,9 @@ fn main() -> ! {
 
     trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
     gpio_tests::run_gpio_tests(
-        manager.gpio0().unwrap(),
-        manager.gpio1().unwrap(),
-        manager.gpio2().unwrap(),
+        manager.gpio0(),
+        manager.gpio1(),
+        manager.gpio2(),
         &mut stdout,
     );
 
