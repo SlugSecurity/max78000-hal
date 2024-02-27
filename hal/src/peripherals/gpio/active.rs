@@ -453,17 +453,23 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
 /// The configuration needed when converting an active GPIO pin into input mode.
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub struct ActiveInputPinConfig {
-    operating_mode: PinOperatingMode,
-    power_supply: PowerSupply,
-    pull_mode: PullMode,
+    /// The operating mode of the pin to use when it's converted to an input pin.
+    pub operating_mode: PinOperatingMode,
+    /// The power supply of the pin to use when it's converted to an input pin.
+    pub power_supply: PowerSupply,
+    /// The pull mode of the pin to use when it's converted to an input pin.
+    pub pull_mode: PullMode,
 }
 
 /// The configuration needed when converting an active GPIO pin into output mode.
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub struct ActiveOutputPinConfig {
-    operating_mode: PinOperatingMode,
-    power_supply: PowerSupply,
-    drive_strength: DriveStrength,
+    /// The operating mode of the pin to use when it's converted to an output pin.
+    pub operating_mode: PinOperatingMode,
+    /// The power supply of the pin to use when it's converted to an output pin.
+    pub power_supply: PowerSupply,
+    /// The drive strength of the pin to use when it's converted to an output pin.
+    pub drive_strength: DriveStrength,
 }
 
 /// Represents the associated power supply of a pin.
