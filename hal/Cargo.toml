@@ -18,6 +18,9 @@ sealed = "0.5"
 chacha20poly1305 = { version = "0.10.1", default-features = false }
 generic-array = "0.14"
 typenum = "1.17.0"
+rand_chacha = { version = "0.3.1", default-features = false }
+sha3 = { version = "0.10.8", default-features = false }
+zeroize = { version = "1.7.0", default-features = false }
 
 [features]
 rt = ["max78000/rt", "cortex-m-rt"]
