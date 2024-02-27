@@ -146,6 +146,7 @@ pub(crate) fn new_gpio2(gpio2: GPIO2) -> Gpio2 {
 }
 
 /// Represents the I/O mode of a pin.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PinIoMode {
     /// Input mode (The default after power-on-reset).
     Input,
@@ -156,10 +157,12 @@ pub enum PinIoMode {
 
 /// Represents the operating mode of a pin. For a list of what each alternate function
 /// does for each pin, see page 28 of [chip datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf).
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub enum PinOperatingMode {
     /// This operating mode allows the pin to be used for general purpose I/O. This is
     /// the default operating mode after power-on-reset for all pins except the pins
     /// for SWDIO and SWCLK. (See page 28 of datasheet linked in the enum's doc comment)
+    #[default]
     DigitalIo,
 
     /// This operating mode is to allow the pin to perform some designated alternate

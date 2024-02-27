@@ -428,9 +428,10 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
 }
 
 /// Represents the associated power supply of a pin.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub enum PowerSupply {
     /// VDDIO (1.8V).
+    #[default]
     Vddio,
     /// VDDIOH (3.0V).
     Vddioh,
@@ -456,9 +457,10 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'a
 }
 
 /// Represents the pull mode of an input pin.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub enum PullMode {
     /// High impedance mode (the default after power-on-reset).
+    #[default]
     HighImpedance,
     /// Weak pullup mode (1 megaohm).
     WeakPullup,
@@ -529,9 +531,10 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveInputPin<'a,
 }
 
 /// Represents the drive strength of an output pin.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub enum DriveStrength {
-    /// Drive strength 0.
+    /// Drive strength 0
+    #[default]
     S0,
     /// Drive strength 1.
     S1,
