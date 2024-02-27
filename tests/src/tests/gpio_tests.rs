@@ -2,20 +2,19 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::peripherals::{
-    gpio::{
-        active::{port_num_types::GpioPortNum, ActiveGpio},
-        pin_traits::{GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
-        Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode,
+use max78000_hal::peripherals::gpio::{
+    active::{
+        port_num_types::GpioPortNum, ActiveGpio, ActiveInputPinConfig, ActiveOutputPinConfig,
     },
-    PeripheralHandle,
+    pin_traits::{InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
+    Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode,
 };
 
 /// Runs all GPIO tests.
 pub fn run_gpio_tests(
-    gpio0_port: PeripheralHandle<'_, Gpio0>,
-    gpio1_port: PeripheralHandle<'_, Gpio1>,
-    gpio2_port: PeripheralHandle<'_, Gpio2>,
+    gpio0_port: &Gpio0,
+    gpio1_port: &Gpio1,
+    gpio2_port: &Gpio2,
     stdout: &mut hio::HostStream,
 ) {
     writeln!(stdout, "Starting GPIO peripheral tests...").unwrap();
@@ -25,9 +24,9 @@ pub fn run_gpio_tests(
     // Note: Tests should be made generic over traits like GeneralIoPin, InputPin, and StatefulOutputPin
     // Write sanity checks for now (writing a value then reading it) -- physical tests will come later
 
-    test_active_port(&gpio0_port);
-    test_active_port(&gpio1_port);
-    test_active_port(&gpio2_port);
+    test_active_port(gpio0_port);
+    test_active_port(gpio1_port);
+    test_active_port(gpio2_port);
 
     writeln!(stdout, "GPIO peripheral tests complete!\n").unwrap();
 }
@@ -45,12 +44,22 @@ fn test_active_port<const PIN_CT: usize>(
         Err(GpioError::InvalidPinIndex)
     ));
 
-    let pin = pin.into_input_pin().unwrap();
-    assert!(matches!(pin.get_io_mode(), PinIoMode::Input));
+    let mut pin = pin.into_input_pin(ActiveInputPinConfig::default()).unwrap();
+    assert_eq!(pin.get_io_mode(), PinIoMode::Input);
+    assert_eq!(pin.get_operating_mode(), Default::default());
+    assert_eq!(pin.get_power_supply(), Default::default());
+    assert_eq!(pin.get_pull_mode(), Default::default());
+
     assert_ne!(pin.is_low(), pin.is_high());
 
-    let mut pin = pin.into_output_pin(PinState::High).unwrap();
-    assert!(matches!(pin.get_io_mode(), PinIoMode::Output));
+    let mut pin = pin
+        .into_output_pin(PinState::High, ActiveOutputPinConfig::default())
+        .unwrap();
+    assert_eq!(pin.get_io_mode(), PinIoMode::Output);
+    assert_eq!(pin.get_operating_mode(), Default::default());
+    assert_eq!(pin.get_power_supply(), Default::default());
+    assert_eq!(pin.get_drive_strength(), Default::default());
+
     assert!(pin.is_set_high().unwrap());
     pin.set_low().unwrap();
     assert!(pin.is_set_low().unwrap());

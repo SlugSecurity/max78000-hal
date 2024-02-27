@@ -392,6 +392,15 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         power_ctrl.reset_toggleable(ToggleableModule::TMR2);
         power_ctrl.reset_toggleable(ToggleableModule::TMR3);
 
+        // GPIO ports are eagerly initialized because they do not use `PeripheralHandle`s.
+        power_ctrl.enable_peripheral(ToggleableModule::GPIO0);
+        power_ctrl.enable_peripheral(ToggleableModule::GPIO1);
+        power_ctrl.enable_peripheral(ToggleableModule::GPIO2);
+
+        power_ctrl.reset_toggleable(ToggleableModule::GPIO0);
+        power_ctrl.reset_toggleable(ToggleableModule::GPIO1);
+        power_ctrl.reset_toggleable(ToggleableModule::GPIO2);
+
         PeripheralManager {
             power_ctrl,
             flash_controller: RefCell::new(FlashController::new(
@@ -408,9 +417,9 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
             timer_1: timer_field!(self, tmr1, timer_1_cfg),
             timer_2: timer_field!(self, tmr2, timer_2_cfg),
             timer_3: timer_field!(self, tmr3, timer_3_cfg),
-            gpio0: RefCell::new(new_gpio0(self.consumed_periphs.gpio0)),
-            gpio1: RefCell::new(new_gpio1(self.consumed_periphs.gpio1)),
-            gpio2: RefCell::new(new_gpio2(self.consumed_periphs.gpio2)),
+            gpio0: new_gpio0(self.consumed_periphs.gpio0),
+            gpio1: new_gpio1(self.consumed_periphs.gpio1),
+            gpio2: new_gpio2(self.consumed_periphs.gpio2),
             trng: RefCell::new(Trng::new(self.consumed_periphs.trng)),
         }
     }
@@ -426,15 +435,24 @@ macro_rules! no_enable_rst_periph_fn {
     };
 }
 
+macro_rules! no_enable_rst_periph_fn_no_handle {
+    ($fn_name:ident, $p_type:ty, $field_name:ident) => {
+        /// Gets the specified peripheral, enabling and resetting it.
+        pub fn $fn_name(&'a self) -> &$p_type {
+            &self.$field_name
+        }
+    };
+}
+
 macro_rules! enable_rst_periph_fn {
     ($fn_name:ident, $p_type:ty, $field_name:ident, $variant:expr) => {
         /// Gets the specified peripheral if not already taken elsewhere, enabling and
         /// resetting it. Otherwise, returns [`BorrowMutError`].
-        pub fn $fn_name(&'a self) -> Result<PeripheralHandle<$p_type>, BorrowMutError> {
+        pub fn $fn_name(&self) -> Result<PeripheralHandle<$p_type>, BorrowMutError> {
+            let handle = PeripheralHandle::new(&self.$field_name)?;
             self.power_ctrl.enable_peripheral($variant);
             self.power_ctrl.reset_toggleable($variant);
-
-            PeripheralHandle::new(&self.$field_name)
+            Ok(handle)
         }
     };
 }
@@ -446,9 +464,9 @@ pub struct PeripheralManager<'a> {
     power_ctrl: PowerControl<'a, 'a>,
     flash_controller: RefCell<FlashController<'a, 'a>>,
     system_clock: RefCell<SystemClock<'a, 'a>>,
-    gpio0: RefCell<Gpio0>,
-    gpio1: RefCell<Gpio1>,
-    gpio2: RefCell<Gpio2>,
+    gpio0: Gpio0,
+    gpio1: Gpio1,
+    gpio2: Gpio2,
     timer_0: RefCell<Clock<TMR>>,
     timer_1: RefCell<Clock<TMR1>>,
     timer_2: RefCell<Clock<TMR2>>,
@@ -467,8 +485,9 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn!(timer_2, Clock<TMR2>, timer_2);
     no_enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3);
 
-    enable_rst_periph_fn!(gpio0, Gpio0, gpio0, ToggleableModule::GPIO0);
-    enable_rst_periph_fn!(gpio1, Gpio1, gpio1, ToggleableModule::GPIO1);
-    enable_rst_periph_fn!(gpio2, Gpio2, gpio2, ToggleableModule::GPIO2);
+    no_enable_rst_periph_fn_no_handle!(gpio0, Gpio0, gpio0);
+    no_enable_rst_periph_fn_no_handle!(gpio1, Gpio1, gpio1);
+    no_enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
+
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
 }
