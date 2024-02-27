@@ -52,7 +52,7 @@ use self::oscillator::{private, Oscillator};
 use self::power::{PowerControl, ToggleableModule};
 use self::timer::{Clock, Prescaler};
 use self::trng::Trng;
-use self::uart::{Uart, Uart0, UartBuilder, UartBuilderError};
+use self::uart::{Uart0, UartBuilder, UartBuilderError};
 
 // Embedded HAL peripherals.
 pub mod adc;

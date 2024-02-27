@@ -2,41 +2,28 @@
 //!
 //! TODO: Add example and more desc.
 
-use core::borrow::Borrow;
 use core::cell::BorrowMutError;
-use core::{cell::RefMut, marker::PhantomData, ops::Deref};
+use core::{marker::PhantomData, ops::Deref, result::Result};
 
 use embedded_hal::digital::PinState;
 use sealed::sealed;
 
-use crate::peripherals::gpio::active::{port_num_types::GpioZero, ActiveInputPin, ActiveOutputPin};
-use crate::peripherals::gpio::active::{DriveStrength, PowerSupply, PullMode};
-use crate::peripherals::gpio::pin_traits::IoPin;
-use crate::peripherals::gpio::PinOperatingMode;
-use crate::peripherals::Gpio0;
-
-use super::gpio::active::{ActiveInputPinConfig, ActiveOutputPinConfig};
-use super::gpio::{GpioError, PinHandle};
+use super::gpio::{
+    active::{
+        port_num_types::GpioZero, ActiveInputPin, ActiveInputPinConfig, ActiveOutputPin,
+        ActiveOutputPinConfig, DriveStrength, PowerSupply, PullMode,
+    },
+    pin_traits::IoPin,
+    GpioError, PinOperatingMode,
+};
 use super::{PeripheralHandle, PeripheralManager};
-
-// TODO: Document this
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum CommunicationError {
-    RecvError { amount_sent: usize },
-    SendError { amount_sent: usize },
-    InternalError,
-}
-
-pub type Result<T> = core::result::Result<T, CommunicationError>;
+use crate::communication::{
+    CommunicationError, Result as CommunicationResult, RxChannel, Timeout, TxChannel,
+};
 
 /// A trait for all instances of UART peripherals, ie: UART0, UART1, UART2, UART3.
 #[sealed]
 pub trait UartInstance {
-    // TODO: Bound to proper pin trait when GPIO is in. Make new trait that encompasses
-    //       the pin handle and (). That trait should have a fn for configuring an instance
-    //       of the RxPin or TxPin to be used for UART -- no-op with ()
-
     /// The register block to use for this UART.
     type Registers: Deref<Target = max78000::uart::RegisterBlock>;
 }
@@ -54,18 +41,21 @@ macro_rules! uart_instance_impl {
     };
 }
 
-// TODO: Replace RX and TX pin types when GPIO is merged.
 uart_instance_impl!(Uart0, max78000::UART);
 
-/// Used to configure a UART instance
+/// Used to configure UART 0
 pub struct UartBuilder<'a, T: UartInstance> {
     uart_regs: PeripheralHandle<'a, T::Registers>,
     tx: ActiveOutputPin<'a, GpioZero, 31>,
     rx: ActiveInputPin<'a, GpioZero, 31>,
 }
 
+/// Error that can be returned while creating a UartBuilders
+#[derive(Debug)]
 pub enum UartBuilderError {
+    /// Error occurred while borrowing a peripheral
     BorrowPeripheral(BorrowMutError),
+    /// Error occurred while claiming a GPIO pin
     GetPins(GpioError),
 }
 
@@ -85,13 +75,14 @@ impl<'a> UartBuilder<'a, Uart0> {
     /// Create a [`UartBuilder`] from a reference to the registers
     pub fn new<'pc>(
         peripheral_manager: &'a PeripheralManager<'pc>,
-    ) -> core::result::Result<Self, UartBuilderError>
+    ) -> Result<Self, UartBuilderError>
     where
         'a: 'pc,
     {
         let gpio = peripheral_manager.gpio0();
 
         // these results have Infallible as the Err type so unwrap is ok
+        // pin configs from https://github.com/analogdevicesinc/msdk/blob/c7dc24619e995f17cefd9c776292d318a8a04afb/Libraries/PeriphDrivers/Source/SYS/pins_ai85.c#L45-L46
         let rx = gpio
             .get_pin_handle(0)?
             .into_input_pin(ActiveInputPinConfig {
@@ -118,20 +109,10 @@ impl<'a> UartBuilder<'a, Uart0> {
         })
     }
 
-    pub fn build(mut self, baud: u32) -> Uart<'a, Uart0> {
+    /// Set up and return a UART instance for the given baud rate
+    pub fn build(self, baud: u32) -> Uart<'a, Uart0> {
         const IBRO_FREQUENCY: u32 = 7372800;
         self.uart_regs.ctrl().modify(|_r, w| {
-            // Set GPIO pins to mode alt 1
-            self.tx.set_operating_mode(PinOperatingMode::AltFunction1);
-            self.rx.set_operating_mode(PinOperatingMode::AltFunction1);
-            // Set pin voltage to VDDIO
-            self.tx.set_power_supply(PowerSupply::Vddio);
-            self.rx.set_power_supply(PowerSupply::Vddio);
-            // Set pull mode to none
-            self.rx.set_pull_mode(PullMode::HighImpedance);
-            // Set drive strength to 0
-            self.tx.set_drive_strength(DriveStrength::S0);
-
             w.rx_thd_val()
                 .variant(1)
                 .char_size()
@@ -159,46 +140,67 @@ impl<'a> UartBuilder<'a, Uart0> {
 
         Uart {
             regs: self.uart_regs,
-            tx: self.tx,
-            rx: self.rx,
+            _tx: self.tx,
+            _rx: self.rx,
             _uart_instance: Default::default(),
         }
     }
 }
 
-// TODO: Move to its own crate/module
-pub trait RxChannel {
-    // TODO: Use timeout versions of these functions with timer API
-    fn recv(&self, dest: &mut [u8]) -> Result<usize>;
-}
-
-pub trait TxChannel {
-    fn send(&self, src: &[u8]) -> Result<()>;
-}
-
-// make trait for pin configuration for Tx and Rx generic params
-// and call those functions on constructions
+/// A running UART instance
 pub struct Uart<'a, T: UartInstance> {
     regs: PeripheralHandle<'a, T::Registers>,
-    tx: ActiveOutputPin<'a, GpioZero, 31>,
-    rx: ActiveInputPin<'a, GpioZero, 31>,
+    _tx: ActiveOutputPin<'a, GpioZero, 31>,
+    _rx: ActiveInputPin<'a, GpioZero, 31>,
     _uart_instance: PhantomData<T>,
 }
 
-impl<T: UartInstance> RxChannel for Uart<'_, T> {
-    fn recv(&self, dest: &mut [u8]) -> Result<usize> {
+impl<T: UartInstance> Uart<'_, T> {
+    fn internal_recv(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut impl Timeout,
+        reset_every_byte: bool,
+    ) -> CommunicationResult<usize> {
         let mut index: usize = 0;
         while index < dest.len() {
-            while self.regs.status().read().rx_em().bit() {}
+            // spin until there is a byte to be read
+            while self.regs.status().read().rx_em().bit() {
+                if tmr.poll() {
+                    return Err(CommunicationError::RecvError);
+                }
+            }
             dest[index] = self.regs.fifo().read().data().bits();
             index += 1;
+
+            if reset_every_byte {
+                tmr.reset();
+            }
         }
         Ok(index)
     }
 }
 
+impl<T: UartInstance> RxChannel for Uart<'_, T> {
+    fn recv_with_data_timeout<U: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut U,
+    ) -> CommunicationResult<usize> {
+        self.internal_recv(dest, tmr, true)
+    }
+
+    fn recv_with_timeout<U: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut U,
+    ) -> CommunicationResult<usize> {
+        self.internal_recv(dest, tmr, false)
+    }
+}
+
 impl<T: UartInstance> TxChannel for Uart<'_, T> {
-    fn send(&self, src: &[u8]) -> Result<()> {
+    fn send(&mut self, src: &mut [u8]) -> CommunicationResult<()> {
         for &byte in src.iter() {
             while self.regs.status().read().tx_full().bit() {}
             self.regs.fifo().modify(|_r, w| w.data().variant(byte));
