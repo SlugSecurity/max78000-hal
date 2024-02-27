@@ -11,19 +11,22 @@ where
     TInput: InputPin + IoPin<TInput, TOutput>,
     TOutput: OutputPin + IoPin<TInput, TOutput>,
 {
+    /// The configuration needed when converting this pin into input mode.
+    type InputConfig;
+
     /// Convert this pin to input mode.
-    fn into_input_pin(self) -> Result<TInput, Self::Error>;
+    fn into_input_pin(self, config: Self::InputConfig) -> Result<TInput, Self::Error>;
+
+    /// The configuration needed when converting this pin into output mode.
+    type OutputConfig;
 
     /// Convert this pin to output mode with the given initial state.
-    fn into_output_pin(self, state: PinState) -> Result<TOutput, Self::Error>;
-}
+    fn into_output_pin(
+        self,
+        state: PinState,
+        config: Self::OutputConfig,
+    ) -> Result<TOutput, Self::Error>;
 
-/// Trait for any GPIO pin on this board in either input or output mode.
-pub trait GeneralIoPin<TInput, TOutput>: IoPin<TInput, TOutput>
-where
-    TInput: InputPin + GeneralIoPin<TInput, TOutput>,
-    TOutput: StatefulOutputPin + GeneralIoPin<TInput, TOutput>,
-{
     /// Sets what operating mode the pin is in. This can be digital I/O mode
     /// or an alternate function mode. For a list of what each alternate function
     /// does for each pin, see page 28 of [chip datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf).

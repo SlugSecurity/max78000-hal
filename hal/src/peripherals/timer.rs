@@ -1,6 +1,7 @@
 //! Peripheral API for Timers
 
 use core::ops::Deref;
+use core::time::Duration;
 use max78000::gcr::clkctrl::ERTCO_EN_A;
 use max78000::gcr::pclkdis0::GPIO0_A;
 use max78000::gcr::rst0::RESET_A;
@@ -9,11 +10,13 @@ use max78000::tmr1::ctrl0::{CLKDIV_A_A, MODE_A_A};
 use max78000::GCR;
 use max78000::{TMR, TMR1, TMR2, TMR3};
 
+use crate::communication::Timeout;
+
 // TODO: use peripheral API when done
 /// Auxiliary trait that only the TMR, TMR1, TMR2, and TMR3 registers can implement;
 /// Allows peripheral toggle and reset functionality to said peripherals if GCR regs
 /// are provided.
-pub trait TimerPeripheralGCR {
+pub trait TimerPeripheralGCR: Deref<Target = tmr::RegisterBlock> {
     /// Disable peripheral
     fn peripheral_clock_disable(gcr_reg: &GCR);
     /// Enable peripheral
@@ -69,7 +72,7 @@ gen_impl_tpgcr!(TMR3, tmr3);
 /// // will stall for 5 seconds
 /// while !timer.poll() {};
 /// ```
-pub struct Clock<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> {
+pub struct Clock<T: TimerPeripheralGCR> {
     tmr_registers: T,
     ticks_per_ms: f64,
 }
@@ -86,7 +89,7 @@ pub enum Oscillator {
 
 /// Instance of a timer. Internally keeps clock start and end values, and a reference to the clock
 /// that created it.
-pub struct Timer<'a, T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> {
+pub struct Timer<'a, T: TimerPeripheralGCR> {
     /// Start timestamp
     pub start: u32,
     /// End timestamp
@@ -95,7 +98,21 @@ pub struct Timer<'a, T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeriph
     finished: bool,
 }
 
-impl<'a, T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Timer<'a, T> {
+impl<'a, T: TimerPeripheralGCR> Timeout for Timer<'a, T> {
+    fn poll(&mut self) -> bool {
+        self.poll()
+    }
+
+    fn reset(&mut self) {
+        self.reset()
+    }
+
+    fn duration(&self) -> Duration {
+        Duration::from_millis(self.duration_ms() as u64)
+    }
+}
+
+impl<'a, T: TimerPeripheralGCR> Timer<'a, T> {
     fn new(start: u32, end: u32, clock: &'a Clock<T>) -> Self {
         Self {
             start,
@@ -135,12 +152,12 @@ impl<'a, T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Tim
     }
 
     /// Get total duration, in clock ticks
-    pub fn duration_ticks(&mut self) -> u32 {
+    pub fn duration_ticks(&self) -> u32 {
         self.end.wrapping_sub(self.start)
     }
 
     /// Get total duration, in milliseconds
-    pub fn duration_ms(&mut self) -> u32 {
+    pub fn duration_ms(&self) -> u32 {
         self.clock.ticks_to_ms(self.duration_ticks())
     }
 }
@@ -183,12 +200,12 @@ pub enum Prescaler {
     _4096,
 }
 
-impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T> {
+impl<T: TimerPeripheralGCR> Clock<T> {
     /// Creates a new `Clock`, taking ownership of the timer peripheral register block,
     /// a temporary reference to the GCR registers for initial configuration, as
     /// well as config values for the oscillator source and the prescaler value, which will divide
     /// the oscillator source to only increment count once per `prescaler` ticks.
-    pub fn new(
+    pub(crate) fn new(
         tmr_registers: T,
         gcr_registers: &GCR,
         oscillator: Oscillator,
@@ -198,9 +215,6 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
             tmr_registers,
             ticks_per_ms: 0f64,
         };
-
-        this.enable_peripheral(gcr_registers);
-        this.reset_peripheral(gcr_registers);
 
         // Disable timer
         this.tmr_registers
@@ -303,16 +317,6 @@ impl<T: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> Clock<T
         while !this.tmr_registers.ctrl0().read().clken_a().bit() {}
 
         this
-    }
-
-    /// Enable the peripheral through the GCR_PCLKDIS0 register
-    fn enable_peripheral(&mut self, gcr_reg: &GCR) {
-        T::peripheral_clock_enable(gcr_reg)
-    }
-
-    /// Reset the peripheral through the GCR_RST0 register
-    fn reset_peripheral(&mut self, gcr_reg: &GCR) {
-        T::reset_peripheral(gcr_reg)
     }
 
     /// Consume `Clock`, returning the underlying timer registers

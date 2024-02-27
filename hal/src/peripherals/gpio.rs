@@ -2,6 +2,7 @@
 
 use core::{array, cell::Cell};
 
+use embedded_hal::digital::{Error, ErrorKind};
 use max78000::{GPIO0, GPIO1, GPIO2};
 use sealed::sealed;
 
@@ -16,6 +17,15 @@ use self::{
 pub mod pin_traits;
 
 pub mod active;
+
+/// The GPIO port for GPIO 0.
+pub type Gpio0 = GpioPort<'static, ActiveGpio<GpioZero>, 31>;
+
+/// The GPIO port for GPIO 1.
+pub type Gpio1 = GpioPort<'static, ActiveGpio<GpioOne>, 10>;
+
+/// The GPIO port for GPIO 2.
+pub type Gpio2 = GpioPort<'static, ActiveGpio<GpioTwo>, 8>;
 
 /// Error type for GPIO operations
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -32,6 +42,12 @@ pub enum GpioError {
 
     /// GPIO pin doesn't have the selected operating mode.
     BadOperatingMode,
+}
+
+impl Error for GpioError {
+    fn kind(&self) -> ErrorKind {
+        ErrorKind::Other
+    }
 }
 
 /// This trait defines two associated types for a particular GPIO port.
@@ -122,24 +138,22 @@ impl<'t, 'regs, Metadata: GpioPortMetadata<'regs> + ?Sized, const PIN_CT: usize>
 }
 
 /// Creates a new [`GpioPort`] representing GPIO0.
-// TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio0(gpio0: GPIO0) -> GpioPort<'static, ActiveGpio<GpioZero>, 31> {
+pub(crate) fn new_gpio0(gpio0: GPIO0) -> Gpio0 {
     GpioPort::<ActiveGpio<GpioZero>, 31>::new(gpio0)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO1.
-// TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio1(gpio1: GPIO1) -> GpioPort<'static, ActiveGpio<GpioOne>, 10> {
+pub(crate) fn new_gpio1(gpio1: GPIO1) -> Gpio1 {
     GpioPort::<ActiveGpio<GpioOne>, 10>::new(gpio1)
 }
 
 /// Creates a new [`GpioPort`] representing GPIO2.
-// TODO: Make this pub(crate) when peripheral manager is made
-pub fn new_gpio2(gpio2: GPIO2) -> GpioPort<'static, ActiveGpio<GpioTwo>, 8> {
+pub(crate) fn new_gpio2(gpio2: GPIO2) -> Gpio2 {
     GpioPort::<ActiveGpio<GpioTwo>, 8>::new(gpio2)
 }
 
 /// Represents the I/O mode of a pin.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PinIoMode {
     /// Input mode (The default after power-on-reset).
     Input,
@@ -150,10 +164,12 @@ pub enum PinIoMode {
 
 /// Represents the operating mode of a pin. For a list of what each alternate function
 /// does for each pin, see page 28 of [chip datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf).
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub enum PinOperatingMode {
     /// This operating mode allows the pin to be used for general purpose I/O. This is
     /// the default operating mode after power-on-reset for all pins except the pins
     /// for SWDIO and SWCLK. (See page 28 of datasheet linked in the enum's doc comment)
+    #[default]
     DigitalIo,
 
     /// This operating mode is to allow the pin to perform some designated alternate

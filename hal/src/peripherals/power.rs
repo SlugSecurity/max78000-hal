@@ -95,7 +95,7 @@ pub enum NonToggleableModule {
 impl<'r, 'l> PowerControl<'r, 'l> {
     // TODO: Make pub(crate)
     /// Creates a new PowerControl instance that holds references to the GCR and LPGCR registers.
-    pub fn new(gcr: &'r GCR, lpgcr: &'l LPGCR) -> Self {
+    pub(crate) fn new(gcr: &'r GCR, lpgcr: &'l LPGCR) -> Self {
         Self { gcr, lpgcr }
     }
 

@@ -14,7 +14,7 @@ pub struct Trng {
 impl Trng {
     /// Creates a new TRNG peripheral.
     // TODO: Make this function pub(crate) when the peripheral API is available. Tests needs it public until then.
-    pub fn new(trng: TRNG) -> Self {
+    pub(crate) fn new(trng: TRNG) -> Self {
         Self { trng }
     }
 

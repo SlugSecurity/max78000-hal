@@ -2,15 +2,20 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::max78000::{GCR, TMR, TMR1};
-use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
+use max78000_hal::max78000::{TMR, TMR1, TMR2};
+use max78000_hal::peripherals::timer::{Clock, Time};
+use max78000_hal::peripherals::PeripheralHandle;
 
 /// Run the tests for the timer peripheral module
-pub fn run_timer_tests(stdout: &mut hio::HostStream, tmr: TMR, tmr1: TMR1, gcr_regs: &GCR) {
+pub fn run_timer_tests(
+    stdout: &mut hio::HostStream,
+    clk0: PeripheralHandle<Clock<TMR>>,
+    clk1: PeripheralHandle<Clock<TMR1>>,
+    clk2: PeripheralHandle<Clock<TMR2>>,
+) {
     writeln!(stdout, "Starting Timer tests!").unwrap();
-    let clock = Clock::new(tmr, gcr_regs, Oscillator::ERTCO, Prescaler::_1);
 
-    let mut timer = clock.new_timer(Time::Milliseconds(3000));
+    let mut timer = clk0.new_timer(Time::Milliseconds(3000));
     writeln!(
         stdout,
         "Timer duration in ticks is {}",
@@ -18,7 +23,7 @@ pub fn run_timer_tests(stdout: &mut hio::HostStream, tmr: TMR, tmr1: TMR1, gcr_r
     )
     .unwrap();
     writeln!(stdout, "Timer start, end is {} {}", timer.start, timer.end).unwrap();
-    writeln!(stdout, "Clk count is {}", clock.get_count()).unwrap();
+    writeln!(stdout, "Clk count is {}", clk0.get_count()).unwrap();
     writeln!(stdout, "Timer poll is {}", timer.poll()).unwrap();
     writeln!(stdout, "Poll for 3 seconds...").unwrap();
 
@@ -29,10 +34,9 @@ pub fn run_timer_tests(stdout: &mut hio::HostStream, tmr: TMR, tmr1: TMR1, gcr_r
     timer.reset();
     while !timer.poll() {}
 
-    writeln!(stdout, "Creating new clock with ISO / 4096").unwrap();
+    writeln!(stdout, "Testing new clock with ISO / 4096").unwrap();
 
-    let clock = Clock::new(tmr1, gcr_regs, Oscillator::ISO, Prescaler::_4096);
-    let mut timer = clock.new_timer(Time::Milliseconds(3000));
+    let mut timer = clk1.new_timer(Time::Milliseconds(3000));
 
     writeln!(stdout, "New timer duration is {}", timer.duration_ticks()).unwrap();
 
@@ -44,10 +48,9 @@ pub fn run_timer_tests(stdout: &mut hio::HostStream, tmr: TMR, tmr1: TMR1, gcr_r
 
     while !timer.poll() {}
 
-    writeln!(stdout, "Creating new clock with IBRO / 512").unwrap();
+    writeln!(stdout, "Testing new clock with IBRO / 512").unwrap();
 
-    let clock = Clock::new(clock.consume(), gcr_regs, Oscillator::IBRO, Prescaler::_512);
-    let mut timer = clock.new_timer(Time::Milliseconds(5000));
+    let mut timer = clk2.new_timer(Time::Milliseconds(5000));
 
     writeln!(
         stdout,

@@ -4,24 +4,13 @@ use core::fmt::Write;
 
 use bitvec::prelude::*;
 use cortex_m_semihosting::hio;
-use max78000_hal::{
-    max78000::TRNG,
-    peripherals::{
-        power::{PowerControl, ToggleableModule},
-        trng::Trng,
-    },
-};
+use max78000_hal::peripherals::{trng::Trng, PeripheralHandle};
 
 /// Runs all TRNG tests.
-pub fn run_trng_tests(trng_regs: TRNG, power: &PowerControl, stdout: &mut hio::HostStream) {
+pub fn run_trng_tests(trng: PeripheralHandle<'_, Trng>, stdout: &mut hio::HostStream) {
     writeln!(stdout, "Starting TRNG peripheral tests...").unwrap();
 
-    // Enable TRNG clock. This will be done by the peripheral API when available.
-    // TODO: Remove this when the peripheral API is available.
-    power.enable_peripheral(ToggleableModule::TRNG);
-
     // Run tests.
-    let trng = Trng::new(trng_regs);
     test_random_u32(&trng);
     test_fill_buffer(&trng, stdout);
     writeln!(stdout, "TRNG peripheral tests complete!\n").unwrap();
