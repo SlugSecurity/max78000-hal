@@ -39,6 +39,7 @@
 //! // 3 seconds has passed.
 //! ```
 
+use core::borrow::{Borrow, BorrowMut};
 use core::cell::{BorrowMutError, RefCell, RefMut};
 use core::ops::{Deref, DerefMut};
 
@@ -51,6 +52,7 @@ use self::oscillator::{private, Oscillator};
 use self::power::{PowerControl, ToggleableModule};
 use self::timer::{Clock, Prescaler};
 use self::trng::Trng;
+use self::uart::{Uart, Uart0, UartBuilder, UartBuilderError};
 
 // Embedded HAL peripherals.
 pub mod adc;
@@ -135,8 +137,6 @@ pub struct RemainingPeripherals {
     pub tmr4: TMR4,
     /// TMR5
     pub tmr5: TMR5,
-    /// UART
-    pub uart: UART,
     /// UART1
     pub uart1: UART1,
     /// UART2
@@ -176,6 +176,7 @@ pub struct PeripheralsToConsume {
     tmr1: TMR1,
     tmr2: TMR2,
     tmr3: TMR3,
+    uart: UART,
 }
 
 /// Extension trait for splitting peripherals for the [`PeripheralManager`].
@@ -211,6 +212,7 @@ impl SplittablePeripheral for Peripherals {
             tmr1: self.TMR1,
             tmr2: self.TMR2,
             tmr3: self.TMR3,
+            uart: self.UART,
         };
 
         let to_borrow = PeripheralsToBorrow {
@@ -251,7 +253,6 @@ impl SplittablePeripheral for Peripherals {
             spi1: self.SPI1,
             tmr4: self.TMR4,
             tmr5: self.TMR5,
-            uart: self.UART,
             uart1: self.UART1,
             uart2: self.UART2,
             uart3: self.UART3,
@@ -279,13 +280,13 @@ impl<'a, T> Deref for PeripheralHandle<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0.borrow()
     }
 }
 
 impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self.0.borrow_mut()
     }
 }
 
@@ -422,6 +423,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
             gpio1: new_gpio1(self.consumed_periphs.gpio1),
             gpio2: new_gpio2(self.consumed_periphs.gpio2),
             trng: RefCell::new(Trng::new(self.consumed_periphs.trng)),
+            uart: RefCell::new(self.consumed_periphs.uart),
         }
     }
 }
@@ -473,6 +475,7 @@ pub struct PeripheralManager<'a> {
     timer_2: RefCell<Clock<'a, TMR2>>,
     timer_3: RefCell<Clock<'a, TMR3>>,
     trng: RefCell<Trng>,
+    uart: RefCell<UART>,
 }
 
 impl<'a> PeripheralManager<'a> {
@@ -491,4 +494,11 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
 
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
+
+    enable_rst_periph_fn!(uart, UART, uart, ToggleableModule::UART0);
+
+    /// Create a [`UartBuilder`] for the UART0
+    pub fn build_uart(&'a self) -> Result<UartBuilder<Uart0>, UartBuilderError> {
+        UartBuilder::new(self)
+    }
 }

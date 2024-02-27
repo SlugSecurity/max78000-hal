@@ -17,7 +17,7 @@ use max78000_hal::{
     },
 };
 use tests::{
-    bit_band_tests, flc_tests, gpio_tests, hello_uart, oscillator_tests, timer_tests, trng_tests,
+    bit_band_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests, uart_tests,
 };
 
 extern crate panic_semihosting;
@@ -77,41 +77,7 @@ fn main() -> ! {
         &mut stdout,
     );
 
-    // do not run! these 2 lines break the board you run them on
-    // peripherals.GCR.clkctrl().modify(|_r, w| w.ibro_en().en());
-    peripherals.GCR.pclkdis0().modify(|_r, w| w.uart0().en());
-
-    // function mode alt 1
-    peripherals.GPIO0.en1_clr().write(|w| w.all().variant(0b11));
-    peripherals.GPIO0.en0_clr().write(|w| w.all().variant(0b11));
-
-    // pad mode none
-    peripherals
-        .GPIO0
-        .padctrl0()
-        .modify(|r, w| w.gpio_padctrl0().variant(r.bits() & !0b11));
-    peripherals
-        .GPIO0
-        .padctrl1()
-        .modify(|r, w| w.gpio_padctrl1().variant(r.bits() & !0b11));
-
-    // voltage vddio
-    peripherals
-        .GPIO0
-        .vssel()
-        .modify(|r, w| w.all().variant(r.bits() & !0b11));
-
-    // drive strength 0
-    peripherals
-        .GPIO0
-        .ds0()
-        .modify(|r, w| w.gpio_ds0().variant(r.bits() & !0b11));
-    peripherals
-        .GPIO0
-        .ds1()
-        .modify(|r, w| w.gpio_ds1().variant(r.bits() & !0b11));
-
-    hello_uart::run_uart_test(&peripherals.UART, &mut stdout);
+    uart_tests::run_uart_test(&mut stdout, manager.build_uart().unwrap());
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
