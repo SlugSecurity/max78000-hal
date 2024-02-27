@@ -431,10 +431,10 @@ macro_rules! enable_rst_periph_fn {
         /// Gets the specified peripheral if not already taken elsewhere, enabling and
         /// resetting it. Otherwise, returns [`BorrowMutError`].
         pub fn $fn_name(&'a self) -> Result<PeripheralHandle<$p_type>, BorrowMutError> {
+            let handle = PeripheralHandle::new(&self.$field_name)?;
             self.power_ctrl.enable_peripheral($variant);
             self.power_ctrl.reset_toggleable($variant);
-
-            PeripheralHandle::new(&self.$field_name)
+            Ok(handle)
         }
     };
 }
