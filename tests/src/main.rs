@@ -16,7 +16,9 @@ use max78000_hal::{
         PeripheralManagerBuilder, SplittablePeripheral,
     },
 };
-use tests::{bit_band_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests};
+use tests::{
+    bit_band_tests, csprng_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests,
+};
 
 extern crate panic_semihosting;
 
@@ -28,13 +30,13 @@ fn main() -> ! {
     let mut stdout = hio::hstdout().unwrap();
     writeln!(stdout, "Starting MAX78000 HAL tests...\n").unwrap();
 
-    // TODO: Use peripheral API when available.
     let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
     let manager = PeripheralManagerBuilder::<Ipo>::new(
         &to_borrow,
         to_consume,
         IpoFrequency::_100MHz,
         IpoDivider::_1,
+        |_buf| {}, // WARNING: This is for testing purposes only. Do NOT copy this into production code. Production code MUST have a secure static secret.
     )
     .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
     .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
@@ -65,6 +67,8 @@ fn main() -> ! {
     );
 
     trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
+    csprng_tests::run_csprng_tests(manager.csprng().unwrap(), &mut stdout);
+
     gpio_tests::run_gpio_tests(
         manager.gpio0(),
         manager.gpio1(),

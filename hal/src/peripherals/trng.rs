@@ -9,11 +9,8 @@ pub struct Trng {
     trng: TRNG,
 }
 
-// TODO: Implement with the peripheral API when available.
-
 impl Trng {
     /// Creates a new TRNG peripheral.
-    // TODO: Make this function pub(crate) when the peripheral API is available. Tests needs it public until then.
     pub(crate) fn new(trng: TRNG) -> Self {
         Self { trng }
     }

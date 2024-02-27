@@ -54,6 +54,8 @@ use self::random::{CsprngInitArgs, EntropyGatherer};
 use self::timer::{Clock, Prescaler};
 use self::trng::Trng;
 
+pub use rand_chacha;
+
 // Embedded HAL peripherals.
 pub mod adc;
 pub mod delay;
@@ -410,6 +412,10 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         power_ctrl.reset_toggleable(ToggleableModule::GPIO0);
         power_ctrl.reset_toggleable(ToggleableModule::GPIO1);
         power_ctrl.reset_toggleable(ToggleableModule::GPIO2);
+
+        // TRNG needs to be eagerly initialized to initialize the CSPRNG.
+        power_ctrl.enable_peripheral(ToggleableModule::TRNG);
+        power_ctrl.reset_toggleable(ToggleableModule::TRNG);
 
         let trng = Trng::new(self.consumed_periphs.trng);
         let timer_0 = timer_field!(self, tmr0, timer_0_cfg);
