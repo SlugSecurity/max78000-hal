@@ -6,15 +6,16 @@ use core::borrow::Borrow;
 use core::cell::BorrowMutError;
 use core::{cell::RefMut, marker::PhantomData, ops::Deref};
 
-use embedded_hal::digital::v2::IoPin;
+use embedded_hal::digital::PinState;
 use sealed::sealed;
 
 use crate::peripherals::gpio::active::{port_num_types::GpioZero, ActiveInputPin, ActiveOutputPin};
 use crate::peripherals::gpio::active::{DriveStrength, PowerSupply, PullMode};
-use crate::peripherals::gpio::pin_traits::GeneralIoPin;
+use crate::peripherals::gpio::pin_traits::IoPin;
 use crate::peripherals::gpio::PinOperatingMode;
 use crate::peripherals::Gpio0;
 
+use super::gpio::active::{ActiveInputPinConfig, ActiveOutputPinConfig};
 use super::gpio::{GpioError, PinHandle};
 use super::{PeripheralHandle, PeripheralManager};
 
@@ -84,14 +85,31 @@ impl<'a> UartBuilder<'a, Uart0> {
     /// Create a [`UartBuilder`] from a reference to the registers
     pub fn new<'pc>(
         peripheral_manager: &'a PeripheralManager<'pc>,
-    ) -> core::result::Result<Self, UartBuilderError> {
+    ) -> core::result::Result<Self, UartBuilderError>
+    where
+        'a: 'pc,
+    {
         let gpio = peripheral_manager.gpio0();
 
         // these results have Infallible as the Err type so unwrap is ok
-        let rx = gpio.get_pin_handle(0)?.into_input_pin().unwrap();
+        let rx = gpio
+            .get_pin_handle(0)?
+            .into_input_pin(ActiveInputPinConfig {
+                operating_mode: PinOperatingMode::AltFunction1,
+                power_supply: PowerSupply::Vddio,
+                pull_mode: PullMode::HighImpedance,
+            })
+            .unwrap();
         let tx = gpio
             .get_pin_handle(1)?
-            .into_output_pin(false.into())
+            .into_output_pin(
+                PinState::Low,
+                ActiveOutputPinConfig {
+                    operating_mode: PinOperatingMode::AltFunction1,
+                    power_supply: PowerSupply::Vddio,
+                    drive_strength: DriveStrength::S0,
+                },
+            )
             .unwrap();
         Ok(Self {
             uart_regs: peripheral_manager.uart()?,
