@@ -59,7 +59,6 @@ uart_instance_impl!(Uart0, max78000::UART);
 /// Used to configure a UART instance
 pub struct UartBuilder<'a, T: UartInstance> {
     uart_regs: PeripheralHandle<'a, T::Registers>,
-    gpio: PeripheralHandle<'a, Gpio0>,
     tx: ActiveOutputPin<'a, GpioZero, 31>,
     rx: ActiveInputPin<'a, GpioZero, 31>,
 }
@@ -83,10 +82,11 @@ impl From<GpioError> for UartBuilderError {
 
 impl<'a> UartBuilder<'a, Uart0> {
     /// Create a [`UartBuilder`] from a reference to the registers
-    pub fn new(
-        peripheral_manager: &'a PeripheralManager<'a>,
+    pub fn new<'pc>(
+        peripheral_manager: &'a PeripheralManager<'pc>,
     ) -> core::result::Result<Self, UartBuilderError> {
-        let gpio = peripheral_manager.gpio0()?;
+        let gpio = peripheral_manager.gpio0();
+
         // these results have Infallible as the Err type so unwrap is ok
         let rx = gpio.get_pin_handle(0)?.into_input_pin().unwrap();
         let tx = gpio
@@ -95,7 +95,6 @@ impl<'a> UartBuilder<'a, Uart0> {
             .unwrap();
         Ok(Self {
             uart_regs: peripheral_manager.uart()?,
-            gpio,
             rx,
             tx,
         })
