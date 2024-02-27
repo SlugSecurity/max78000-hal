@@ -260,6 +260,16 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
 
+        i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+
+        i2c_regs.txctrl0().modify(|_, w| {
+            w.thd_val().variant(2)
+        });
+
+        i2c_regs.rxctrl0().modify(|_, w| {
+            w.thd_lvl().variant(6)
+        });
+
         // TODO: configure
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode().bit(true)
@@ -269,14 +279,6 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
                 .hs_en().bit(false)
                 .en().bit(true)
                 .bb_mode().bit(false)
-        });
-
-        i2c_regs.txctrl0().modify(|_, w| {
-            w.thd_val().variant(2)
-        });
-
-        i2c_regs.rxctrl0().modify(|_, w| {
-            w.thd_lvl().variant(6)
         });
 
         unsafe {
