@@ -296,7 +296,7 @@ impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
 /// A builder for the [`PeripheralManager`]. This builder can be used to configure
 /// the system clock frequency and divider, timer oscillators and prescalers, and
 /// the RNG static secret.
-pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
+pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])> {
     borrowed_periphs: &'a PeripheralsToBorrow,
     consumed_periphs: PeripheralsToConsume,
     sysclk_osc_freq: <T as oscillator::Oscillator>::Frequency,
@@ -305,7 +305,7 @@ pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
     timer_1_cfg: (timer::Oscillator, Prescaler),
     timer_2_cfg: (timer::Oscillator, Prescaler),
     timer_3_cfg: (timer::Oscillator, Prescaler),
-    get_rng_static_secret: fn(&mut [u8]),
+    get_rng_static_secret: F,
 }
 
 macro_rules! timer_field {
@@ -332,7 +332,9 @@ macro_rules! timer_fn {
     };
 }
 
-impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
+impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
+    PeripheralManagerBuilder<'a, T, F>
+{
     /// Creates a new [`PeripheralManagerBuilder`] with the system clock configured
     /// to the desired oscillator, frequency, and divider. All oscillators used
     /// for timers are configured to [`timer::Oscillator::IBRO`] with a prescaler of
@@ -345,8 +347,8 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         consumed_periphs: PeripheralsToConsume,
         freq: <T as oscillator::Oscillator>::Frequency,
         div: <T as oscillator::Oscillator>::Divider,
-        get_rng_static_secret: fn(&mut [u8]),
-    ) -> PeripheralManagerBuilder<T> {
+        get_rng_static_secret: F,
+    ) -> PeripheralManagerBuilder<T, F> {
         PeripheralManagerBuilder {
             borrowed_periphs,
             consumed_periphs,
@@ -366,7 +368,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         self,
         sysclk_osc_freq: <O as oscillator::Oscillator>::Frequency,
         sysclk_osc_div: <O as oscillator::Oscillator>::Divider,
-    ) -> PeripheralManagerBuilder<'a, O> {
+    ) -> PeripheralManagerBuilder<'a, O, F> {
         PeripheralManagerBuilder {
             borrowed_periphs: self.borrowed_periphs,
             consumed_periphs: self.consumed_periphs,

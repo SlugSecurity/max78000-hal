@@ -17,7 +17,7 @@ pub(crate) struct TrngEntropy<T: EntropySource> {
 }
 
 impl<T: EntropySource> EntropySource for TrngEntropy<T> {
-    fn init(csprng_init_args: CsprngInitArgs) -> Self {
+    fn init<F: FnMut(&mut [u8])>(csprng_init_args: CsprngInitArgs<F>) -> Self {
         let mut trng_entropy = [0; TRNG_ENTROPY_SIZE];
         csprng_init_args.trng.fill_buffer(&mut trng_entropy);
 

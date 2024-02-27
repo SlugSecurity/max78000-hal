@@ -20,10 +20,10 @@ use super::{timer::Clock, trng::Trng};
 pub const SECRET_SIZE: usize = 32;
 
 /// CSPRNG initialization arguments.
-pub(crate) struct CsprngInitArgs<'a, 'b> {
+pub(crate) struct CsprngInitArgs<'a, 'b, F: FnMut(&mut [u8])> {
     pub trng: &'a Trng,
     pub timer_0: Ref<'b, Clock<TMR>>,
-    pub get_rng_static_secret: fn(&mut [u8]),
+    pub get_rng_static_secret: F,
 }
 
 /// Entropy gatherer.
@@ -31,7 +31,9 @@ pub(crate) struct EntropyGatherer {}
 
 impl EntropyGatherer {
     /// Creates a new entropy gatherer.
-    pub(crate) fn init_csprng(csprng_init_args: CsprngInitArgs) -> ChaCha20Rng {
+    pub(crate) fn init_csprng<F: FnMut(&mut [u8])>(
+        csprng_init_args: CsprngInitArgs<F>,
+    ) -> ChaCha20Rng {
         ChaCha20Rng::from_seed(
             EntropyHasher::<Secret<ClockDrift<TrngEntropy<()>>>>::new(csprng_init_args).hash(),
         )

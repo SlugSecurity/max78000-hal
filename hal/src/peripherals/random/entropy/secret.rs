@@ -14,7 +14,7 @@ pub(crate) struct Secret<T: EntropySource> {
 }
 
 impl<T: EntropySource> EntropySource for Secret<T> {
-    fn init(csprng_init_args: CsprngInitArgs) -> Self {
+    fn init<F: FnMut(&mut [u8])>(mut csprng_init_args: CsprngInitArgs<F>) -> Self {
         let mut secret = [0; SECRET_SIZE];
         (csprng_init_args.get_rng_static_secret)(&mut secret);
 

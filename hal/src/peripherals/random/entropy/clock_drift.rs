@@ -21,7 +21,7 @@ pub(crate) struct ClockDrift<T: EntropySource> {
 }
 
 impl<T: EntropySource> EntropySource for ClockDrift<T> {
-    fn init(csprng_init_args: CsprngInitArgs) -> Self {
+    fn init<F: FnMut(&mut [u8])>(csprng_init_args: CsprngInitArgs<F>) -> Self {
         let mut entropy_pool = [0; CLOCK_DRIFT_ENTROPY_SIZE];
 
         for mut bit in entropy_pool.as_mut_bits::<Lsb0>() {

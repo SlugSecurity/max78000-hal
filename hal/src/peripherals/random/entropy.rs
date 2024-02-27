@@ -18,7 +18,7 @@ pub(crate) trait EntropySource {
     /// Initializes the internal state of the entropy source. May block to gather entropy.
     ///
     /// IMPORTANT NOTE: This function must call the next entropy source's `init()` function.
-    fn init(csprng_init_args: CsprngInitArgs) -> Self;
+    fn init<F: FnMut(&mut [u8])>(csprng_init_args: CsprngInitArgs<F>) -> Self;
 
     /// Adds entropy from the entropy source to a hasher.
     ///
@@ -28,7 +28,7 @@ pub(crate) trait EntropySource {
 
 // We implement this trait for () so that we can use it to end the list of entropy sources.
 impl EntropySource for () {
-    fn init(_csprng_init_args: CsprngInitArgs) {}
+    fn init<F: FnMut(&mut [u8])>(_csprng_init_args: CsprngInitArgs<F>) {}
     fn add_to_hasher(&self, _hasher: &mut Sha3_256) {}
 }
 
@@ -40,7 +40,7 @@ pub(crate) struct EntropyHasher<T: EntropySource> {
 
 impl<T: EntropySource> EntropyHasher<T> {
     /// Initializes the entropy hasher, gathering entropy from all of the inputted sources.
-    pub(crate) fn new(csprng_init_args: CsprngInitArgs) -> Self {
+    pub(crate) fn new<F: FnMut(&mut [u8])>(csprng_init_args: CsprngInitArgs<F>) -> Self {
         EntropyHasher {
             entropy: T::init(csprng_init_args),
         }
