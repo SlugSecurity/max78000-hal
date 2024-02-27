@@ -1,16 +1,20 @@
+use bitvec::prelude::*;
 use sha3::{digest::Update, Sha3_256};
 use zeroize::Zeroize;
 
-use crate::peripherals::random::CsprngInitArgs;
+use crate::peripherals::{random::CsprngInitArgs, timer::Time};
 
 use super::EntropySource;
 
-/// The number of bytes to get from the TRNG.
+/// Number of milliseconds to count for clock drift.
+const MS_TO_COUNT: u32 = 1;
+
+/// The number of bytes to get from clock drift.
 const CLOCK_DRIFT_ENTROPY_SIZE: usize = 64;
 
-/// TRNG entropy source.
+/// Clock drift entropy source.
 ///
-/// This struct should not be moved to ensure the entropy gets zeroed out on drop.
+/// IMPORTANT: This struct should not be moved to ensure the entropy gets zeroed out on drop.
 pub(crate) struct ClockDrift<T: EntropySource> {
     next: T,
     entropy: [u8; CLOCK_DRIFT_ENTROPY_SIZE],
@@ -18,12 +22,28 @@ pub(crate) struct ClockDrift<T: EntropySource> {
 
 impl<T: EntropySource> EntropySource for ClockDrift<T> {
     fn init(csprng_init_args: CsprngInitArgs) -> Self {
-        let mut clock_drift_entropy = [0; CLOCK_DRIFT_ENTROPY_SIZE];
-        // TODO: Implement.
+        let mut entropy_pool = [0; CLOCK_DRIFT_ENTROPY_SIZE];
+
+        for mut bit in entropy_pool.as_mut_bits::<Lsb0>() {
+            // Initialize timer.
+            let mut clock_drift_timer = csprng_init_args
+                .timer_0
+                .new_timer(Time::Milliseconds(MS_TO_COUNT));
+
+            // Wait for timer to reach MS_TO_COUNT ms and count.
+            let mut counter: u32 = 0;
+
+            while !clock_drift_timer.poll() {
+                counter += 1;
+            }
+
+            // Set bit to 1 if counter LSB is 1.
+            bit.set((counter & 1) == 1);
+        }
 
         ClockDrift {
             next: T::init(csprng_init_args),
-            entropy: clock_drift_entropy,
+            entropy: entropy_pool,
         }
     }
 

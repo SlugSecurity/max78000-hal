@@ -10,7 +10,7 @@ const TRNG_ENTROPY_SIZE: usize = 64;
 
 /// TRNG entropy source.
 ///
-/// This struct should not be moved to ensure the entropy gets zeroed out on drop.
+/// IMPORTANT: This struct should not be moved to ensure the entropy gets zeroed out on drop.
 pub(crate) struct TrngEntropy<T: EntropySource> {
     next: T,
     entropy: [u8; TRNG_ENTROPY_SIZE],

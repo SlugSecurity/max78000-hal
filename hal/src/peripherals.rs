@@ -412,8 +412,11 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         power_ctrl.reset_toggleable(ToggleableModule::GPIO2);
 
         let trng = Trng::new(self.consumed_periphs.trng);
+        let timer_0 = timer_field!(self, tmr0, timer_0_cfg);
+
         let initialized_csprng = EntropyGatherer::init_csprng(CsprngInitArgs {
             trng: &trng,
+            timer_0: timer_0.borrow(),
             get_rng_static_secret: self.get_rng_static_secret,
         });
 
@@ -429,7 +432,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
                 self.borrowed_periphs.gcr.clkctrl(),
                 self.borrowed_periphs.trimsir.inro(),
             )),
-            timer_0: timer_field!(self, tmr0, timer_0_cfg),
+            timer_0,
             timer_1: timer_field!(self, tmr1, timer_1_cfg),
             timer_2: timer_field!(self, tmr2, timer_2_cfg),
             timer_3: timer_field!(self, tmr3, timer_3_cfg),

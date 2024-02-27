@@ -7,7 +7,7 @@ use super::EntropySource;
 
 /// This entropy source is a constant secret value.
 ///
-/// This struct should not be moved to ensure the secret gets zeroed out on drop.
+/// IMPORTANT: This struct should not be moved to ensure the secret gets zeroed out on drop.
 pub(crate) struct Secret<T: EntropySource> {
     next: T,
     secret: [u8; SECRET_SIZE],

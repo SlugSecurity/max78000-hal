@@ -2,6 +2,9 @@
 
 mod entropy;
 
+use core::cell::Ref;
+
+use max78000::TMR;
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaCha20Rng,
@@ -11,14 +14,15 @@ use crate::communication::lower_layers::crypto::RandomSource;
 
 use self::entropy::{ClockDrift, EntropyHasher, Secret, TrngEntropy};
 
-use super::trng::Trng;
+use super::{timer::Clock, trng::Trng};
 
 /// The size of the static secret in bytes.
 pub const SECRET_SIZE: usize = 32;
 
 /// CSPRNG initialization arguments.
-pub(crate) struct CsprngInitArgs<'a> {
+pub(crate) struct CsprngInitArgs<'a, 'b> {
     pub trng: &'a Trng,
+    pub timer_0: Ref<'b, Clock<TMR>>,
     pub get_rng_static_secret: fn(&mut [u8]),
 }
 
