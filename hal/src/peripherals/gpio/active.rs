@@ -22,9 +22,7 @@ use sealed::sealed;
 
 use port_num_types::GpioPortNum;
 
-use super::pin_traits::{
-    ErrorType, GeneralIoPin, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin,
-};
+use super::pin_traits::{ErrorType, InputPin, IoPin, OutputPin, PinState, StatefulOutputPin};
 use super::private::NonConstructible;
 use super::{
     GpioError, GpioPort, GpioPortMetadata, PinHandle, PinIoMode, PinOperatingMode,
@@ -217,13 +215,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
             .write(|w| w.all().variant(1 << pin.0.pin_idx));
         Ok(pin)
     }
-}
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    GeneralIoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
-    for ActivePinHandle<'a, PortNum, PIN_CT>
-{
-    // TODO: Statically constrain the pin operating mode according to PIN_CT and the pin index
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
         const A1_RX: u8 = 0b0001; // means AF1 is valid when this pin is an input pin
         const A1_TX: u8 = 0b0010; // means AF1 is valid when this pin is an output pin
@@ -237,6 +229,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
         // Tables based off of https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf, page 29 to 31 in the `GPIO and Alternate Function` section.
         // Note that the AF validation checks only covers UART when checking if the RX/TX state is valid.
         // TODO: check the RX/TX state for more than just UART
+        // TODO: Statically constrain the pin operating mode according to PIN_CT and the pin index
         const P0_TABLE: &[u8] = &[
             A1_RX | A2_NA, // P0.0    UART0A_RX           -
             A1_TX | A2_NA, // P0.1    UART0A_TX           -
@@ -375,12 +368,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     ) -> Result<ActiveOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_output_pin(state)
     }
-}
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    GeneralIoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
-    for ActiveInputPin<'a, PortNum, PIN_CT>
-{
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
         self.0.set_operating_mode(mode)
     }
@@ -408,12 +396,7 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
     ) -> Result<ActiveOutputPin<'a, PortNum, PIN_CT>, Self::Error> {
         self.0.into_output_pin(state)
     }
-}
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
-    GeneralIoPin<ActiveInputPin<'a, PortNum, PIN_CT>, ActiveOutputPin<'a, PortNum, PIN_CT>>
-    for ActiveOutputPin<'a, PortNum, PIN_CT>
-{
     fn set_operating_mode(&mut self, mode: PinOperatingMode) -> Result<(), GpioError> {
         self.0.set_operating_mode(mode)
     }
