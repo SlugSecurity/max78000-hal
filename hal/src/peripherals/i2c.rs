@@ -111,7 +111,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
 
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode().bit(false)
-                .gc_addr_en().bit(true)
+                .gc_addr_en().bit(false)
                 .irxm_en().bit(false)
                 .clkstr_dis().bit(false)
                 .hs_en().bit(false)
@@ -180,9 +180,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
 
         while !self.i2c_regs.intfl0().read().addr_match().bit() {}
 
-        return Ok(TransmitNeeded);
-
-        if self.i2c_regs.ctrl().read().read().bit() {
+        if !self.i2c_regs.ctrl().read().read().bit() {
             let res = self.slave_recv(read_buffer)?;
             return Ok(Received(res.0, res.1));
         }
@@ -273,7 +271,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // TODO: configure
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode().bit(true)
-                .gc_addr_en().bit(true)
+                .gc_addr_en().bit(false)
                 .irxm_en().bit(false)
                 .clkstr_dis().bit(false)
                 .hs_en().bit(false)

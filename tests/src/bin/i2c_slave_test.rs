@@ -75,18 +75,26 @@ fn main() -> ! {
     // let read_sda = || peripherals.GPIO0.in_().read().bits() & (1 << 17);
     //let mut read_scl = || scl_handle.is_high(); //peripherals.GPIO0.in_().read().bits() & (1 << 16);
 
-    loop {
+    /*loop {
         writeln!(stdout, "SCL line is {}\n", scl).unwrap();
         writeln!(stdout, "SDA line is {}\n", sda).unwrap();
         while scl_handle.is_high().unwrap() == scl && sda_handle.is_high().unwrap() == sda {};
         scl = scl_handle.is_high().unwrap();
         sda = sda_handle.is_high().unwrap();
         writeln!(stdout, "SDA changed!!\n").unwrap();
+    }*/
+
+    let res = i2c_slave.slave_poll(&mut buf).unwrap();
+
+    match res {
+        SlavePollResult::Received(num, overflow) => {
+            writeln!(stdout, "received: {:?}", buf).unwrap();
+        }
+        SlavePollResult::TransmitNeeded => {
+            writeln!(stdout, "transmit needed").unwrap();
+        }
     }
 
-    if let SlavePollResult::Received(num, overflow) = i2c_slave.slave_poll(&mut buf).unwrap() {
-        writeln!(stdout, stringify!(buf)).unwrap();
-    }
     writeln!(stdout, "Finished i2c slave tests!\n").unwrap();
 
     #[allow(clippy::empty_loop)]
