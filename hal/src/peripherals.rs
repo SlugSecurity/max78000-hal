@@ -508,4 +508,6 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
 
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
+
+    no_enable_rst_periph_fn!(csprng, ChaCha20Rng, csprng);
 }
