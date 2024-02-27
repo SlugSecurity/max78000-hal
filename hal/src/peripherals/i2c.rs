@@ -177,6 +177,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         self.i2c_regs.flush_fifo();
         // Wait for I2Cn_INTFL0.addr_match = 1
         self.i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+        self.i2c_regs.intfl0().modify(|_, w| w.addr_match().bit(false));
 
         while !self.i2c_regs.intfl0().read().addr_match().bit() {}
 
@@ -224,20 +225,22 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         // I2Cn_TXCTRL0[5:2] = 0x8 and I2Cn_TXCTRL0.preload_mode = 0. Don't forget to program I2Cn_CLKHI.hi and
         // I2Cn_HSCLK.hsclk_hi with appropriate values satisfying tSU;DAT (and HS tSU;DAT).
 
-        self.i2c_regs.intfl0().modify(|_, w| w.tx_lockout().variant(false));
+        self.i2c_regs.intfl0().modify(|_, w| w.tx_lockout().variant(true));
         let mut num_written = 0;
         while num_written < buffer.len() && !self.i2c_regs.intfl0().read().done().bit() {
             while !self.i2c_regs.is_tx_fifo_full() {
                 if num_written < buffer.len() {
                     self.i2c_regs.fifo().write(|w| w.data().variant(buffer[num_written]));
                     num_written += 1;
+                } else {
+                    break;
                 }
             }
         }
 
         // write zeros if we've exceeded buffer but master still wants more
         while !self.i2c_regs.intfl0().read().done().bit() {
-            while !self.i2c_regs.is_tx_fifo_full() {
+            while !self.i2c_regs.is_tx_fifo_full() && !self.i2c_regs.intfl0().read().done().bit() {
                 self.i2c_regs.fifo().write(|w| w.data().variant(0));
             }
         }

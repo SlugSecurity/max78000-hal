@@ -5,6 +5,7 @@
 #![no_std]
 
 use core::fmt::Write;
+use core::ptr::write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
@@ -66,23 +67,7 @@ fn main() -> ! {
 
     writeln!(stdout, "Ok we poll now\n").unwrap();
 
-    let mut buf = [0u8; 256];
-
-    let mut scl = scl_handle.is_high().unwrap(); //peripherals.GPIO0.in_().read().bits() & (1 << 16);
-    let mut sda = sda_handle.is_high().unwrap();
-    // let mut sda = peripherals.GPIO0.in_().read().bits() & (1 << 17);
-
-    // let read_sda = || peripherals.GPIO0.in_().read().bits() & (1 << 17);
-    //let mut read_scl = || scl_handle.is_high(); //peripherals.GPIO0.in_().read().bits() & (1 << 16);
-
-    /*loop {
-        writeln!(stdout, "SCL line is {}\n", scl).unwrap();
-        writeln!(stdout, "SDA line is {}\n", sda).unwrap();
-        while scl_handle.is_high().unwrap() == scl && sda_handle.is_high().unwrap() == sda {};
-        scl = scl_handle.is_high().unwrap();
-        sda = sda_handle.is_high().unwrap();
-        writeln!(stdout, "SDA changed!!\n").unwrap();
-    }*/
+    let mut buf = [0u8; 8];
 
     let res = i2c_slave.slave_poll(&mut buf).unwrap();
 
@@ -92,6 +77,21 @@ fn main() -> ! {
         }
         SlavePollResult::TransmitNeeded => {
             writeln!(stdout, "transmit needed").unwrap();
+        }
+    }
+
+    writeln!(stdout, "Polling again...").unwrap();
+
+    let res = i2c_slave.slave_poll(&mut buf).unwrap();
+
+    match res {
+        SlavePollResult::Received(num, overflow) => {
+            writeln!(stdout, "received: {:?}", buf).unwrap();
+        }
+        SlavePollResult::TransmitNeeded => {
+            writeln!(stdout, "transmit needed").unwrap();
+            let n = i2c_slave.slave_send("pong".as_bytes());
+            writeln!(stdout, "sent {} bytes", n).unwrap();
         }
     }
 

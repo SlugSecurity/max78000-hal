@@ -73,13 +73,9 @@ fn main() -> ! {
 
     writeln!(stdout, "Writing to slave...\n").unwrap();
 
-    /*let mut stuff = [0u8; 16];
+    let mut stuff = [0u8; 16];
 
-    let mut scl_state = false;
-
-    let mut scl_output = scl_handle.into_output_pin(PinState::Low).unwrap();
-
-    loop {
+    /*loop {
         timer.reset();
         while !timer.poll() {}
         writeln!(stdout, "Toggling logic...").unwrap();
@@ -88,6 +84,12 @@ fn main() -> ! {
     }*/
 
     i2c_master.write(69, "ping".as_bytes()).unwrap();
+
+    writeln!(stdout, "Reading from slave...").unwrap();
+
+    i2c_master.read(69, &mut stuff).unwrap();
+
+    writeln!(stdout, "Read {:?}", stuff).unwrap();
 
     writeln!(stdout, "Finished i2c master tests!\n").unwrap();
 
