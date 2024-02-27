@@ -435,6 +435,15 @@ macro_rules! no_enable_rst_periph_fn {
     };
 }
 
+macro_rules! no_enable_rst_periph_fn_no_handle {
+    ($fn_name:ident, $p_type:ty, $field_name:ident) => {
+        /// Gets the specified peripheral, enabling and resetting it.
+        pub fn $fn_name(&'a self) -> &$p_type {
+            &self.$field_name
+        }
+    };
+}
+
 macro_rules! enable_rst_periph_fn {
     ($fn_name:ident, $p_type:ty, $field_name:ident, $variant:expr) => {
         /// Gets the specified peripheral if not already taken elsewhere, enabling and
@@ -444,15 +453,6 @@ macro_rules! enable_rst_periph_fn {
             self.power_ctrl.enable_peripheral($variant);
             self.power_ctrl.reset_toggleable($variant);
             Ok(handle)
-        }
-    };
-}
-
-macro_rules! enable_rst_periph_fn_no_handle {
-    ($fn_name:ident, $p_type:ty, $field_name:ident) => {
-        /// Gets the specified peripheral, enabling and resetting it.
-        pub fn $fn_name(&'a self) -> &$p_type {
-            &self.$field_name
         }
     };
 }
@@ -485,8 +485,9 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn!(timer_2, Clock<TMR2>, timer_2);
     no_enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3);
 
-    enable_rst_periph_fn_no_handle!(gpio0, Gpio0, gpio0);
-    enable_rst_periph_fn_no_handle!(gpio1, Gpio1, gpio1);
-    enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
+    no_enable_rst_periph_fn_no_handle!(gpio0, Gpio0, gpio0);
+    no_enable_rst_periph_fn_no_handle!(gpio1, Gpio1, gpio1);
+    no_enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
+
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
 }
