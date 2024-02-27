@@ -247,7 +247,8 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
         const A2_AX: u8 = 0b1100; // means AF2 is always valid for this pin
         const A2_NA: u8 = 0b0000; // means AF2 is never valid for this pin
 
-        // Tables based off of https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf, page 29 to 31 in the `GPIO and Alternate Function` section.
+        // Tables based off of https://www.analog.com/media/en/technical-documentation/data-sheets/MAX78000.pdf
+        // Page 29-31, table section `GPIO and Alternate Function`.
         // Note that the AF validation checks only covers UART when checking if the RX/TX state is valid.
         // TODO: check the RX/TX state for more than just UART
         // TODO: Statically constrain the pin operating mode according to PIN_CT and the pin index
@@ -322,6 +323,8 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>
             PinIoMode::Output => (pin_entry & A1_TX != 0, pin_entry & A2_TX != 0),
         };
 
+        // https://www.analog.com/media/en/technical-documentation/user-guides/max78000-user-guide.pdf
+        // Page 111, section 6.2.3, table 6-2.
         match mode {
             PinOperatingMode::DigitalIo => {
                 self.port
@@ -521,6 +524,8 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveInputPin<'a,
 
         let bit = |r, bit| (r & !(1 << self.0.pin_idx)) | ((bit as u32) << self.0.pin_idx);
 
+        // https://www.analog.com/media/en/technical-documentation/user-guides/max78000-user-guide.pdf
+        // Page 111, section 6.2.4, table 6-3.
         self.0
             .port
             .regs
@@ -592,6 +597,8 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveOutputPin<'a
 
         let bit = |r, bit| (r & !(1 << self.0.pin_idx)) | ((bit as u32) << self.0.pin_idx);
 
+        // https://www.analog.com/media/en/technical-documentation/user-guides/max78000-user-guide.pdf
+        // Page 112, section 6.2.5, table 6-4.
         self.0
             .port
             .regs
