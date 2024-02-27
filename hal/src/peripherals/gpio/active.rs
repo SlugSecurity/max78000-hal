@@ -271,13 +271,12 @@ impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'a
 
         // https://www.analog.com/media/en/technical-documentation/user-guides/max78000-user-guide.pdf
         // Page 111, section 6.2.3, table 6-2.
+        self.port
+            .regs
+            .en0_set()
+            .write(|w| w.all().variant(1 << self.pin_idx));
         match mode {
-            PinOperatingMode::DigitalIo => {
-                self.port
-                    .regs
-                    .en0_set()
-                    .write(|w| w.all().variant(1 << self.pin_idx));
-            }
+            PinOperatingMode::DigitalIo => {}
             PinOperatingMode::AltFunction1 if af1_is_valid => {
                 self.port
                     .regs
