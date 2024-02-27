@@ -15,7 +15,6 @@
 //! assert!(pin.is_set_high().unwrap());
 //! ```
 
-use core::convert::Infallible;
 use core::marker::PhantomData;
 
 use sealed::sealed;
@@ -113,7 +112,7 @@ pub struct ActiveInputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usiz
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
     for ActiveInputPin<'_, PortNum, PIN_CT>
 {
-    type Error = Infallible;
+    type Error = GpioError;
 }
 
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> InputPin
@@ -136,7 +135,7 @@ pub struct ActiveOutputPin<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usi
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
     for ActiveOutputPin<'_, PortNum, PIN_CT>
 {
-    type Error = Infallible;
+    type Error = GpioError;
 }
 
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> OutputPin
@@ -176,7 +175,7 @@ impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> StatefulOutputPin
 impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
     for ActivePinHandle<'_, PortNum, PIN_CT>
 {
-    type Error = Infallible;
+    type Error = GpioError;
 }
 
 impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize>

@@ -2,6 +2,7 @@
 
 use core::{array, cell::Cell};
 
+use embedded_hal::digital::{Error, ErrorKind};
 use max78000::{GPIO0, GPIO1, GPIO2};
 use sealed::sealed;
 
@@ -41,6 +42,12 @@ pub enum GpioError {
 
     /// GPIO pin doesn't have the selected operating mode.
     BadOperatingMode,
+}
+
+impl Error for GpioError {
+    fn kind(&self) -> ErrorKind {
+        ErrorKind::Other
+    }
 }
 
 /// This trait defines two associated types for a particular GPIO port.
