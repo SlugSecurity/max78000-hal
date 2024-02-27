@@ -23,6 +23,8 @@ pub trait GCRI2C {
     fn is_tx_fifo_full(&self) -> bool;
     /// Is transmit FIFO empty?
     fn is_tx_fifo_empty(&self) -> bool;
+    /// Clear interrupt flags
+    fn clear_interrupt_flags(&mut self);
 }
 
 macro_rules! gen_impl_gcri2c {
@@ -60,6 +62,9 @@ macro_rules! gen_impl_gcri2c {
             }
             fn is_tx_fifo_full(&self) -> bool {
                 self.status().read().tx_full().bit()
+            }
+            fn clear_interrupt_flags(&mut self) {
+                todo!();
             }
         }
     };
@@ -123,13 +128,15 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         });
 
         // TODO: j set these values to something that works
-        i2c_regs.clkhi().modify(|_ ,w| {
-            w.hi().variant(120)
-        });
+        unsafe {
+            i2c_regs.clkhi().modify(|_, w| {
+                w.bits(299)
+            });
 
-        i2c_regs.clklo().modify(|_, w| {
-            w.lo().variant(240)
-        });
+            i2c_regs.clklo().modify(|_, w| {
+                w.bits(299)
+            });
+        }
 
         unsafe {
             i2c_regs.slave0().write(|w| {
@@ -268,13 +275,15 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
             w.thd_lvl().variant(6)
         });
 
-        i2c_regs.clkhi().modify(|_ ,w| {
-            w.hi().variant(120)
-        });
+        unsafe {
+            i2c_regs.clkhi().modify(|_, w| {
+                w.bits(299)
+            });
 
-        i2c_regs.clklo().modify(|_, w| {
-            w.lo().variant(240)
-        });
+            i2c_regs.clklo().modify(|_, w| {
+                w.bits(299)
+            });
+        }
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true).bb_mode().bit(false));
 
@@ -319,6 +328,8 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // Let's flush the FIFO buffers
         self.i2c_regs.flush_fifo();
 
+        self.i2c_regs.intfl0().modify(|_, w| w.tx_lockout().bit(true));
+
         // Write the I2C slave address byte to the I2Cn_FIFO register with the R/W bit set to 0
         self.i2c_regs
             .fifo()
@@ -327,13 +338,13 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // Write the desired data bytes to the I2Cn_FIFO register, up to the size of the transmit FIFO. (e.g., If the transmit
         // FIFO size is 8 bytes, the software may write one address byte and seven data bytes before starting the transaction.)
         let mut num_written = 0;
-        for i in 0..write.len() {
+        /*for i in 0..write.len() {
             if self.i2c_regs.status().read().tx_full().bit() {
                 break;
             }
             self.i2c_regs.fifo().write(|w| w.data().variant(write[i]));
             num_written += 1;
-        }
+        }*/
 
         // Send a START condition by setting I2Cn_MSTCTRL.start = 1
         self.i2c_regs

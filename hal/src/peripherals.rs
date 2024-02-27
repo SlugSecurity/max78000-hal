@@ -74,6 +74,7 @@ pub mod power;
 pub mod raw;
 pub mod rtc;
 pub mod synchronization;
+pub mod i2c_bitbang;
 
 /// The peripherals that are completely unused by the [`PeripheralManager].
 pub struct RemainingPeripherals {
