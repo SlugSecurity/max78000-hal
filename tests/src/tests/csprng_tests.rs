@@ -22,7 +22,7 @@ pub fn run_csprng_tests(
     writeln!(stdout, "CSPRNG peripheral tests complete!\n").unwrap();
 }
 
-/// Tests the [`csprng::fill_buffer()`] function.
+/// Tests the [`csprng::fill_bytes()`] function.
 fn test_fill_buffer(csprng: &mut ChaCha20Rng, stdout: &mut hio::HostStream) {
     // Large buffer entropy test.
     let mut buf = [0u8; 80 * 1024]; // 80 KiB.
