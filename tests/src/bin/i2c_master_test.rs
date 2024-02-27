@@ -9,7 +9,7 @@ use core::fmt::Write;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use embedded_hal::digital::{OutputPin, PinState};
-use max78000_hal::{max78000::Peripherals, peripherals::i2c_bitbang, peripherals::timer};
+use max78000_hal::{max78000::Peripherals, peripherals::i2c_bitbang, peripherals::i2c, peripherals::timer};
 use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
 use embedded_hal::i2c::I2c;
 use max78000_hal::peripherals::gpio;
@@ -62,7 +62,8 @@ fn main() -> ! {
 
     let delay_timer = clock.new_timer(Time::Milliseconds(1));
 
-    let mut i2c_master = i2c_bitbang::I2CMaster::new(&peripherals.GCR, peripherals.I2C1, delay_timer);
+    // whether or not the test should use the manual rewrite of i2c protocol using pins or not
+    let mut i2c_master = i2c::I2CMaster::new(&peripherals.GCR, peripherals.I2C1);
 
     let mut timer = clock.new_timer(Time::Milliseconds(1000));
 
@@ -72,13 +73,13 @@ fn main() -> ! {
 
     writeln!(stdout, "Writing to slave...\n").unwrap();
 
-    let mut stuff = [0u8; 16];
+    /*let mut stuff = [0u8; 16];
 
     let mut scl_state = false;
 
     let mut scl_output = scl_handle.into_output_pin(PinState::Low).unwrap();
 
-    /*loop {
+    loop {
         timer.reset();
         while !timer.poll() {}
         writeln!(stdout, "Toggling logic...").unwrap();

@@ -107,6 +107,8 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
 
+        i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode().bit(false)
                 .gc_addr_en().bit(true)
@@ -130,11 +132,11 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         // TODO: j set these values to something that works
         unsafe {
             i2c_regs.clkhi().modify(|_, w| {
-                w.bits(299)
+                w.bits(149)
             });
 
             i2c_regs.clklo().modify(|_, w| {
-                w.bits(299)
+                w.bits(149)
             });
         }
 
@@ -265,6 +267,8 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
                 .irxm_en().bit(false)
                 .clkstr_dis().bit(false)
                 .hs_en().bit(false)
+                .en().bit(true)
+                .bb_mode().bit(false)
         });
 
         i2c_regs.txctrl0().modify(|_, w| {
@@ -277,15 +281,13 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
 
         unsafe {
             i2c_regs.clkhi().modify(|_, w| {
-                w.bits(299)
+                w.bits(149)
             });
 
             i2c_regs.clklo().modify(|_, w| {
-                w.bits(299)
+                w.bits(149)
             });
         }
-
-        i2c_regs.ctrl().modify(|_, w| w.en().bit(true).bb_mode().bit(false));
 
         // i2c_regs.ctrl().modify(|_, w| w.scl_out().bit(false));
 
