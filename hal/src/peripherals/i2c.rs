@@ -1,12 +1,20 @@
+use crate::peripherals::gpio::active::port_num_types::GpioZero;
+use crate::peripherals::gpio::active::ActivePinHandle;
 use crate::peripherals::i2c::SlavePollResult::{Received, TransmitNeeded};
 use core::ops::Deref;
 use embedded_hal;
 use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
-use max78000::{i2c0, GCR};
+use max78000::{i2c0, GCR, TMR};
 use max78000::{I2C0, I2C1, I2C2};
-// use cortex_m::interrupt::free;
+use crate::peripherals::gpio::pin_traits::IoPin;
+use crate::peripherals::timer::Timer;
+use crate::peripherals::gpio::PinOperatingMode;
+use crate::peripherals::oscillator::SystemClock;
 
-pub trait GCRI2C {
+/// Auxiliary trait that only the I2C0, I2C1, and I2C2 registers can implement;
+/// Allows peripheral toggle and reset functionality to said peripherals if GCR regs
+/// are provided.
+pub trait GCRI2C: Deref<Target = i2c0::RegisterBlock> {
     /// Disable peripheral
     fn peripheral_clock_disable(gcr_reg: &GCR);
     /// Enable peripheral
@@ -74,36 +82,55 @@ gen_impl_gcri2c!(I2C0, i2c0, rst0, pclkdis0);
 gen_impl_gcri2c!(I2C1, i2c1, rst1, pclkdis0);
 gen_impl_gcri2c!(I2C2, i2c2, rst1, pclkdis1);
 
-/*
-/// Master or slave, in the slave case provide a 7 bit address to be used
-/// given it's a u8, the topmost bit will be ignored
-pub enum I2CMode {
-    /// Function as a master
-    Master,
-    /// Function as a slave
-    Slave(u8)
-}*/
-
 /// The result of calling slave_poll, Received indicates how many bytes have been read,
 /// and if bytes had to be dropped due to exceeding the buffer size
 ///
 /// TransmitNeeded indicates you need to call slave_send with the data needed
 pub enum SlavePollResult {
+    /// Received #bytes and if given read buffer length was exceeded
     Received(u32, bool),
+    /// The peripheral is currently clock stretching and a transmit operation
+    /// is required ASAP
     TransmitNeeded,
 }
 
-pub struct I2CMaster<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
+/// Various I2C bus speeds
+pub enum BusSpeed {
+    /// Standard mode - 100kbps or 100khz
+    Standard100kbps,
+    /// Fast mode - 400kbps or 400khz
+    Fast400kbps,
+    /// Fast plus mode - 1mbps or 1mhz
+    FastPlus1mbps
+}
+
+/// An I2C peripheral operating as a master.
+/// Important: Bus arbitration is not supported, so there can only be one
+/// master on the bus
+pub struct I2CMaster<T: GCRI2C> {
     i2c_regs: T,
 }
 
-pub struct I2CSlave<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> {
+/// An I2C peripheral operating as a slave.
+pub struct I2CSlave<T: GCRI2C> {
     i2c_regs: T,
-    address: SevenBitAddress,
 }
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
-    pub fn new(gcr_regs: &GCR, i2c_regs: T, address: SevenBitAddress) -> Self {
+impl<T: GCRI2C> I2CSlave<T> {
+    /// Creates a new instance of an I2C slave
+    pub fn new(
+        gcr_regs: &GCR,
+        i2c_regs: T,
+        address: SevenBitAddress,
+        scl_pin_handle: &mut ActivePinHandle<GpioZero, 31>,
+        sda_pin_handle: &mut ActivePinHandle<GpioZero, 31>,
+        bus_speed: BusSpeed,
+        sys_clk_speed: &SystemClock
+    ) -> Self {
+
+        scl_pin_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap_or(());
+        sda_pin_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap_or(());
+
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
 
@@ -139,48 +166,45 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
                 .bit(false)
         });
 
-        // TODO: j set these values to something that works
-        unsafe {
-            i2c_regs.clkhi().modify(|_, w| w.bits(149));
+        // Configure clock speed values
+        let target_speed = match bus_speed {
+            BusSpeed::Standard100kbps => 100_000,
+            BusSpeed::Fast400kbps => 400_000,
+            BusSpeed::FastPlus1mbps => 1_000_000
+        };
 
-            i2c_regs.clklo().modify(|_, w| w.bits(149));
+        let pclk_speed = sys_clk_speed / 2;
+
+        let multiplier = pclk_speed / target_speed;
+        let val = multiplier / 2 - 1;
+
+        unsafe {
+            i2c_regs.clkhi().modify(|_, w| w.bits(val));
+
+            i2c_regs.clklo().modify(|_, w| w.bits(val));
         }
 
         unsafe {
             i2c_regs.slave0().write(|w| w.bits(address as u32));
         }
 
-        // TODO: figure out wtf slave_multi does later
-        /*i2c_regs.slave_multi(0).modify(|_, w| {
-            w.addr().variant(address as u16)
-                .ext_addr_en().bit(false)
-        });
-
-        i2c_regs.slave_multi(1).modify(|_, w| {
-            w.addr().variant(address as u16)
-                .ext_addr_en().bit(false)
-        });
-
-        i2c_regs.slave_multi(2).modify(|_, w| {
-            w.addr().variant(address as u16)
-                .ext_addr_en().bit(false)
-        });
-
-        i2c_regs.slave_multi(3).modify(|_, w| {
-            w.addr().variant(address as u16)
-                .ext_addr_en().bit(false)
-        }); */
-
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
-        Self { i2c_regs, address }
+        Self { i2c_regs }
+    }
+
+    /// Consume the peripheral, returning the underlying register block
+    pub fn consume(self) -> T {
+        self.i2c_regs
     }
 
     pub fn slave_poll(&mut self, read_buffer: &mut [u8]) -> Result<SlavePollResult, ErrorKind> {
         self.i2c_regs.flush_fifo();
         // Wait for I2Cn_INTFL0.addr_match = 1
         self.i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
-        self.i2c_regs.intfl0().modify(|_, w| w.addr_match().bit(false));
+        self.i2c_regs
+            .intfl0()
+            .modify(|_, w| w.addr_match().bit(false));
 
         while !self.i2c_regs.intfl0().read().addr_match().bit() {}
 
@@ -228,7 +252,9 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         // I2Cn_TXCTRL0[5:2] = 0x8 and I2Cn_TXCTRL0.preload_mode = 0. Don't forget to program I2Cn_CLKHI.hi and
         // I2Cn_HSCLK.hsclk_hi with appropriate values satisfying tSU;DAT (and HS tSU;DAT).
 
-        self.i2c_regs.intfl0().modify(|_, w| w.tx_lockout().variant(true));
+        self.i2c_regs
+            .intfl0()
+            .modify(|_, w| w.tx_lockout().variant(true));
         let mut num_written = 0;
         while num_written < buffer.len() && !self.i2c_regs.intfl0().read().done().bit() {
             while !self.i2c_regs.is_tx_fifo_full() {
@@ -260,7 +286,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
 
 // TODO: write code to initialize relevant registers for both master and slave operation
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
+impl<T: GCRI2C> I2CMaster<T> {
     pub fn new(gcr_regs: &GCR, i2c_regs: T) -> Self {
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
@@ -402,11 +428,11 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
     }
 }
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> ErrorType for I2CMaster<T> {
+impl<T: GCRI2C> ErrorType for I2CMaster<T> {
     type Error = ErrorKind;
 }
 
-impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> embedded_hal::i2c::I2c for I2CMaster<T> {
+impl<T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<T> {
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         let bytes_to_read = read.len();
         for i in 0..bytes_to_read / 256 {

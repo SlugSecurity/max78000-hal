@@ -10,13 +10,13 @@ use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use embedded_hal::digital::{OutputPin, PinState};
 use embedded_hal::i2c::I2c;
-use max78000_hal::peripherals::gpio;
-use max78000_hal::peripherals::gpio::pin_traits::{GeneralIoPin, IoPin};
 use max78000_hal::peripherals::gpio::PinOperatingMode;
 use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
-use max78000_hal::{
-    max78000::Peripherals, peripherals::i2c, peripherals::i2c_bitbang, peripherals::timer,
-};
+use max78000_hal::{max78000::Peripherals, peripherals::i2c};
+
+use max78000_hal::peripherals::gpio::pin_traits::IoPin;
+use max78000_hal::peripherals::oscillator::{Ipo, IpoDivider, IpoFrequency};
+use max78000_hal::peripherals::{PeripheralManagerBuilder, SplittablePeripheral};
 
 extern crate panic_semihosting;
 
@@ -27,39 +27,26 @@ fn main() -> ! {
 
     writeln!(stdout, "Starting i2c master tests...\n").unwrap();
 
-    let peripherals = Peripherals::take().unwrap();
+    let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
 
-    peripherals
-        .GCR
-        .pclkdis0()
-        .modify(|_, w| w.gpio0().bit(false));
+    let manager = PeripheralManagerBuilder::<Ipo>::new(
+        &to_borrow,
+        to_consume,
+        IpoFrequency::_100MHz,
+        IpoDivider::_1,
+    )
+    .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+    .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
+    .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
+    .build();
 
-    peripherals.GPIO0.en0().modify(|r, w| {
-        w.gpio_en()
-            .variant(r.gpio_en().bits() | ((1 << 16) | (1 << 17)))
-    });
+    let clock = manager.system_clock().unwrap();
+    manager.system_clock().unwrap().get_freq();
+    manager.system_clock().unwrap().get_div();
 
-    peripherals.GPIO0.en1().modify(|r, w| {
-        w.gpio_en1()
-            .variant(r.gpio_en1().bits() & (!((1 << 16) | (1 << 17))))
-    });
 
-    peripherals.GPIO0.en2().modify(|r, w| {
-        w.gpio_en2()
-            .variant(r.gpio_en2().bits() & (!((1 << 16) | (1 << 17))))
-    });
 
-    peripherals
-        .GPIO0
-        .outen()
-        .modify(|r, w| w.en().variant(r.en().bits() & (!((1 << 16) | (1 << 17)))));
-
-    peripherals.GPIO0.en0().modify(|r, w| {
-        w.gpio_en()
-            .variant(r.gpio_en().bits() & (!((1 << 16) | (1 << 17))))
-    });
-
-    let gpio0 = gpio::new_gpio0(peripherals.GPIO0);
+    let gpio0 = manager.gpio0();
 
     let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
     let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
@@ -70,6 +57,10 @@ fn main() -> ! {
     scl_handle
         .set_operating_mode(PinOperatingMode::AltFunction1)
         .unwrap();
+
+    let timer = manager.timer_0().unwrap();
+    let timer2 = manager.timer_1().unwrap();
+    let tr = timer.new_timer(Time::Milliseconds(3000));
 
     let clock = Clock::new(
         peripherals.TMR,
