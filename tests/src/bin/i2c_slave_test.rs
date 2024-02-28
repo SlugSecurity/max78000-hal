@@ -5,17 +5,14 @@
 #![no_std]
 
 use core::fmt::Write;
-use core::ptr::write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
-use max78000_hal::peripherals::gpio::pin_traits::IoPin;
-use max78000_hal::peripherals::gpio::PinOperatingMode;
-use max78000_hal::peripherals::i2c::SlavePollResult;
+use max78000_hal::max78000::Peripherals;
+use max78000_hal::peripherals::i2c::{BusSpeed, SlavePollResult};
 use max78000_hal::peripherals::oscillator::{Iso, IsoDivider, IsoFrequency};
-use max78000_hal::peripherals::timer::Time;
+use max78000_hal::peripherals::timer::{Oscillator, Prescaler, Time};
 use max78000_hal::peripherals::{PeripheralManagerBuilder, SplittablePeripheral};
-use max78000_hal::{max78000::Peripherals, peripherals::i2c};
 
 extern crate panic_semihosting;
 
@@ -26,39 +23,28 @@ fn main() -> ! {
 
     writeln!(stdout, "Starting i2c slave tests...\n").unwrap();
 
-    let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
+    let (to_consume, to_borrow, _rem) = Peripherals::take().unwrap().split();
     let manager = PeripheralManagerBuilder::<Iso>::new(
         &to_borrow,
         to_consume,
         IsoFrequency::_60MHz,
         IsoDivider::_1,
     )
+    .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
     .build();
 
-    let gpio0 = manager.gpio0();
-
-    let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
-    let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
-
-    sda_handle
-        .set_operating_mode(PinOperatingMode::AltFunction1)
-        .unwrap();
-    scl_handle
-        .set_operating_mode(PinOperatingMode::AltFunction1)
-        .unwrap();
-
-    let mut i2c_slave = i2c::I2CSlave::new(rem.i2c1, 69);
+    let mut i2c_slave = manager.i2c_slave(BusSpeed::Standard100kbps, 69).unwrap();
     let clock = manager.timer_0().unwrap();
 
     let mut timer = clock.new_timer(Time::Milliseconds(1000));
 
-    writeln!(stdout, "Waiting for 3 seconds to come online\n").unwrap();
+    writeln!(stdout, "Waiting for 1 second to come online\n").unwrap();
 
     while !timer.poll() {}
 
     writeln!(stdout, "Ok we poll now\n").unwrap();
 
-    let mut buf = [0u8; 256];
+    let mut buf = [0u8; 16];
     let res = i2c_slave.slave_poll(&mut buf).unwrap();
 
     match res {
@@ -76,7 +62,7 @@ fn main() -> ! {
 
     match res {
         SlavePollResult::Received(num, overflow) => {
-            writeln!(stdout, "received: {:?}", buf).unwrap();
+            writeln!(stdout, "received: {:?} {} {}", buf, num, overflow).unwrap();
         }
         SlavePollResult::TransmitNeeded => {
             writeln!(stdout, "transmit needed").unwrap();

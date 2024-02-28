@@ -1,18 +1,14 @@
-use crate::peripherals::gpio::active::port_num_types::GpioZero;
-use crate::peripherals::gpio::active::ActivePinHandle;
-use crate::peripherals::gpio::pin_traits::IoPin;
-use crate::peripherals::gpio::PinOperatingMode;
+//! I2C Peripheral Drivers
+
+use crate::peripherals::gpio::GpioError;
 use crate::peripherals::i2c::SlavePollResult::{Received, TransmitNeeded};
 use crate::peripherals::oscillator::SystemClock;
-use crate::peripherals::timer::Timer;
+use core::cell::{Ref, RefMut};
 use core::ops::Deref;
 use embedded_hal;
 use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
 use max78000::i2c0;
 use max78000::{I2C0, I2C1, I2C2};
-
-use super::gpio::active::{ActiveInputPin, ActiveOutputPin};
-use super::{PeripheralHandle, PeripheralManager};
 
 /// Auxiliary trait that only the I2C0, I2C1, and I2C2 registers can implement;
 /// Allows peripheral toggle and reset functionality to said peripherals if GCR regs
@@ -30,6 +26,24 @@ pub trait GCRI2C: Deref<Target = i2c0::RegisterBlock> {
     fn is_tx_fifo_empty(&self) -> bool;
     /// Clear interrupt flags
     fn clear_interrupt_flags(&mut self);
+    /// Has a bus timeout occurred?
+    fn bus_timeout(&self) -> bool;
+}
+
+/// Allows for bounded transmit and receive operations
+pub trait BoundedTransmitMaster {
+    /// Send bytes, letting the slave know in advance how many there are
+    fn send_bounded(address: SevenBitAddress, buf: &[u8]) -> Result<(), ErrorKind>;
+    /// Request bytes, letting the slave know in advance how many you require
+    fn request_bounded(address: SevenBitAddress, write_buf: &[u8]) -> Result<(), ErrorKind>;
+}
+
+/// Allows for bounded transmit and receive operations
+pub trait BoundedTransmitSlave {
+    /// Send bytes to master
+    fn reply_send_bounded(buf: &[u8]) -> Result<(), ErrorKind>;
+    /// Receive bytes from master
+    fn receive_bounded(write_buf: &[u8]) -> Result<(), ErrorKind>;
 }
 
 macro_rules! gen_impl_gcri2c {
@@ -52,8 +66,46 @@ macro_rules! gen_impl_gcri2c {
             fn is_tx_fifo_full(&self) -> bool {
                 self.status().read().tx_full().bit()
             }
+            fn bus_timeout(&self) -> bool {
+                self.intfl0().read().to_err().bit()
+            }
             fn clear_interrupt_flags(&mut self) {
-                todo!();
+                self.intfl0().modify(|_, w| {
+                    w.wr_addr_match()
+                        .bit(true)
+                        .rd_addr_match()
+                        .bit(true)
+                        .tx_lockout()
+                        .bit(true)
+                        .stop_err()
+                        .bit(true)
+                        .start_err()
+                        .bit(true)
+                        .dnr_err()
+                        .bit(true)
+                        .data_err()
+                        .bit(true)
+                        .addr_nack_err()
+                        .bit(true)
+                        .to_err()
+                        .bit(true)
+                        .arb_err()
+                        .bit(true)
+                        .addr_ack()
+                        .bit(true)
+                        .stop()
+                        .bit(true)
+                        .rx_thd()
+                        .bit(true)
+                        .addr_match()
+                        .bit(true)
+                        .gc_addr_match()
+                        .bit(true)
+                        .irxm()
+                        .bit(true)
+                        .done()
+                        .bit(true)
+                });
             }
         }
     };
@@ -89,30 +141,22 @@ pub enum BusSpeed {
 /// Important: Bus arbitration is not supported, so there can only be one
 /// master on the bus
 pub struct I2CMaster<'a, T: GCRI2C> {
-    i2c_regs: PeripheralHandle<'a, T>,
-    tx_pin: ActivePinHandle<'a, GpioZero, 31>,
-    rx_pin: ActivePinHandle<'a, GpioZero, 31>,
+    i2c_regs: RefMut<'a, T>,
 }
 
 /// An I2C peripheral operating as a slave.
 pub struct I2CSlave<'a, T: GCRI2C> {
-    i2c_regs: &'a T,
+    i2c_regs: RefMut<'a, T>,
 }
 
 impl<'a, T: GCRI2C> I2CSlave<'a, T> {
     /// Creates a new instance of an I2C slave
-    pub(crate) fn new<'pc>(
-        peripheral_manager: &'a PeripheralManager<'pc>,
+    pub(crate) fn new(
         address: SevenBitAddress,
         bus_speed: BusSpeed,
-    ) -> Self {
-        scl_pin_handle
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap_or(());
-        sda_pin_handle
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap_or(());
-
+        system_clock: Ref<SystemClock>,
+        i2c_regs: RefMut<'a, T>,
+    ) -> Result<Self, GpioError> {
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         i2c_regs.ctrl().modify(|_, w| {
@@ -145,6 +189,10 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
                 .bit(false)
         });
 
+        i2c_regs
+            .timeout()
+            .modify(|_, w| w.scl_to_val().variant(0xffff));
+
         // Configure clock speed values
         let target_speed = match bus_speed {
             BusSpeed::Standard100kbps => 100_000,
@@ -152,14 +200,13 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
             BusSpeed::FastPlus1mbps => 1_000_000,
         };
 
-        let pclk_speed = sys_clk_speed / 2;
+        let pclk_speed = system_clock.get_freq() / (system_clock.get_div() as u32) / 2;
 
         let multiplier = pclk_speed / target_speed;
         let val = multiplier / 2 - 1;
 
         unsafe {
             i2c_regs.clkhi().modify(|_, w| w.bits(val));
-
             i2c_regs.clklo().modify(|_, w| w.bits(val));
         }
 
@@ -169,10 +216,12 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
-        Self { i2c_regs }
+        Ok(Self { i2c_regs })
     }
 
+    /// poll for either a master read or write operation
     pub fn slave_poll(&mut self, read_buffer: &mut [u8]) -> Result<SlavePollResult, ErrorKind> {
+        self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
         // Wait for I2Cn_INTFL0.addr_match = 1
         self.i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
@@ -190,6 +239,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         Ok(TransmitNeeded)
     }
 
+    /// Receive message from master into read buffer
     fn slave_recv(&mut self, read_buffer: &mut [u8]) -> Result<(u32, bool), ErrorKind> {
         self.i2c_regs
             .intfl0()
@@ -221,6 +271,8 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         Ok((num_read as u32, was_it_truncated))
     }
 
+    /// Respond to master on i2c buf using buffer as the message to send
+    /// sends a chain of 0s if bus exceeded but master still wants more
     pub fn slave_send(&mut self, buffer: &[u8]) -> u32 {
         // With I2Cn_CTRL.en = 0, initialize all relevant registers, including specifically for this mode I2Cn_CTRL. clkstr_dis = 0,
         // I2Cn_TXCTRL0[5:2] = 0x8 and I2Cn_TXCTRL0.preload_mode = 0. Don't forget to program I2Cn_CLKHI.hi and
@@ -261,12 +313,12 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
 // TODO: write code to initialize relevant registers for both master and slave operation
 
 impl<'a, T: GCRI2C> I2CMaster<'a, T> {
-    pub(crate) fn new(i2c_regs: T) -> Self {
+    pub(crate) fn new(
+        bus_speed: BusSpeed,
+        system_clock: Ref<SystemClock>,
+        i2c_regs: RefMut<'a, T>,
+    ) -> Result<Self, GpioError> {
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
-
-        i2c_regs.txctrl0().modify(|_, w| w.thd_val().variant(2));
-
-        i2c_regs.rxctrl0().modify(|_, w| w.thd_lvl().variant(6));
 
         // TODO: configure
         i2c_regs.ctrl().modify(|_, w| {
@@ -286,6 +338,10 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
                 .bit(false)
         });
 
+        i2c_regs
+            .timeout()
+            .modify(|_, w| w.scl_to_val().variant(0xffff));
+
         unsafe {
             i2c_regs.clkhi().modify(|_, w| w.bits(149));
 
@@ -294,12 +350,32 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
         // i2c_regs.ctrl().modify(|_, w| w.scl_out().bit(false));
 
-        Self { i2c_regs }
+        let target_speed = match bus_speed {
+            BusSpeed::Standard100kbps => 100_000,
+            BusSpeed::Fast400kbps => 400_000,
+            BusSpeed::FastPlus1mbps => 1_000_000,
+        };
+
+        let pclk_speed = system_clock.get_freq() / (system_clock.get_div() as u32) / 2;
+
+        let multiplier = pclk_speed / target_speed;
+        let val = multiplier / 2 - 1;
+
+        unsafe {
+            i2c_regs.clkhi().modify(|_, w| w.bits(val));
+
+            i2c_regs.clklo().modify(|_, w| w.bits(val));
+        }
+
+        i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
+
+        Ok(Self { i2c_regs })
     }
 
     // Reads up to 256 bytes to read slice, in single i2c transaction
     fn master_recv(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
+        self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
 
         let bytes_to_read = if read.len() >= 256 { 256 } else { read.len() };
@@ -319,18 +395,34 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         // The slave address is transmitted by the controller from the I2Cn_FIFO register.
         // The I2C controller receives an ACK from the slave, and the controller sets the address ACK interrupt flag
         // (I2Cn_INTFL0.addr_ack = 1).
-        while !self.i2c_regs.intfl0().read().addr_ack().bit() {}
+        while !self.i2c_regs.intfl0().read().addr_ack().bit()
+            && !self.i2c_regs.intfl0().read().data_err().bit()
+            && !self.i2c_regs.intfl0().read().addr_nack_err().bit()
+            && !self.i2c_regs.bus_timeout()
+        {}
+
+        if self.i2c_regs.bus_timeout()
+            || self.i2c_regs.intfl0().read().data_err().bit()
+            || self.i2c_regs.intfl0().read().addr_nack_err().bit()
+        {
+            self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
+            return Err(ErrorKind::Bus);
+        }
         // The I2C controller receives data from the slave and automatically ACKs each byte. The software must retrieve this
         // data by reading the I2Cn_FIFO register.
         for cell in read.iter_mut().take(bytes_to_read) {
             while self.i2c_regs.is_rx_fifo_empty() {}
             *cell = self.i2c_regs.fifo().read().data().bits();
         }
+
+        self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
+
         Ok(())
     }
 
     fn master_send(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
+        self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
 
         self.i2c_regs
@@ -345,13 +437,13 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         // Write the desired data bytes to the I2Cn_FIFO register, up to the size of the transmit FIFO. (e.g., If the transmit
         // FIFO size is 8 bytes, the software may write one address byte and seven data bytes before starting the transaction.)
         let mut num_written = 0;
-        /*for i in 0..write.len() {
+        for byte in write {
             if self.i2c_regs.status().read().tx_full().bit() {
                 break;
             }
-            self.i2c_regs.fifo().write(|w| w.data().variant(write[i]));
+            self.i2c_regs.fifo().write(|w| w.data().variant(*byte));
             num_written += 1;
-        }*/
+        }
 
         // Send a START condition by setting I2Cn_MSTCTRL.start = 1
         self.i2c_regs
@@ -367,7 +459,17 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         // poll addr_ack
         while !self.i2c_regs.intfl0().read().addr_ack().bit()
             && !self.i2c_regs.intfl0().read().data_err().bit()
+            && !self.i2c_regs.intfl0().read().addr_nack_err().bit()
+            && !self.i2c_regs.bus_timeout()
         {}
+
+        if self.i2c_regs.bus_timeout()
+            || self.i2c_regs.intfl0().read().data_err().bit()
+            || self.i2c_regs.intfl0().read().addr_nack_err().bit()
+        {
+            self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
+            return Err(ErrorKind::Bus);
+        }
 
         while num_written < write.len() {
             while !self.i2c_regs.status().read().tx_full().bit() {
