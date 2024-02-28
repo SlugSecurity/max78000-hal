@@ -8,19 +8,13 @@ use crate::peripherals::timer::Timer;
 use core::ops::Deref;
 use embedded_hal;
 use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
-use max78000::{i2c0, GCR, TMR};
+use max78000::i2c0;
 use max78000::{I2C0, I2C1, I2C2};
 
 /// Auxiliary trait that only the I2C0, I2C1, and I2C2 registers can implement;
 /// Allows peripheral toggle and reset functionality to said peripherals if GCR regs
 /// are provided.
 pub trait GCRI2C: Deref<Target = i2c0::RegisterBlock> {
-    /// Disable peripheral
-    fn peripheral_clock_disable(gcr_reg: &GCR);
-    /// Enable peripheral
-    fn peripheral_clock_enable(gcr_reg: &GCR);
-    /// Reset the peripheral
-    fn reset_peripheral(gcr_reg: &GCR);
     /// Flush transmit and receive FIFO
     fn flush_fifo(&mut self);
     /// Is receive FIFO full?
@@ -38,22 +32,6 @@ pub trait GCRI2C: Deref<Target = i2c0::RegisterBlock> {
 macro_rules! gen_impl_gcri2c {
     ($register:ty, $lowercaseName:ident, $rstReg:ident, $pclkdisReg:ident) => {
         impl GCRI2C for $register {
-            fn peripheral_clock_disable(gcr_reg: &GCR) {
-                gcr_reg
-                    .$pclkdisReg()
-                    .modify(|_, w| w.$lowercaseName().bit(true))
-            }
-            fn peripheral_clock_enable(gcr_reg: &GCR) {
-                gcr_reg
-                    .$pclkdisReg()
-                    .modify(|_, w| w.$lowercaseName().bit(false))
-            }
-            fn reset_peripheral(gcr_reg: &GCR) {
-                gcr_reg
-                    .$rstReg()
-                    .modify(|_, w| w.$lowercaseName().bit(true));
-                while gcr_reg.$rstReg().read().$lowercaseName().bit() {}
-            }
             fn flush_fifo(&mut self) {
                 self.rxctrl0().modify(|_, w| w.flush().bit(true));
                 self.txctrl0().modify(|_, w| w.flush().bit(true));
@@ -133,9 +111,6 @@ impl<T: GCRI2C> I2CSlave<T> {
         sda_pin_handle
             .set_operating_mode(PinOperatingMode::AltFunction1)
             .unwrap_or(());
-
-        T::reset_peripheral(gcr_regs);
-        T::peripheral_clock_enable(gcr_regs);
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
@@ -290,10 +265,7 @@ impl<T: GCRI2C> I2CSlave<T> {
 // TODO: write code to initialize relevant registers for both master and slave operation
 
 impl<T: GCRI2C> I2CMaster<T> {
-    pub fn new(gcr_regs: &GCR, i2c_regs: T) -> Self {
-        T::reset_peripheral(gcr_regs);
-        T::peripheral_clock_enable(gcr_regs);
-
+    pub fn new(i2c_regs: T) -> Self {
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         i2c_regs.txctrl0().modify(|_, w| w.thd_val().variant(2));

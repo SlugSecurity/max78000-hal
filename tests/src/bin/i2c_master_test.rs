@@ -8,15 +8,14 @@ use core::fmt::Write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
-use embedded_hal::digital::{OutputPin, PinState};
-use embedded_hal::i2c::I2c;
-use max78000_hal::peripherals::gpio::PinOperatingMode;
-use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
-use max78000_hal::{max78000::Peripherals, peripherals::i2c};
 
+use embedded_hal::i2c::I2c;
 use max78000_hal::peripherals::gpio::pin_traits::IoPin;
-use max78000_hal::peripherals::oscillator::{Ipo, IpoDivider, IpoFrequency};
+use max78000_hal::peripherals::gpio::PinOperatingMode;
+use max78000_hal::peripherals::oscillator::{Iso, IsoDivider, IsoFrequency};
+use max78000_hal::peripherals::timer::Time;
 use max78000_hal::peripherals::{PeripheralManagerBuilder, SplittablePeripheral};
+use max78000_hal::{max78000::Peripherals, peripherals::i2c};
 
 extern crate panic_semihosting;
 
@@ -28,24 +27,15 @@ fn main() -> ! {
     writeln!(stdout, "Starting i2c master tests...\n").unwrap();
 
     let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
-
-    let manager = PeripheralManagerBuilder::<Ipo>::new(
+    let manager = PeripheralManagerBuilder::<Iso>::new(
         &to_borrow,
         to_consume,
-        IpoFrequency::_100MHz,
-        IpoDivider::_1,
+        IsoFrequency::_60MHz,
+        IsoDivider::_1,
     )
-    .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
-    .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
-    .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
     .build();
 
-    let clock = manager.system_clock().unwrap();
-    manager.system_clock().unwrap().get_freq();
-    manager.system_clock().unwrap().get_div();
-
     let gpio0 = manager.gpio0();
-
     let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
     let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
 
@@ -56,21 +46,10 @@ fn main() -> ! {
         .set_operating_mode(PinOperatingMode::AltFunction1)
         .unwrap();
 
-    let timer = manager.timer_0().unwrap();
-    let timer2 = manager.timer_1().unwrap();
-    let tr = timer.new_timer(Time::Milliseconds(3000));
-
-    let clock = Clock::new(
-        peripherals.TMR,
-        &peripherals.GCR,
-        Oscillator::IBRO,
-        Prescaler::_64,
-    );
-
-    let delay_timer = clock.new_timer(Time::Milliseconds(1));
+    let clock = manager.timer_0().unwrap();
 
     // whether or not the test should use the manual rewrite of i2c protocol using pins or not
-    let mut i2c_master = i2c::I2CMaster::new(&peripherals.GCR, peripherals.I2C1);
+    let mut i2c_master = i2c::I2CMaster::new(rem.i2c1);
 
     let mut timer = clock.new_timer(Time::Milliseconds(1000));
 

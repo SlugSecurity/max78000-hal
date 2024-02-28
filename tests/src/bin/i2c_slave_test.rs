@@ -9,14 +9,13 @@ use core::ptr::write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
-use embedded_hal::digital::InputPin;
-use embedded_hal::i2c::I2c;
-use max78000_hal::peripherals::gpio;
-use max78000_hal::peripherals::gpio::pin_traits::{GeneralIoPin, IoPin};
+use max78000_hal::peripherals::gpio::pin_traits::IoPin;
 use max78000_hal::peripherals::gpio::PinOperatingMode;
 use max78000_hal::peripherals::i2c::SlavePollResult;
-use max78000_hal::peripherals::timer::{Clock, Oscillator, Prescaler, Time};
-use max78000_hal::{max78000::Peripherals, peripherals::i2c, peripherals::timer};
+use max78000_hal::peripherals::oscillator::{Iso, IsoDivider, IsoFrequency};
+use max78000_hal::peripherals::timer::Time;
+use max78000_hal::peripherals::{PeripheralManagerBuilder, SplittablePeripheral};
+use max78000_hal::{max78000::Peripherals, peripherals::i2c};
 
 extern crate panic_semihosting;
 
@@ -27,48 +26,29 @@ fn main() -> ! {
 
     writeln!(stdout, "Starting i2c slave tests...\n").unwrap();
 
-    let peripherals = Peripherals::take().unwrap();
+    let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
+    let manager = PeripheralManagerBuilder::<Iso>::new(
+        &to_borrow,
+        to_consume,
+        IsoFrequency::_60MHz,
+        IsoDivider::_1,
+    )
+    .build();
 
-    peripherals
-        .GCR
-        .pclkdis0()
-        .modify(|_, w| w.gpio0().bit(false));
+    let gpio0 = manager.gpio0();
 
-    peripherals.GPIO0.en0().modify(|r, w| {
-        w.gpio_en()
-            .variant(r.gpio_en().bits() | ((1 << 16) | (1 << 17)))
-    });
+    let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
+    let mut sda_handle = gpio0.get_pin_handle(17).unwrap();
 
-    peripherals.GPIO0.en1().modify(|r, w| {
-        w.gpio_en1()
-            .variant(r.gpio_en1().bits() & (!((1 << 16) | (1 << 17))))
-    });
+    sda_handle
+        .set_operating_mode(PinOperatingMode::AltFunction1)
+        .unwrap();
+    scl_handle
+        .set_operating_mode(PinOperatingMode::AltFunction1)
+        .unwrap();
 
-    peripherals.GPIO0.en2().modify(|r, w| {
-        w.gpio_en2()
-            .variant(r.gpio_en2().bits() & (!((1 << 16) | (1 << 17))))
-    });
-
-    peripherals.GPIO0.en0().modify(|r, w| {
-        w.gpio_en()
-            .variant(r.gpio_en().bits() & (!((1 << 16) | (1 << 17))))
-    });
-
-    let gpio0 = gpio::new_gpio0(peripherals.GPIO0);
-
-    let mut scl_handle = gpio0.get_pin_handle(16).unwrap().into_input_pin().unwrap();
-    let mut sda_handle = gpio0.get_pin_handle(17).unwrap().into_input_pin().unwrap();
-
-    sda_handle.set_operating_mode(PinOperatingMode::AltFunction1);
-    scl_handle.set_operating_mode(PinOperatingMode::AltFunction1);
-
-    let mut i2c_slave = i2c::I2CSlave::new(&peripherals.GCR, peripherals.I2C1, 69);
-    let clock = Clock::new(
-        peripherals.TMR,
-        &peripherals.GCR,
-        Oscillator::IBRO,
-        Prescaler::_64,
-    );
+    let mut i2c_slave = i2c::I2CSlave::new(rem.i2c1, 69);
+    let clock = manager.timer_0().unwrap();
 
     let mut timer = clock.new_timer(Time::Milliseconds(1000));
 
@@ -78,12 +58,11 @@ fn main() -> ! {
 
     writeln!(stdout, "Ok we poll now\n").unwrap();
 
-    let mut buf = [0u8; 8];
-
+    let mut buf = [0u8; 256];
     let res = i2c_slave.slave_poll(&mut buf).unwrap();
 
     match res {
-        SlavePollResult::Received(num, overflow) => {
+        SlavePollResult::Received(_, _) => {
             writeln!(stdout, "received: {:?}", buf).unwrap();
         }
         SlavePollResult::TransmitNeeded => {
