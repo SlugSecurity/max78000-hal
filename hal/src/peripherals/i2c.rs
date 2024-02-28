@@ -1,15 +1,15 @@
 use crate::peripherals::gpio::active::port_num_types::GpioZero;
 use crate::peripherals::gpio::active::ActivePinHandle;
+use crate::peripherals::gpio::pin_traits::IoPin;
+use crate::peripherals::gpio::PinOperatingMode;
 use crate::peripherals::i2c::SlavePollResult::{Received, TransmitNeeded};
+use crate::peripherals::oscillator::SystemClock;
+use crate::peripherals::timer::Timer;
 use core::ops::Deref;
 use embedded_hal;
 use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
 use max78000::{i2c0, GCR, TMR};
 use max78000::{I2C0, I2C1, I2C2};
-use crate::peripherals::gpio::pin_traits::IoPin;
-use crate::peripherals::timer::Timer;
-use crate::peripherals::gpio::PinOperatingMode;
-use crate::peripherals::oscillator::SystemClock;
 
 /// Auxiliary trait that only the I2C0, I2C1, and I2C2 registers can implement;
 /// Allows peripheral toggle and reset functionality to said peripherals if GCR regs
@@ -101,7 +101,7 @@ pub enum BusSpeed {
     /// Fast mode - 400kbps or 400khz
     Fast400kbps,
     /// Fast plus mode - 1mbps or 1mhz
-    FastPlus1mbps
+    FastPlus1mbps,
 }
 
 /// An I2C peripheral operating as a master.
@@ -125,11 +125,14 @@ impl<T: GCRI2C> I2CSlave<T> {
         scl_pin_handle: &mut ActivePinHandle<GpioZero, 31>,
         sda_pin_handle: &mut ActivePinHandle<GpioZero, 31>,
         bus_speed: BusSpeed,
-        sys_clk_speed: &SystemClock
+        sys_clk_speed: &SystemClock,
     ) -> Self {
-
-        scl_pin_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap_or(());
-        sda_pin_handle.set_operating_mode(PinOperatingMode::AltFunction1).unwrap_or(());
+        scl_pin_handle
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap_or(());
+        sda_pin_handle
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap_or(());
 
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
@@ -170,7 +173,7 @@ impl<T: GCRI2C> I2CSlave<T> {
         let target_speed = match bus_speed {
             BusSpeed::Standard100kbps => 100_000,
             BusSpeed::Fast400kbps => 400_000,
-            BusSpeed::FastPlus1mbps => 1_000_000
+            BusSpeed::FastPlus1mbps => 1_000_000,
         };
 
         let pclk_speed = sys_clk_speed / 2;

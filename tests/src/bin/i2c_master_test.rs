@@ -44,8 +44,6 @@ fn main() -> ! {
     manager.system_clock().unwrap().get_freq();
     manager.system_clock().unwrap().get_div();
 
-
-
     let gpio0 = manager.gpio0();
 
     let mut scl_handle = gpio0.get_pin_handle(16).unwrap();
