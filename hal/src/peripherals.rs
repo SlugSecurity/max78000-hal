@@ -39,7 +39,6 @@
 //! // 3 seconds has passed.
 //! ```
 
-use core::borrow::{Borrow, BorrowMut};
 use core::cell::{BorrowMutError, RefCell, RefMut};
 use core::ops::{Deref, DerefMut};
 
@@ -279,14 +278,16 @@ impl<'a, T> PeripheralHandle<'a, T> {
 impl<'a, T> Deref for PeripheralHandle<'a, T> {
     type Target = T;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
-        self.0.borrow()
+        &self.0
     }
 }
 
 impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.borrow_mut()
+        &mut self.0
     }
 }
 

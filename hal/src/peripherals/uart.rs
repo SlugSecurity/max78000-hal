@@ -156,11 +156,11 @@ pub struct Uart<'a, T: UartInstance> {
 }
 
 impl<T: UartInstance> Uart<'_, T> {
-    fn internal_recv(
+    #[inline(always)]
+    fn internal_recv<const RESET_EVERY_BYTE: bool>(
         &mut self,
         dest: &mut [u8],
         tmr: &mut impl Timeout,
-        reset_every_byte: bool,
     ) -> CommunicationResult<usize> {
         let mut index: usize = 0;
         while index < dest.len() {
@@ -173,7 +173,7 @@ impl<T: UartInstance> Uart<'_, T> {
             dest[index] = self.regs.fifo().read().data().bits();
             index += 1;
 
-            if reset_every_byte {
+            if RESET_EVERY_BYTE {
                 tmr.reset();
             }
         }
@@ -187,7 +187,7 @@ impl<T: UartInstance> RxChannel for Uart<'_, T> {
         dest: &mut [u8],
         tmr: &mut U,
     ) -> CommunicationResult<usize> {
-        self.internal_recv(dest, tmr, true)
+        self.internal_recv::<true>(dest, tmr)
     }
 
     fn recv_with_timeout<U: Timeout>(
@@ -195,7 +195,7 @@ impl<T: UartInstance> RxChannel for Uart<'_, T> {
         dest: &mut [u8],
         tmr: &mut U,
     ) -> CommunicationResult<usize> {
-        self.internal_recv(dest, tmr, false)
+        self.internal_recv::<false>(dest, tmr)
     }
 }
 
