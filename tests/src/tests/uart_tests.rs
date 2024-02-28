@@ -58,6 +58,8 @@ pub fn run_uart_test(
     uart_builder: UartBuilder<'_, Uart0>,
     clk0: PeripheralHandle<Clock<TMR>>,
 ) {
+    writeln!(stdout, "Starting UART tests...\n").unwrap();
+
     let mut uart = uart_builder.build(115200);
 
     // send, host should receive the same data
@@ -117,4 +119,6 @@ pub fn run_uart_test(
         "actually received: {}",
         core::str::from_utf8(&big_buf).unwrap_or("[junk]")
     );
+
+    writeln!(stdout, "Finished UART tests...\n").unwrap();
 }
