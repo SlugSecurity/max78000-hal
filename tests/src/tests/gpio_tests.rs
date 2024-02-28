@@ -7,7 +7,7 @@ use max78000_hal::peripherals::gpio::{
         port_num_types::GpioPortNum, ActiveGpio, ActiveInputPinConfig, ActiveOutputPinConfig,
     },
     pin_traits::{InputPin, IoPin, OutputPin, PinState, StatefulOutputPin},
-    Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode,
+    Gpio0, Gpio1, Gpio2, GpioError, GpioPort, PinIoMode, PinOperatingMode,
 };
 
 /// Runs all GPIO tests.
@@ -31,8 +31,8 @@ pub fn run_gpio_tests(
     writeln!(stdout, "GPIO peripheral tests complete!\n").unwrap();
 }
 
-fn test_active_port<const PIN_CT: usize>(
-    port: &GpioPort<'static, ActiveGpio<impl GpioPortNum + 'static>, PIN_CT>,
+fn test_active_port<const PIN_CT: usize, PortNum: GpioPortNum + 'static>(
+    port: &GpioPort<'static, ActiveGpio<PortNum>, PIN_CT>,
 ) {
     let pin = port.get_pin_handle(PIN_CT - 1).unwrap();
     assert!(matches!(
@@ -72,4 +72,36 @@ fn test_active_port<const PIN_CT: usize>(
         port.get_pin_handle(PIN_CT - 1),
         Err(GpioError::HandleAlreadyTaken)
     ));
+
+    if matches!(PortNum::PORT_NUM, 0 | 2) {
+        let mut rx = port
+            .get_pin_handle(0)
+            .unwrap()
+            .into_input_pin(ActiveInputPinConfig {
+                operating_mode: PinOperatingMode::AltFunction1,
+                ..Default::default()
+            })
+            .unwrap();
+        let mut tx = port
+            .get_pin_handle(1)
+            .unwrap()
+            .into_output_pin(
+                PinState::Low,
+                ActiveOutputPinConfig {
+                    operating_mode: PinOperatingMode::AltFunction1,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        assert_eq!(rx.get_operating_mode(), PinOperatingMode::AltFunction1);
+        assert_eq!(tx.get_operating_mode(), PinOperatingMode::AltFunction1);
+        assert_eq!(
+            rx.set_operating_mode(PinOperatingMode::AltFunction2),
+            Err(GpioError::BadOperatingMode)
+        );
+        assert_eq!(
+            tx.set_operating_mode(PinOperatingMode::AltFunction2),
+            Err(GpioError::BadOperatingMode)
+        );
+    }
 }
