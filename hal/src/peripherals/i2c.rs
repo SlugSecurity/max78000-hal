@@ -110,11 +110,16 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         i2c_regs.ctrl().modify(|_, w| {
-            w.mst_mode().bit(false)
-                .gc_addr_en().bit(false)
-                .irxm_en().bit(false)
-                .clkstr_dis().bit(false)
-                .hs_en().bit(false)
+            w.mst_mode()
+                .bit(false)
+                .gc_addr_en()
+                .bit(false)
+                .irxm_en()
+                .bit(false)
+                .clkstr_dis()
+                .bit(false)
+                .hs_en()
+                .bit(false)
         });
 
         i2c_regs.rxctrl0().modify(|_, w| {
@@ -122,30 +127,28 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         });
 
         i2c_regs.txctrl0().modify(|_, w| {
-            w.nack_flush_dis().bit(false) // TODO: idk what this does
-                .rd_addr_flush_dis().bit(true)
-                .wr_addr_flush_dis().bit(true)
-                .gc_addr_flush_dis().bit(true)
-                .preload_mode().bit(false)
+            w.nack_flush_dis()
+                .bit(false) // TODO: idk what this does
+                .rd_addr_flush_dis()
+                .bit(true)
+                .wr_addr_flush_dis()
+                .bit(true)
+                .gc_addr_flush_dis()
+                .bit(true)
+                .preload_mode()
+                .bit(false)
         });
 
         // TODO: j set these values to something that works
         unsafe {
-            i2c_regs.clkhi().modify(|_, w| {
-                w.bits(149)
-            });
+            i2c_regs.clkhi().modify(|_, w| w.bits(149));
 
-            i2c_regs.clklo().modify(|_, w| {
-                w.bits(149)
-            });
+            i2c_regs.clklo().modify(|_, w| w.bits(149));
         }
 
         unsafe {
-            i2c_regs.slave0().write(|w| {
-                w.bits(address as u32)
-            });
+            i2c_regs.slave0().write(|w| w.bits(address as u32));
         }
-
 
         // TODO: figure out wtf slave_multi does later
         /*i2c_regs.slave_multi(0).modify(|_, w| {
@@ -230,7 +233,9 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
         while num_written < buffer.len() && !self.i2c_regs.intfl0().read().done().bit() {
             while !self.i2c_regs.is_tx_fifo_full() {
                 if num_written < buffer.len() {
-                    self.i2c_regs.fifo().write(|w| w.data().variant(buffer[num_written]));
+                    self.i2c_regs
+                        .fifo()
+                        .write(|w| w.data().variant(buffer[num_written]));
                     num_written += 1;
                 } else {
                     break;
@@ -251,7 +256,6 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CSlave<T> {
 
         num_written as u32
     }
-
 }
 
 // TODO: write code to initialize relevant registers for both master and slave operation
@@ -263,33 +267,32 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
-        i2c_regs.txctrl0().modify(|_, w| {
-            w.thd_val().variant(2)
-        });
+        i2c_regs.txctrl0().modify(|_, w| w.thd_val().variant(2));
 
-        i2c_regs.rxctrl0().modify(|_, w| {
-            w.thd_lvl().variant(6)
-        });
+        i2c_regs.rxctrl0().modify(|_, w| w.thd_lvl().variant(6));
 
         // TODO: configure
         i2c_regs.ctrl().modify(|_, w| {
-            w.mst_mode().bit(true)
-                .gc_addr_en().bit(false)
-                .irxm_en().bit(false)
-                .clkstr_dis().bit(false)
-                .hs_en().bit(false)
-                .en().bit(true)
-                .bb_mode().bit(false)
+            w.mst_mode()
+                .bit(true)
+                .gc_addr_en()
+                .bit(false)
+                .irxm_en()
+                .bit(false)
+                .clkstr_dis()
+                .bit(false)
+                .hs_en()
+                .bit(false)
+                .en()
+                .bit(true)
+                .bb_mode()
+                .bit(false)
         });
 
         unsafe {
-            i2c_regs.clkhi().modify(|_, w| {
-                w.bits(149)
-            });
+            i2c_regs.clkhi().modify(|_, w| w.bits(149));
 
-            i2c_regs.clklo().modify(|_, w| {
-                w.bits(149)
-            });
+            i2c_regs.clklo().modify(|_, w| w.bits(149));
         }
 
         // i2c_regs.ctrl().modify(|_, w| w.scl_out().bit(false));
@@ -319,7 +322,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // The slave address is transmitted by the controller from the I2Cn_FIFO register.
         // The I2C controller receives an ACK from the slave, and the controller sets the address ACK interrupt flag
         // (I2Cn_INTFL0.addr_ack = 1).
-        while !self.i2c_regs.intfl0().read().addr_ack().bit() {};
+        while !self.i2c_regs.intfl0().read().addr_ack().bit() {}
         // The I2C controller receives data from the slave and automatically ACKs each byte. The software must retrieve this
         // data by reading the I2Cn_FIFO register.
         for cell in read.iter_mut().take(bytes_to_read) {
@@ -333,7 +336,9 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // Let's flush the FIFO buffers
         self.i2c_regs.flush_fifo();
 
-        self.i2c_regs.intfl0().modify(|_, w| w.tx_lockout().bit(true));
+        self.i2c_regs
+            .intfl0()
+            .modify(|_, w| w.tx_lockout().bit(true));
 
         // Write the I2C slave address byte to the I2Cn_FIFO register with the R/W bit set to 0
         self.i2c_regs
@@ -363,7 +368,9 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
         // TODO: add operation timeouts using timer module
 
         // poll addr_ack
-        while !self.i2c_regs.intfl0().read().addr_ack().bit() && !self.i2c_regs.intfl0().read().data_err().bit() {}
+        while !self.i2c_regs.intfl0().read().addr_ack().bit()
+            && !self.i2c_regs.intfl0().read().data_err().bit()
+        {}
 
         while num_written < write.len() {
             while !self.i2c_regs.status().read().tx_full().bit() {
@@ -371,7 +378,7 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> I2CMaster<T> {
                     break;
                 }
                 if self.i2c_regs.intfl0().read().data_err().bit() {
-                    return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown))
+                    return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown));
                 }
                 self.i2c_regs
                     .fifo()
@@ -414,15 +421,24 @@ impl<T: Deref<Target = i2c0::RegisterBlock> + GCRI2C> embedded_hal::i2c::I2c for
         self.master_send(address, write)
     }
 
-    fn write_read(&mut self, address: SevenBitAddress, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+    fn write_read(
+        &mut self,
+        address: SevenBitAddress,
+        write: &[u8],
+        read: &mut [u8],
+    ) -> Result<(), Self::Error> {
         //free(|_| -> Result<(), Self::Error> {
-            self.write(address, write)?;
-            self.read(address, read)?;
-            Ok(())
+        self.write(address, write)?;
+        self.read(address, read)?;
+        Ok(())
         //})
     }
 
-    fn transaction(&mut self, address: SevenBitAddress, operations: &mut [Operation<'_>]) -> Result<(), Self::Error> {
+    fn transaction(
+        &mut self,
+        address: SevenBitAddress,
+        operations: &mut [Operation<'_>],
+    ) -> Result<(), Self::Error> {
         for operation in operations.iter_mut() {
             match operation {
                 Operation::Read(read) => {

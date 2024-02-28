@@ -1,13 +1,13 @@
 //! uh oh
 
 use crate::peripherals::i2c::SlavePollResult::{Received, TransmitNeeded};
+use crate::peripherals::timer::{Timer, TimerPeripheralGCR};
 use core::ops::Deref;
 use cortex_m::asm::delay;
 use embedded_hal;
 use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
-use max78000::{i2c0, GCR, tmr};
+use max78000::{i2c0, tmr, GCR};
 use max78000::{I2C0, I2C1, I2C2};
-use crate::peripherals::timer::{Timer, TimerPeripheralGCR};
 // use cortex_m::interrupt::free;
 
 pub trait BBGCRI2C {
@@ -96,53 +96,74 @@ pub enum SlavePollResult {
     TransmitNeeded,
 }
 
-pub struct I2CMaster<'a, T: Deref<Target=i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Target=tmr::RegisterBlock> + TimerPeripheralGCR> {
+pub struct I2CMaster<
+    'a,
+    T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C,
+    R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR,
+> {
     i2c_regs: T,
     timer: Timer<'a, R>,
-    started: bool
+    started: bool,
 }
 
-pub struct I2CSlave<T: Deref<Target=i2c0::RegisterBlock> + BBGCRI2C> {
-    i2c_regs: T
+pub struct I2CSlave<T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C> {
+    i2c_regs: T,
 }
 
-impl<T: Deref<Target=i2c0::RegisterBlock> + BBGCRI2C> I2CSlave<T> {
+impl<T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C> I2CSlave<T> {
     pub fn new(gcr_regs: &GCR, i2c_regs: T, address: u8) -> Self {
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
 
         i2c_regs.ctrl().modify(|_, w| {
-            w.mst_mode().bit(false)
-                .en().bit(true)
-                .bb_mode().bit(true)
-                .scl_out().bit(true)
-                .sda_out().bit(true)
+            w.mst_mode()
+                .bit(false)
+                .en()
+                .bit(true)
+                .bb_mode()
+                .bit(true)
+                .scl_out()
+                .bit(true)
+                .sda_out()
+                .bit(true)
         });
 
-        Self {i2c_regs}
+        Self { i2c_regs }
     }
 
-    pub fn poll(&mut self) {
-
-    }
+    pub fn poll(&mut self) {}
 }
 
 // TODO: write code to initialize relevant registers for both master and slave operation
 
-impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> I2CMaster<'a, T, R> {
+impl<
+        'a,
+        T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C,
+        R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR,
+    > I2CMaster<'a, T, R>
+{
     pub fn new(gcr_regs: &GCR, i2c_regs: T, timer: Timer<'a, R>) -> Self {
         T::reset_peripheral(gcr_regs);
         T::peripheral_clock_enable(gcr_regs);
 
         i2c_regs.ctrl().modify(|_, w| {
-            w.mst_mode().bit(true)
-                .bb_mode().bit(true)
-                .en().bit(true)
-                .scl_out().bit(true)
-                .sda_out().bit(true)
+            w.mst_mode()
+                .bit(true)
+                .bb_mode()
+                .bit(true)
+                .en()
+                .bit(true)
+                .scl_out()
+                .bit(true)
+                .sda_out()
+                .bit(true)
         });
 
-        Self { i2c_regs, timer, started: false }
+        Self {
+            i2c_regs,
+            timer,
+            started: false,
+        }
     }
 
     fn delay(&mut self) {
@@ -163,7 +184,7 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
             self.delay();
         }
         if !self.i2c_regs.read_sda() {
-            return Err(ErrorKind::ArbitrationLoss)
+            return Err(ErrorKind::ArbitrationLoss);
         }
         self.i2c_regs.clear_sda();
         self.delay();
@@ -183,7 +204,7 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
         self.i2c_regs.set_sda();
         self.delay();
         if !self.i2c_regs.read_sda() {
-            return Err(ErrorKind::ArbitrationLoss)
+            return Err(ErrorKind::ArbitrationLoss);
         }
 
         self.started = false;
@@ -207,7 +228,7 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
         self.clock_stretch()?;
 
         if bit && !self.i2c_regs.read_sda() {
-            return Err(ErrorKind::ArbitrationLoss)
+            return Err(ErrorKind::ArbitrationLoss);
         }
 
         self.i2c_regs.clear_scl();
@@ -242,7 +263,7 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
         for b in 0..8 {
             self.write_bit(byte & (1 << b) != 0)?;
             if self.read_bit()? {
-                return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown))
+                return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown));
             }
         }
         Ok(())
@@ -251,7 +272,7 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
     fn read_byte(&mut self, nack: bool) -> Result<u8, ErrorKind> {
         let mut byte = 0;
         for _ in 0..8 {
-            byte = (byte << 1) | if self.read_bit()? {1} else {0};
+            byte = (byte << 1) | if self.read_bit()? { 1 } else { 0 };
         }
         self.write_bit(nack)?;
         Ok(byte)
@@ -285,11 +306,21 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
     }
 }
 
-impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> ErrorType for I2CMaster<'a, T, R> {
+impl<
+        'a,
+        T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C,
+        R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR,
+    > ErrorType for I2CMaster<'a, T, R>
+{
     type Error = ErrorKind;
 }
 
-impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR> embedded_hal::i2c::I2c for I2CMaster<'a, T, R> {
+impl<
+        'a,
+        T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C,
+        R: Sized + Deref<Target = tmr::RegisterBlock> + TimerPeripheralGCR,
+    > embedded_hal::i2c::I2c for I2CMaster<'a, T, R>
+{
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         self.master_recv(address, read)?;
         Ok(())
@@ -299,7 +330,12 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
         self.master_send(address, write)
     }
 
-    fn write_read(&mut self, address: SevenBitAddress, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+    fn write_read(
+        &mut self,
+        address: SevenBitAddress,
+        write: &[u8],
+        read: &mut [u8],
+    ) -> Result<(), Self::Error> {
         //free(|_| -> Result<(), Self::Error> {
         self.write(address, write)?;
         self.read(address, read)?;
@@ -307,7 +343,11 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
         //})
     }
 
-    fn transaction(&mut self, address: SevenBitAddress, operations: &mut [Operation<'_>]) -> Result<(), Self::Error> {
+    fn transaction(
+        &mut self,
+        address: SevenBitAddress,
+        operations: &mut [Operation<'_>],
+    ) -> Result<(), Self::Error> {
         for operation in operations.iter_mut() {
             match operation {
                 Operation::Read(read) => {
@@ -321,5 +361,3 @@ impl<'a, T: Deref<Target = i2c0::RegisterBlock> + BBGCRI2C, R: Sized + Deref<Tar
         Ok(())
     }
 }
-
-
