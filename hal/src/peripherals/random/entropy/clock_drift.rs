@@ -1,4 +1,5 @@
 use bitvec::prelude::*;
+use cortex_m_semihosting::dbg;
 use sha3::{digest::Update, Sha3_256};
 use zeroize::Zeroize;
 
@@ -48,6 +49,7 @@ impl<T: EntropySource> EntropySource for ClockDrift<T> {
     }
 
     fn add_to_hasher(&self, hasher: &mut Sha3_256) {
+        dbg!("Clock drift entropy: ", &self.entropy);
         hasher.update(&self.entropy);
         self.next.add_to_hasher(hasher);
     }

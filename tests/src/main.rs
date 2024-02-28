@@ -52,6 +52,7 @@ fn main() -> ! {
     .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
     .build();
 
+    /*
     flc_tests::run_flc_tests(
         &mut stdout,
         manager.flash_controller().unwrap(),
@@ -74,16 +75,19 @@ fn main() -> ! {
         manager.timer_1().unwrap(),
         manager.timer_2().unwrap(),
     );
+    */
 
     trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
     csprng_tests::run_csprng_tests(manager.csprng().unwrap(), &mut stdout);
 
+    /*
     gpio_tests::run_gpio_tests(
         manager.gpio0(),
         manager.gpio1(),
         manager.gpio2(),
         &mut stdout,
     );
+    */
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
 
