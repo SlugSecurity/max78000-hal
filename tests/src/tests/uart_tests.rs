@@ -87,7 +87,8 @@ pub fn run_uart_test(
         Err(CommunicationError::RecvError)
     );
 
-    // flush the fifo bleh bleh bleh
+    // flush the fifo bleh bleh bleh (otherwise the bytes from the last test before we hit timeout are still there)
+    // host sends 0xff at the start of the big buffer test
     let mut byte = [0u8];
     timer = clk0.new_timer(Milliseconds(500));
     while uart.recv_with_timeout(&mut byte, &mut timer) != Ok(1) || byte != [0xff] {}

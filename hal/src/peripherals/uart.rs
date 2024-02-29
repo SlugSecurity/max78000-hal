@@ -1,6 +1,43 @@
 //! Module for UART API.
 //!
-//! TODO: Add example and more desc.
+//! Currently only UART0 is implemented, using pins 0 and 1 as those are connected to the
+//! USB-to-UART bridge on the MAX78000FTHR board.
+//!
+//! # Example usage
+//!
+//! ```rs
+//! use max78000_hal::communication::{RxChannel, TxChannel};
+//! use max78000_hal::peripherals::timer::Time::Milliseconds;
+//! use max78000_hal::{
+//!     max78000::Peripherals,
+//!     peripherals::{
+//!         oscillator::{Ipo, IpoDivider, IpoFrequency},
+//!         timer::{Oscillator, Prescaler},
+//!         PeripheralManagerBuilder, SplittablePeripheral,
+//!     },
+//! };
+//!
+//! let (to_consume, to_borrow, rem) = Peripherals::take().unwrap().split();
+//! let manager = PeripheralManagerBuilder::<Ipo>::new(
+//!     &to_borrow,
+//!     to_consume,
+//!     IpoFrequency::_100MHz,
+//!     IpoDivider::_1,
+//! )
+//! .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+//! .build();
+//! // we need timers for the timeout receive methods
+//! let clk0 = manager.timer_0().unwrap();
+//! // 115,200 baud
+//! let mut uart = manager.build_uart().unwrap().build(115200);
+//!! let mut timer = clk0.new_timer(Milliseconds(500));
+//! let mut buf = [0u8; 16];
+//! uart.recv_with_timeout(&mut buf, &mut timer).unwrap();
+//!! buf = *b"0123456789abcdef";
+//! // send must take a mutable parameter due to the txchannel trait,
+//! // but UART send does not actually mutate the buffer
+//! uart.send(&mut buf).unwrap();
+//! ```
 
 use core::cell::BorrowMutError;
 use core::{marker::PhantomData, ops::Deref, result::Result};
