@@ -2,8 +2,6 @@
 
 mod entropy;
 
-use core::cell::Ref;
-
 use max78000::TMR;
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
@@ -22,7 +20,7 @@ pub const SECRET_SIZE: usize = 32;
 /// CSPRNG initialization arguments.
 pub(crate) struct CsprngInitArgs<'a, 'b, F: FnMut(&mut [u8])> {
     pub trng: &'a Trng,
-    pub timer_0: Ref<'b, Clock<TMR>>,
+    pub csprng_timer: &'b Clock<TMR>,
     pub get_rng_static_secret: F,
 }
 

@@ -320,7 +320,7 @@ impl<T: TimerPeripheralGCR> Clock<T> {
     }
 
     /// Consume `Clock`, returning the underlying timer registers
-    pub fn consume(self) -> T {
+    pub(crate) fn consume(self) -> T {
         self.tmr_registers
     }
 

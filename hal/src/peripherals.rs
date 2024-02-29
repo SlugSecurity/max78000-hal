@@ -389,7 +389,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
 
     /// Builds the [`PeripheralManager`] given the system clock
     /// oscillator settings along with the timer settings.
-    pub fn build(self) -> PeripheralManager<'a> {
+    pub fn build(mut self) -> PeripheralManager<'a> {
         // TODO: Lazily initialize timers
         //       For now, they're eagerly intialized.
         let power_ctrl =
@@ -420,13 +420,22 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
         power_ctrl.reset_toggleable(ToggleableModule::TRNG);
 
         let trng = Trng::new(self.consumed_periphs.trng);
-        let timer_0 = timer_field!(self, tmr0, timer_0_cfg);
+        let csprng_timer_config = (timer::Oscillator::ISO, Prescaler::_4096);
+
+        let csprng_timer = Clock::new(
+            self.consumed_periphs.tmr0,
+            &self.borrowed_periphs.gcr,
+            csprng_timer_config.0,
+            csprng_timer_config.1,
+        );
 
         let initialized_csprng = EntropyGatherer::init_csprng(CsprngInitArgs {
             trng: &trng,
-            timer_0: timer_0.borrow(),
+            csprng_timer: &csprng_timer,
             get_rng_static_secret: self.get_rng_static_secret,
         });
+
+        self.consumed_periphs.tmr0 = csprng_timer.consume();
 
         PeripheralManager {
             power_ctrl,
@@ -440,7 +449,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
                 self.borrowed_periphs.gcr.clkctrl(),
                 self.borrowed_periphs.trimsir.inro(),
             )),
-            timer_0,
+            timer_0: timer_field!(self, tmr0, timer_0_cfg),
             timer_1: timer_field!(self, tmr1, timer_1_cfg),
             timer_2: timer_field!(self, tmr2, timer_2_cfg),
             timer_3: timer_field!(self, tmr3, timer_3_cfg),

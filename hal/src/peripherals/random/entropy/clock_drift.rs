@@ -8,10 +8,10 @@ use crate::peripherals::{random::CsprngInitArgs, timer::Time};
 use super::EntropySource;
 
 /// Number of milliseconds to count for clock drift.
-const MS_TO_COUNT: u32 = 1;
+const MS_TO_COUNT: u32 = 5;
 
 /// The number of bytes to get from clock drift.
-const CLOCK_DRIFT_ENTROPY_SIZE: usize = 64;
+const CLOCK_DRIFT_ENTROPY_SIZE: usize = 128;
 
 /// Clock drift entropy source.
 ///
@@ -28,7 +28,7 @@ impl<T: EntropySource> EntropySource for ClockDrift<T> {
         for mut bit in entropy_pool.as_mut_bits::<Lsb0>() {
             // Initialize timer.
             let mut clock_drift_timer = csprng_init_args
-                .timer_0
+                .csprng_timer
                 .new_timer(Time::Milliseconds(MS_TO_COUNT));
 
             // Wait for timer to reach MS_TO_COUNT ms and count.
