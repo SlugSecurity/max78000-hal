@@ -2,7 +2,6 @@ use crate::communication::Timeout;
 use crate::peripherals::gpio::GpioError;
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, GCRI2C};
 use crate::peripherals::oscillator::SystemClock;
-use crate::peripherals::timer::Time;
 use core::cell::{Ref, RefMut};
 use core::time::Duration;
 use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
@@ -63,10 +62,12 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         })
     }
 
+    /// Configure the address of the target for comm stack traits
     pub fn set_target_addr(&mut self, addr: SevenBitAddress) {
         self.target_addr = addr;
     }
 
+    /// Get the address of the target for comm stack traits
     pub fn get_target_addr(&self) -> SevenBitAddress {
         self.target_addr
     }
@@ -217,6 +218,12 @@ impl InfTimeout {
     /// Create a new instance of an infinite timeout
     pub fn new() -> Self {
         InfTimeout {}
+    }
+}
+
+impl Default for InfTimeout {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -10,9 +10,7 @@ use cortex_m::asm::delay;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 
-use embedded_hal::i2c::I2c;
 use max78000_hal::communication::{RxChannel, TxChannel};
-use max78000_hal::max78000::gpio0::IN;
 use max78000_hal::max78000::Peripherals;
 use max78000_hal::peripherals::i2c::master::InfTimeout;
 use max78000_hal::peripherals::i2c::BusSpeed;
@@ -51,8 +49,6 @@ fn main() -> ! {
 
     writeln!(stdout, "Writing to slave...\n").unwrap();
 
-    let mut stuff = [0u8; 16];
-
     i2c_master.set_target_addr(69);
 
     let mut funny = [1u8, 2u8, 3u8, 4u8];
@@ -69,6 +65,8 @@ fn main() -> ! {
 
     delay(100000);
 
+    writeln!(stdout, "time for big funny").unwrap();
+
     let mut big_funny = [0u8; 765];
 
     let mut i: u8 = 1;
@@ -80,6 +78,8 @@ fn main() -> ! {
 
     i2c_master.send(&mut big_funny).unwrap();
 
+    writeln!(stdout, "big funny was sent, waiting for big funny back...").unwrap();
+
     delay(100000);
 
     let mut recv_big_funny = [0u8; 765];
@@ -89,8 +89,10 @@ fn main() -> ! {
         .unwrap();
 
     for i in 0..765 {
-        assert!(recv_big_funny[i] == big_funny[i]);
+        assert_eq!(recv_big_funny[i], big_funny[i]);
     }
+
+    writeln!(stdout, "Verified that the big funny was indeed correct").unwrap();
 
     delay(100000);
 

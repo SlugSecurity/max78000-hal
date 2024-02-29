@@ -1,11 +1,7 @@
 //! I2C Peripheral Drivers
 
-use crate::peripherals::gpio::GpioError;
-use crate::peripherals::oscillator::SystemClock;
-use core::cell::{Ref, RefMut};
+use core::cell::RefMut;
 use core::ops::Deref;
-use embedded_hal;
-use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
 use max78000::i2c0;
 use max78000::{I2C0, I2C1, I2C2};
 

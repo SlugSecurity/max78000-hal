@@ -1,6 +1,7 @@
 use crate::communication::{CommunicationError, RxChannel, Timeout, TxChannel};
 use crate::peripherals::i2c::master::InfTimeout;
 use crate::peripherals::i2c::{I2CMaster, I2CSlave, SlavePollResult, GCRI2C};
+use cortex_m::asm::delay;
 use embedded_hal::i2c::{ErrorKind, I2c, SevenBitAddress};
 
 /// Allows for bounded transmit and receive operations
@@ -42,18 +43,17 @@ impl<'a, T: GCRI2C> RxChannel for I2CSlave<'a, T> {
                 if n != 4 {
                     return Err(CommunicationError::InternalError);
                 }
-                let num_incoming = u32::from_le_bytes(bytes_sent_buf);
                 let mut num_read = 0;
-                if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
+                return if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
                     if let Ok((n, _)) = self.slave_recv(dest, tmr, true) {
                         num_read += n;
-                        return Ok(num_read as usize);
+                        Ok(num_read as usize)
                     } else {
-                        return Err(CommunicationError::InternalError);
+                        Err(CommunicationError::InternalError)
                     }
                 } else {
-                    return Err(CommunicationError::InternalError);
-                }
+                    Err(CommunicationError::InternalError)
+                };
                 /*for i in 0..(num_incoming as usize >> 8) {
                     if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
                         if let Ok((n, _)) = self.slave_recv(&mut dest[i * 256..], tmr, true) {
@@ -104,15 +104,15 @@ impl<'a, T: GCRI2C> RxChannel for I2CSlave<'a, T> {
                 if n != 4 {
                     return Err(CommunicationError::InternalError);
                 }
-                let num_incoming = u32::from_le_bytes(bytes_sent_buf);
+                // let num_incoming = u32::from_le_bytes(bytes_sent_buf);
                 let mut num_read = 0;
                 if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
-                    if let Ok((n, _)) = self.slave_recv(dest, tmr, true) {
+                    return if let Ok((n, _)) = self.slave_recv(dest, tmr, true) {
                         num_read += n;
-                        return Ok(num_read as usize);
+                        Ok(num_read as usize)
                     } else {
-                        return Err(CommunicationError::InternalError);
-                    }
+                        Err(CommunicationError::InternalError)
+                    };
                 } else {
                     return Err(CommunicationError::InternalError);
                 }
@@ -162,10 +162,12 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
         if let Ok(()) = self.master_recv(self.target_addr, &mut bytes_sent_buf, tmr, true) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
+                delay(10000); // TODO: mitigate these delays bc this is... a lot
                 self.master_recv(self.target_addr, &mut dest[i * 256..], tmr, true)
                     .unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
+            delay(10000);
             self.master_recv(self.target_addr, &mut dest[leftover..], tmr, true)
                 .unwrap();
             return Ok(bytes_to_read as usize);
@@ -185,10 +187,12 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
         if let Ok(()) = self.master_recv(self.target_addr, &mut bytes_sent_buf, tmr, false) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
+                delay(10000); // This delay is necessary for the slave to catch up
                 self.master_recv(self.target_addr, &mut dest[i * 256..], tmr, false)
                     .unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
+            delay(10000);
             self.master_recv(self.target_addr, &mut dest[leftover..], tmr, false)
                 .unwrap();
             return Ok(bytes_to_read as usize);
@@ -202,7 +206,7 @@ impl<'a, T: GCRI2C> TxChannel for I2CSlave<'a, T> {
         if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new()) {
             self.slave_send(&u32::to_le_bytes(src.len() as u32))
                 .unwrap();
-            for i in 0..(src.len() / 256) + 1 {
+            for i in 0..((src.len() - 1) / 256) + 1 {
                 if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new())
                 {
                     self.slave_send(&src[i * 256..]).unwrap();
