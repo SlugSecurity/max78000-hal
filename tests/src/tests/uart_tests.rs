@@ -3,7 +3,7 @@
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
 use max78000_hal::communication::{CommunicationError, RxChannel, TxChannel};
-use max78000_hal::max78000::TMR;
+use max78000_hal::max78000::TMR2;
 use max78000_hal::peripherals::timer::Time::Milliseconds;
 use max78000_hal::peripherals::{
     timer::Clock,
@@ -56,7 +56,7 @@ distributions are really distributions of GNU/Linux.
 pub fn run_uart_test(
     stdout: &mut hio::HostStream,
     uart_builder: UartBuilder<'_, Uart0>,
-    clk0: PeripheralHandle<Clock<TMR>>,
+    clk0: PeripheralHandle<Clock<TMR2>>,
 ) {
     writeln!(stdout, "Starting UART tests...\n").unwrap();
 

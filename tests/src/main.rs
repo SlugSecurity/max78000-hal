@@ -80,7 +80,7 @@ fn main() -> ! {
     uart_tests::run_uart_test(
         &mut stdout,
         manager.build_uart().unwrap(),
-        manager.timer_0().unwrap(),
+        manager.timer_2().unwrap(),
     );
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();
