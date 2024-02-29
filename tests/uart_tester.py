@@ -66,7 +66,6 @@ class UartTest(unittest.TestCase):
 		to_send = interjection * 2
 		while total < len(to_send):
 			current = self.port.write(to_send[total:])
-			print(f'wrote {current} bytes')
 			total += current
 		self.port.flush()
 
