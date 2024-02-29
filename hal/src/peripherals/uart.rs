@@ -204,7 +204,7 @@ impl<T: UartInstance> Uart<'_, T> {
             // spin until there is a byte to be read
             while self.regs.status().read().rx_em().bit() {
                 if tmr.poll() {
-                    return Err(CommunicationError::RecvError);
+                    return Err(CommunicationError::RecvError(index));
                 }
             }
             dest[index] = self.regs.fifo().read().data().bits();

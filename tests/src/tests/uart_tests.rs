@@ -94,10 +94,11 @@ pub fn run_uart_test(
     // but recv_with_data_timeout should pass
     timer = clk0.new_timer(Milliseconds(1000));
     buf = [0; 14];
-    assert_eq!(
+
+    assert!(matches!(
         uart.recv_with_timeout(&mut buf, &mut timer),
-        Err(CommunicationError::RecvError)
-    );
+        Err(CommunicationError::RecvError(_))
+    ));
 
     // flush the fifo bleh bleh bleh (otherwise the bytes from the last test before we hit timeout are still there)
     // host sends 0xff at the start of the big buffer test
