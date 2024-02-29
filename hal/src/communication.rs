@@ -95,10 +95,11 @@ pub trait RxChannel {
 /// A channel to receive data from which supports reading until a line delimiter.
 pub trait LineDelimitedRxChannel: RxChannel {
     /// Receives one line of data from the channel, reading until the specified
-    /// [`line_ending`](LineEnding) or the timeout is reached, putting the data into `dest`,
-    /// returning the number of bytes received (including the line ending) upon success. `tmr` is
-    /// reset for every byte read. If the end of the buffer is reached before seeing a line ending,
-    /// returns [`RecvError(dest.len())`](CommunicationError::RecvError).
+    /// [`line_ending`](LineEnding) or the timeout is reached without any new byte being read,
+    /// putting the data into `dest`, returning the number of bytes received (including the line
+    /// ending) upon success. `tmr` is reset for every byte read. If the end of the buffer is
+    /// reached before seeing a line ending, returns
+    /// [`RecvError(dest.len())`](CommunicationError::RecvError).
     ///
     /// See [rev_with_data_timeout](RxChannel::recv_with_data_timeout) for more documentation on the
     /// other error conditions.
