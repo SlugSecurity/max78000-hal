@@ -120,12 +120,6 @@ pub fn run_uart_test(
     let mut big_buf = [0u8; INTERJECTION.len()];
     timer = clk0.new_timer(Milliseconds(500));
     let ret = uart.recv_with_data_timeout(&mut big_buf, &mut timer);
-    for (i, &byte) in big_buf.iter().enumerate() {
-        if byte != INTERJECTION[i] {
-            writeln!(stdout, "first mismatch at {i}").unwrap();
-            break;
-        }
-    }
     assert_eq!(ret, Ok(big_buf.len()));
     assert_eq!(
         big_buf,
