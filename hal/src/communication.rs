@@ -92,6 +92,44 @@ pub trait RxChannel {
         T: Timeout;
 }
 
+/// A channel to receive data from which supports reading until a line delimiter.
+pub trait LineDelimitedRxChannel: RxChannel {
+    /// Receives one line of data from the channel, reading until the specified
+    /// [`line_ending`](LineEnding) or the timeout is reached without any new byte being read,
+    /// putting the data into `dest`, returning the number of bytes received (including the line
+    /// ending) upon success. `tmr` is reset for every byte read. If the end of the buffer is
+    /// reached before seeing a line ending, returns
+    /// [`RecvError(dest.len())`](CommunicationError::RecvError).
+    ///
+    /// See [rev_with_data_timeout](RxChannel::recv_with_data_timeout) for more documentation on the
+    /// other error conditions.
+    fn recv_line_with_data_timeout<T: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut T,
+        line_ending: LineEnding,
+    ) -> Result<usize>
+    where
+        T: Timeout;
+
+    /// Receives one line of data from the channel, reading until the specified
+    /// [`line_ending`](LineEnding) or the timeout is reached, putting the data into `dest`,
+    /// returning the number of bytes received (including the line ending) upon success. `tmr`
+    /// indicates a timeout for the entire operation. If the end of the buffer is reached before
+    /// seeing a line ending, returns [`RecvError(dest.len())`](CommunicationError::RecvError).
+    ///
+    /// See [rev_with_data_timeout](RxChannel::recv_with_data_timeout) for more documentation on the
+    /// other error conditions.
+    fn recv_line_with_timeout<T: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut T,
+        line_ending: LineEnding,
+    ) -> Result<usize>
+    where
+        T: Timeout;
+}
+
 /// A channel to send data through. See the documentation for [`send`](TxChannel::send) for
 /// more info.
 pub trait TxChannel {
@@ -115,12 +153,37 @@ pub trait TxChannel {
 #[non_exhaustive]
 pub enum CommunicationError {
     /// An error that can occur during a receive operation. See [RxChannel::recv_with_timeout] and
-    /// [RxChannel::recv_with_data_timeout] for more details.
-    RecvError,
+    /// [RxChannel::recv_with_data_timeout] for more details. Contains the number of bytes that were
+    /// read successfully before the error occurred, if any.
+    RecvError(usize),
 
     /// An error that can occur during a send operation. See [TxChannel::send] for more details.
     SendError,
 
     /// An error that can occur if an internal error is encountered that should never happen.
     InternalError,
+}
+
+/// Specifies what is counted as the end of a line for the RxChannel::recv_line_* methods
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum LineEnding {
+    /// Carriage return (\r)
+    CR,
+    /// Newline (\n)
+    LF,
+    /// Carriage return, then newline (\r\n)
+    CRLF,
+}
+
+impl LineEnding {
+    /// Check if a buffer of bytes ends with the specified line ending
+    pub fn matches_end(&self, buf: &[u8]) -> bool {
+        match *self {
+            LineEnding::CR => buf.last().copied() == Some(b'\r'),
+            LineEnding::LF => buf.last().copied() == Some(b'\n'),
+            LineEnding::CRLF => {
+                buf.len() >= 2 && buf[buf.len() - 2] == b'\r' && buf[buf.len() - 1] == b'\n'
+            }
+        }
+    }
 }
