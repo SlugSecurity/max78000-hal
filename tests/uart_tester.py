@@ -24,7 +24,18 @@ it can only function in the context of a complete operating system.  Linux is
 normally used in combination with the GNU operating system: the whole system
 is basically GNU with Linux added, or GNU/Linux.  All the so-called "Linux"
 distributions are really distributions of GNU/Linux.
-""")
+""") * 2
+for i in range(256):
+	interjection += bytes([i])
+
+ego = str.encode("""don't interpret it as ego. Long is computer researcher more than a professor, he's the highest profile person to teach us the way of the industry, he would be better off doing research for the betterment of the computer science field but he decide to nurture us students to have a good impact on the industry as a whole. If you are wondering why that's a good thing, I'll give you 2 sides of the picture to compare: 
+1. Veenstra has 240 students, that means complete chaos with grading, less interactions with students, TAs are gonna be overwhelmed, etc, etc, pretty much what's happening in this class. Unless he can manage it well (which is a pretty tall task) 
+2. Long has 51 students, that means 51 students are gonna get the content closest to the industry to get jobs from a high profile person of the campus. While being chill with the grading, more engagement with the students, etc. 
+
+I don't usually make comments like this, but I had to get it out there cause he's being misunderstood hard by alot of people
+""") * 2
+for i in range(256):
+	ego += bytes([i])
 
 print(len(interjection))
 
@@ -62,15 +73,12 @@ class UartTest(unittest.TestCase):
 			self.port.flush()
 
 	def test_4_long_recv(self):
-		total = 0
-		to_send = interjection * 2
-		while total < len(to_send):
-			current = self.port.write(to_send[total:])
-			total += current
+		self.port.write(interjection)
 		self.port.flush()
 
 	def test_5_long_transmit(self):
-		pass
+		sent = self.port.read(len(ego))
+		self.assertEqual(sent, ego)
 
 	def tearDown(self):
 		self.port.close()
