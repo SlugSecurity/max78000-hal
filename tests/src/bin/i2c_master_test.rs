@@ -5,12 +5,16 @@
 #![no_std]
 
 use core::fmt::Write;
+use cortex_m::asm::delay;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 
 use embedded_hal::i2c::I2c;
+use max78000_hal::communication::{RxChannel, TxChannel};
+use max78000_hal::max78000::gpio0::IN;
 use max78000_hal::max78000::Peripherals;
+use max78000_hal::peripherals::i2c::master::InfTimeout;
 use max78000_hal::peripherals::i2c::BusSpeed;
 use max78000_hal::peripherals::oscillator::{Iso, IsoDivider, IsoFrequency};
 use max78000_hal::peripherals::timer::{Oscillator, Prescaler, Time};
@@ -49,13 +53,59 @@ fn main() -> ! {
 
     let mut stuff = [0u8; 16];
 
-    i2c_master.write(69, "ping".as_bytes()).unwrap();
+    i2c_master.set_target_addr(69);
+
+    let mut funny = [1u8, 2u8, 3u8, 4u8];
+
+    i2c_master.send(&mut funny).unwrap();
+
+    delay(100000);
+
+    writeln!(stdout, "ok we need funny back").unwrap();
+
+    i2c_master
+        .recv_with_data_timeout(&mut funny, &mut InfTimeout::new())
+        .unwrap();
+
+    delay(100000);
+
+    let mut big_funny = [0u8; 765];
+
+    let mut i: u8 = 1;
+
+    for byte in big_funny.as_mut() {
+        *byte = i;
+        i = i.wrapping_add(1);
+    }
+
+    i2c_master.send(&mut big_funny).unwrap();
+
+    delay(100000);
+
+    let mut recv_big_funny = [0u8; 765];
+
+    i2c_master
+        .recv_with_timeout(&mut recv_big_funny, &mut InfTimeout::new())
+        .unwrap();
+
+    for i in 0..765 {
+        assert!(recv_big_funny[i] == big_funny[i]);
+    }
+
+    delay(100000);
+
+    writeln!(stdout, "Funny: {:?}", funny).unwrap();
+
+    //i2c_master.write(69, "ping".as_bytes()).unwrap();
+
+    /*let mut timer2 = clock.new_timer(Time::Milliseconds(5000));
+    while !timer2.poll() {}
 
     writeln!(stdout, "Reading from slave...").unwrap();
 
     i2c_master.read(69, &mut stuff).unwrap();
 
-    writeln!(stdout, "Read {:?}", stuff).unwrap();
+    writeln!(stdout, "Read {:?}", stuff).unwrap();*/
 
     writeln!(stdout, "Finished i2c master tests!\n").unwrap();
 

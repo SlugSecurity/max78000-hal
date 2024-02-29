@@ -123,4 +123,7 @@ pub enum CommunicationError {
 
     /// An error that can occur if an internal error is encountered that should never happen.
     InternalError,
+
+    /// TODO: remove. custom error
+    CustomError(u32),
 }
