@@ -420,7 +420,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
         power_ctrl.reset_toggleable(ToggleableModule::TRNG);
 
         let trng = Trng::new(self.consumed_periphs.trng);
-        let csprng_timer_config = (timer::Oscillator::ISO, Prescaler::_4096);
+        let csprng_timer_config = (timer::Oscillator::IBRO, Prescaler::_4096);
 
         let csprng_timer = Clock::new(
             self.consumed_periphs.tmr0,
