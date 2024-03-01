@@ -234,11 +234,11 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
             ticks_per_ms: Cell::new(0f64),
         };
 
-        clock.configure(gcr_registers, prescaler, oscillator);
+        clock.configure(gcr_registers, oscillator, prescaler);
         clock
     }
 
-    fn configure(&self, gcr_registers: &GCR, prescaler: Prescaler, oscillator: Oscillator) {
+    fn configure(&self, gcr_registers: &GCR, oscillator: Oscillator, prescaler: Prescaler) {
         // Disable timer
         self.tmr_registers
             .ctrl0()
@@ -346,11 +346,11 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
     /// this. Otherwise, the operation fails with a [`TimerInUseError`].
     pub fn reconfigure(
         &self,
-        prescaler: Prescaler,
         oscillator: Oscillator,
+        prescaler: Prescaler,
     ) -> Result<(), TimerInUseError> {
         if self.active_timers.get() == 0 {
-            self.configure(self.gcr, prescaler, oscillator);
+            self.configure(self.gcr, oscillator, prescaler);
 
             Ok(())
         } else {

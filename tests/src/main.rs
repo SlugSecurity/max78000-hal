@@ -22,6 +22,9 @@ extern crate panic_semihosting;
 
 pub mod tests;
 
+const TIMER_0_OSC: Oscillator = Oscillator::ERTCO;
+const TIMER_0_PRESCALER: Prescaler = Prescaler::_1;
+
 /// Entry point for tests.
 #[entry]
 fn main() -> ! {
@@ -36,7 +39,7 @@ fn main() -> ! {
         IpoFrequency::_100MHz,
         IpoDivider::_1,
     )
-    .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+    .configure_timer_0(TIMER_0_OSC, TIMER_0_PRESCALER)
     .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
     .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
     .build();
