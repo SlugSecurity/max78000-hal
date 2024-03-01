@@ -70,9 +70,17 @@ pub fn run_timer_tests(
 
 fn reconfigure_tests(stdout: &mut hio::HostStream, clk: &Clock<TMR>) {
     {
-        let mut timer = clk.new_timer(Time::Milliseconds(5000));
+        let mut _timer = clk.new_timer(Time::Milliseconds(5000));
+
         clk.reconfigure(Oscillator::ISO, Prescaler::_1024)
             .expect_err("Reconfigured timer when active timer taken out.");
+    }
+
+    clk.reconfigure(Oscillator::ISO, Prescaler::_1024)
+        .expect("Couldn't reconfigure timer when no active timer taken out.");
+
+    {
+        let mut timer = clk.new_timer(Time::Milliseconds(5000));
 
         writeln!(stdout, "Polling for reconfigured timer for ~5 seconds...").unwrap();
 
