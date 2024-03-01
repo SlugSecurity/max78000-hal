@@ -42,11 +42,6 @@ pub fn run_timer_tests(
         let mut timer = clk1.new_timer(Time::Milliseconds(3000));
 
         writeln!(stdout, "New timer duration is {}", timer.duration_ticks()).unwrap();
-
-        /*for _ in 0..10 {
-            writeln!(stdout, "clock val is {}", clock.get_count()).unwrap();
-        }*/
-
         writeln!(stdout, "Poll for 3 seconds...").unwrap();
 
         while !timer.poll() {}
