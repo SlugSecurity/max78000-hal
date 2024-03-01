@@ -1,4 +1,3 @@
-use cortex_m_semihosting::dbg;
 use sha3::{digest::Update, Sha3_256};
 use zeroize::Zeroize;
 
@@ -29,7 +28,6 @@ impl<T: EntropySource> EntropySource for TrngEntropy<T> {
     }
 
     fn add_to_hasher(&self, hasher: &mut Sha3_256) {
-        dbg!("TRNG entropy: ", &self.entropy);
         hasher.update(&self.entropy);
         self.next.add_to_hasher(hasher);
     }

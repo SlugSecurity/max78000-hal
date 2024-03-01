@@ -1,4 +1,3 @@
-use cortex_m_semihosting::dbg;
 use sha3::{digest::Update, Sha3_256};
 use zeroize::Zeroize;
 
@@ -31,11 +30,8 @@ impl<T: EntropySource> EntropySource for Secret<T> {
             0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B,
             0x1C, 0x1D, 0x1E, 0x1F,
         ];
+
         assert_eq!(static_secret, self.secret);
-        dbg!(
-            "Secret entropy (already asserted against static test): ",
-            &self.secret
-        );
 
         hasher.update(&self.secret);
         self.next.add_to_hasher(hasher);
