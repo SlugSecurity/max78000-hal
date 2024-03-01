@@ -72,8 +72,8 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         self.target_addr
     }
 
-    // Reads up to 256 bytes to read slice, in single i2c transaction
-    pub(crate) fn master_recv<TMT: Timeout>(
+    /// Reads up to 256 bytes to read slice, in single i2c transaction
+    pub fn master_recv<TMT: Timeout>(
         &mut self,
         address: SevenBitAddress,
         read: &mut [u8],
@@ -129,11 +129,8 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         Ok(())
     }
 
-    pub(crate) fn master_send(
-        &mut self,
-        address: SevenBitAddress,
-        write: &[u8],
-    ) -> Result<(), ErrorKind> {
+    /// Sends bytes from slice to slave specified by address.
+    pub fn master_send(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
         self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
