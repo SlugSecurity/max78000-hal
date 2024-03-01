@@ -1,4 +1,5 @@
-use crate::communication::{CommunicationError, RxChannel, Timeout, TxChannel};
+use crate::communication::lower_layers::framing::{Frame, FramedTxChannel};
+use crate::communication::{CommunicationError, RxChannel, Timeout};
 use crate::peripherals::i2c::master::InfTimeout;
 use crate::peripherals::i2c::{I2CMaster, I2CSlave, SlavePollResult, GCRI2C};
 use cortex_m::asm::delay;
@@ -174,10 +175,10 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
     }
 }
 
-impl<'a, T: GCRI2C> TxChannel for I2CSlave<'a, T> {
+/*impl<'a, T: GCRI2C> TxChannel for I2CSlave<'a, T> {
     fn send(&mut self, src: &mut [u8]) -> crate::communication::Result<()> {
         if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new()) {
-            self.slave_send(&u32::to_le_bytes(src.len() as u32))
+            self.slave_send(&mut u32::to_le_bytes(src.len() as u32).into_iter())
                 .unwrap();
             for i in 0..((src.len() - 1) / 256) + 1 {
                 if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new())
@@ -197,6 +198,45 @@ impl<'a, T: GCRI2C> TxChannel for I2CMaster<'a, T> {
             .unwrap();
         delay(10000);
         self.write(self.target_addr, src).unwrap();
+        Ok(())
+    }
+}*/
+
+impl<'b, T: GCRI2C> FramedTxChannel for I2CSlave<'b, T> {
+    fn frame<'a, const FRAME_CT: usize>(
+        &mut self,
+        frame: impl FnOnce() -> Result<Frame<'a, FRAME_CT>, CommunicationError>,
+    ) -> Result<(), CommunicationError> {
+        let frame = frame()?;
+        let mut iter = frame.into_byte_iter();
+        let len = iter.length();
+        if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new()) {
+            self.slave_send(&mut u32::to_le_bytes(len as u32).into_iter())
+                .unwrap();
+            for _ in 0..((len - 1) / 256) + 1 {
+                if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new())
+                {
+                    self.slave_send(&mut iter).unwrap();
+                }
+            }
+            return Ok(());
+        }
+        Err(CommunicationError::InternalError)
+    }
+}
+
+impl<'b, T: GCRI2C> FramedTxChannel for I2CMaster<'b, T> {
+    fn frame<'a, const FRAME_CT: usize>(
+        &mut self,
+        frame: impl FnOnce() -> Result<Frame<'a, FRAME_CT>, CommunicationError>,
+    ) -> Result<(), CommunicationError> {
+        let frame = frame()?;
+        let mut iter = frame.into_byte_iter();
+        let len = iter.length();
+        self.write(self.target_addr, &u32::to_le_bytes(len as u32))
+            .unwrap();
+        delay(10000);
+        self.master_send(self.target_addr, &mut iter).unwrap();
         Ok(())
     }
 }

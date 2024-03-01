@@ -4,7 +4,7 @@ use crate::peripherals::i2c::{BusSpeed, I2CMaster, GCRI2C};
 use crate::peripherals::oscillator::SystemClock;
 use core::cell::{Ref, RefMut};
 use core::time::Duration;
-use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
+use embedded_hal::i2c::{ErrorKind, ErrorType, Operation, SevenBitAddress};
 
 impl<'a, T: GCRI2C> I2CMaster<'a, T> {
     pub(crate) fn new(
@@ -130,7 +130,12 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
     }
 
     /// Sends bytes from slice to slave specified by address.
-    pub fn master_send(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), ErrorKind> {
+    #[allow(clippy::while_let_on_iterator)]
+    pub fn master_send<I: Iterator<Item = u8>>(
+        &mut self,
+        address: SevenBitAddress,
+        write: &mut I,
+    ) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
         self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
@@ -146,13 +151,15 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
         // Write the desired data bytes to the I2Cn_FIFO register, up to the size of the transmit FIFO. (e.g., If the transmit
         // FIFO size is 8 bytes, the software may write one address byte and seven data bytes before starting the transaction.)
-        let mut num_written = 0;
-        for byte in write {
-            if self.i2c_regs.status().read().tx_full().bit() {
+        // let mut num_written = 0;
+
+        while !self.i2c_regs.status().read().tx_full().bit() {
+            if let Some(byte) = write.next() {
+                self.i2c_regs.fifo().write(|w| w.data().variant(byte));
+                // num_written += 1;
+            } else {
                 break;
             }
-            self.i2c_regs.fifo().write(|w| w.data().variant(*byte));
-            num_written += 1;
         }
 
         // Send a START condition by setting I2Cn_MSTCTRL.start = 1
@@ -174,19 +181,13 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
             return Err(ErrorKind::Bus);
         }
 
-        while num_written < write.len() {
-            while !self.i2c_regs.status().read().tx_full().bit() {
-                if num_written >= write.len() {
-                    break;
-                }
-                if self.i2c_regs.intfl0().read().data_err().bit() {
-                    return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown));
-                }
-                self.i2c_regs
-                    .fifo()
-                    .write(|w| w.data().variant(write[num_written]));
-                num_written += 1;
+        while let Some(byte) = write.next() {
+            while self.i2c_regs.status().read().tx_full().bit() && !self.i2c_regs.bus_error() {}
+            if self.i2c_regs.bus_error() {
+                return Err(ErrorKind::Bus);
             }
+            self.i2c_regs.fifo().write(|w| w.data().variant(byte));
+            // num_written += 1;
         }
 
         // Once the software writes all the desired bytes to the I2Cn_FIFO register; the software should set either
@@ -253,7 +254,7 @@ impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
     }
 
     fn write(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), Self::Error> {
-        self.master_send(address, write)
+        self.master_send(address, &mut write.iter().copied())
     }
 
     fn write_read(

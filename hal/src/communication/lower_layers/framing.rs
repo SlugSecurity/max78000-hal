@@ -88,4 +88,45 @@ impl<'a, const FRAME_CT: usize> Frame<'a, FRAME_CT> {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Converts the [`Frame`] into an iterator over the individual bytes of the frame
+    pub fn into_byte_iter(self) -> FrameIterator<'a, FRAME_CT> {
+        FrameIterator {
+            frame: self.frame_components,
+            current_slice_index: 0,
+            current_byte_index: 0,
+        }
+    }
+}
+
+/// An iterator over the bytes of a frame, not the slices
+pub struct FrameIterator<'a, const FRAME_SLICES: usize> {
+    frame: heapless::Vec<&'a [u8], FRAME_SLICES>,
+    current_slice_index: usize,
+    current_byte_index: usize,
+}
+
+impl<'a, const FRAME_SLICES: usize> FrameIterator<'a, FRAME_SLICES> {
+    /// Computes the frame length, in bytes
+    pub fn length(&self) -> usize {
+        self.frame.iter().fold(0, |sum, el| sum + el.len())
+    }
+}
+
+impl<'a, const FRAME_SLICES: usize> Iterator for FrameIterator<'a, FRAME_SLICES> {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(slice) = self.frame.get(self.current_slice_index) {
+            if let Some(&byte) = slice.get(self.current_byte_index) {
+                self.current_byte_index += 1;
+                Some(byte)
+            } else {
+                self.current_slice_index += 1;
+                self.current_byte_index = 0;
+                self.next()
+            }
+        } else {
+            None
+        }
+    }
 }

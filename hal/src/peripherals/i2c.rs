@@ -18,6 +18,8 @@ pub mod slave;
 pub trait GCRI2C: Deref<Target = i2c0::RegisterBlock> {
     /// Flush transmit and receive FIFO
     fn flush_fifo(&mut self);
+    /// Flush only the receive FIFO
+    fn flush_rx_fifo(&mut self);
     /// Is receive FIFO full?
     fn is_rx_fifo_full(&self) -> bool;
     /// Is receive FIFO empty?
@@ -41,6 +43,10 @@ macro_rules! gen_impl_gcri2c {
                 self.rxctrl0().modify(|_, w| w.flush().bit(true));
                 self.txctrl0().modify(|_, w| w.flush().bit(true));
                 while self.rxctrl0().read().flush().bit() || self.txctrl0().read().flush().bit() {}
+            }
+            fn flush_rx_fifo(&mut self) {
+                self.rxctrl0().modify(|_, w| w.flush().bit(true));
+                while self.rxctrl0().read().flush().bit() {}
             }
             fn is_rx_fifo_empty(&self) -> bool {
                 self.status().read().rx_em().bit()

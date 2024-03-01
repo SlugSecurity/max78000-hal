@@ -81,7 +81,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         tmt: &mut TMT,
     ) -> Result<SlavePollResult, ErrorKind> {
         self.i2c_regs.clear_interrupt_flags();
-        self.i2c_regs.flush_fifo();
+        self.i2c_regs.flush_rx_fifo();
         // Wait for I2Cn_INTFL0.addr_match = 1
         self.i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
@@ -156,7 +156,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
 
     /// Respond to master on i2c buf using buffer as the message to send
     /// sends a chain of 0s if bus exceeded but master still wants more
-    pub fn slave_send(&mut self, buffer: &[u8]) -> Result<u32, ErrorKind> {
+    pub fn slave_send<I: Iterator<Item = u8>>(&mut self, buffer: &mut I) -> Result<u32, ErrorKind> {
         // With I2Cn_CTRL.en = 0, initialize all relevant registers, including specifically for this mode I2Cn_CTRL. clkstr_dis = 0,
         // I2Cn_TXCTRL0[5:2] = 0x8 and I2Cn_TXCTRL0.preload_mode = 0. Don't forget to program I2Cn_CLKHI.hi and
         // I2Cn_HSCLK.hsclk_hi with appropriate values satisfying tSU;DAT (and HS tSU;DAT).
@@ -169,20 +169,22 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
             .intfl0()
             .modify(|_, w| w.tx_lockout().variant(true));
         let mut num_written = 0;
-        while num_written < buffer.len() && !self.i2c_regs.intfl0().read().done().bit() {
+
+        let mut done = false;
+        while !self.i2c_regs.intfl0().read().done().bit() && !done {
             if self.i2c_regs.bus_error() {
                 return Err(ErrorKind::Bus);
             }
-            while !self.i2c_regs.is_tx_fifo_full() {
+            while !self.i2c_regs.is_tx_fifo_full() && !self.i2c_regs.intfl0().read().done().bit() {
                 if self.i2c_regs.bus_error() {
                     return Err(ErrorKind::Bus);
                 }
-                if num_written < buffer.len() {
-                    self.i2c_regs
-                        .fifo()
-                        .write(|w| w.data().variant(buffer[num_written]));
+                // important: we must only pull out of the iterator if we know the master needs it
+                if let Some(byte) = buffer.next() {
+                    self.i2c_regs.fifo().write(|w| w.data().variant(byte));
                     num_written += 1;
                 } else {
+                    done = true;
                     break;
                 }
             }
