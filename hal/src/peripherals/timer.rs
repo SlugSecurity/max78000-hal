@@ -1,5 +1,6 @@
 //! Peripheral API for Timers
 
+use core::cell::Cell;
 use core::ops::Deref;
 use core::time::Duration;
 use max78000::gcr::clkctrl::ERTCO_EN_A;
@@ -74,7 +75,8 @@ gen_impl_tpgcr!(TMR3, tmr3);
 pub struct Clock<'a, T: TimerPeripheralGCR> {
     gcr: &'a GCR,
     tmr_registers: T,
-    ticks_per_ms: f64,
+    ticks_per_ms: Cell<f64>,
+    active_timers: Cell<usize>,
 }
 
 /// Oscillator options for the Clock struct
@@ -96,6 +98,15 @@ pub struct Timer<'clock, 'gcr, T: TimerPeripheralGCR> {
     pub end: u32,
     clock: &'clock Clock<'gcr, T>,
     finished: bool,
+}
+
+impl<'clock, 'gcr, T: TimerPeripheralGCR> Drop for Timer<'clock, 'gcr, T> {
+    fn drop(&mut self) {
+        // Decrease the active timer counter for the reconfigure function.
+        self.clock
+            .active_timers
+            .set(self.clock.active_timers.get() - 1);
+    }
 }
 
 impl<'clock, 'gcr, T: TimerPeripheralGCR> Timeout for Timer<'clock, 'gcr, T> {
@@ -162,6 +173,11 @@ impl<'clock, 'gcr, T: TimerPeripheralGCR> Timer<'clock, 'gcr, T> {
     }
 }
 
+/// Error type that represents that an operation cannot be performed
+/// because the timer is in use.
+#[derive(Debug, Copy, Clone)]
+pub struct TimerInUseError;
+
 /// Represents a time value for starting a timer
 pub enum Time {
     /// Raw clock ticks, i.e, number of oscillations / prescaler
@@ -211,17 +227,18 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
         oscillator: Oscillator,
         prescaler: Prescaler,
     ) -> Self {
-        let mut clock = Clock {
+        let clock = Clock {
+            active_timers: Cell::new(0),
             gcr: gcr_registers,
             tmr_registers,
-            ticks_per_ms: 0f64,
+            ticks_per_ms: Cell::new(0f64),
         };
 
         clock.configure(gcr_registers, prescaler, oscillator);
         clock
     }
 
-    fn configure(&mut self, gcr_registers: &GCR, prescaler: Prescaler, oscillator: Oscillator) {
+    fn configure(&self, gcr_registers: &GCR, prescaler: Prescaler, oscillator: Oscillator) {
         // Disable timer
         self.tmr_registers
             .ctrl0()
@@ -304,7 +321,7 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
             Oscillator::ERTCO => 32.768, // 32.768 Khz
         };
 
-        self.ticks_per_ms = clks_per_ms / clkdiv;
+        self.ticks_per_ms.set(clks_per_ms / clkdiv);
 
         // Set time to repeat every 2^32 ticks (basically highest period possible)
         self.tmr_registers
@@ -323,9 +340,22 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
         while !self.tmr_registers.ctrl0().read().clken_a().bit() {}
     }
 
-    /// Consume `Clock`, returning the underlying timer registers
-    pub fn consume(self) -> T {
-        self.tmr_registers
+    /// Modify the prescaler and oscillator for this timer. This operation
+    /// only works if no timers are actively in use. In other words, any
+    /// [`Timer`] linked to this Clock must be dropped prior to calling
+    /// this. Otherwise, the operation fails with a [`TimerInUseError`].
+    pub fn reconfigure(
+        &self,
+        prescaler: Prescaler,
+        oscillator: Oscillator,
+    ) -> Result<(), TimerInUseError> {
+        if self.active_timers.get() == 0 {
+            self.configure(self.gcr, prescaler, oscillator);
+
+            Ok(())
+        } else {
+            Err(TimerInUseError)
+        }
     }
 
     /// Return raw clk count val
@@ -335,12 +365,12 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
 
     /// Convert milliseconds to ticks
     pub fn ms_to_ticks(&self, ms: u32) -> u32 {
-        ((ms as f64) * self.ticks_per_ms) as u32
+        ((ms as f64) * self.ticks_per_ms.get()) as u32
     }
 
     /// Convert ticks to milliseconds
     pub fn ticks_to_ms(&self, ticks: u32) -> u32 {
-        (ticks as f64 / self.ticks_per_ms) as u32
+        (ticks as f64 / self.ticks_per_ms.get()) as u32
     }
 
     /// Start a new timer with given `Time`, which can be expressed with either raw `Ticks`
@@ -348,6 +378,7 @@ impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
     ///
     /// Caveat: Will only work reliably for durations of less than `2^31` ticks.
     pub fn new_timer(&self, duration: Time) -> Timer<T> {
+        self.active_timers.set(self.active_timers.get() + 1);
         let current = self.get_count();
         match duration {
             Time::Ticks(ticks) => {
