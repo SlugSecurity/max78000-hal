@@ -5,6 +5,8 @@ use crate::peripherals::i2c::{I2CMaster, I2CSlave, SlavePollResult, GCRI2C};
 use cortex_m::asm::delay;
 use embedded_hal::i2c::{ErrorKind, I2c, SevenBitAddress};
 
+static MASTER_DELAY: u32 = 10;
+
 /// Allows for bounded transmit and receive operations
 pub trait BoundedTransmitMaster {
     /// Send bytes, letting the slave know in advance how many there are
@@ -131,16 +133,16 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
     ) -> crate::communication::Result<usize> {
         // TODO: remove unwraps
         let mut bytes_sent_buf = [0u8; 4];
-        delay(10000);
+        delay(MASTER_DELAY);
         if let Ok(()) = self.master_recv(self.target_addr, &mut bytes_sent_buf, tmr, true) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
-                delay(10000); // TODO: mitigate these delays bc this is... a lot
+                delay(MASTER_DELAY); // TODO: mitigate these delays bc this is... a lot
                 self.master_recv(self.target_addr, &mut dest[i * 256..], tmr, true)
                     .unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
-            delay(10000);
+            delay(MASTER_DELAY);
             self.master_recv(self.target_addr, &mut dest[leftover..], tmr, true)
                 .unwrap();
             return Ok(bytes_to_read as usize);
@@ -157,16 +159,16 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
         TMT: Timeout,
     {
         let mut bytes_sent_buf = [0u8; 4];
-        delay(10000);
+        delay(MASTER_DELAY);
         if let Ok(()) = self.master_recv(self.target_addr, &mut bytes_sent_buf, tmr, false) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
-                delay(10000); // This delay is necessary for the slave to catch up
+                delay(MASTER_DELAY); // This delay is necessary for the slave to catch up
                 self.master_recv(self.target_addr, &mut dest[i * 256..], tmr, false)
                     .unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
-            delay(10000);
+            delay(MASTER_DELAY);
             self.master_recv(self.target_addr, &mut dest[leftover..], tmr, false)
                 .unwrap();
             return Ok(bytes_to_read as usize);
@@ -196,7 +198,7 @@ impl<'a, T: GCRI2C> TxChannel for I2CMaster<'a, T> {
     fn send(&mut self, src: &mut [u8]) -> crate::communication::Result<()> {
         self.write(self.target_addr, &u32::to_le_bytes(src.len() as u32))
             .unwrap();
-        delay(10000);
+        delay(MASTER_DELAY);
         self.write(self.target_addr, src).unwrap();
         Ok(())
     }
@@ -235,7 +237,7 @@ impl<'b, T: GCRI2C> FramedTxChannel for I2CMaster<'b, T> {
         let len = iter.length();
         self.write(self.target_addr, &u32::to_le_bytes(len as u32))
             .unwrap();
-        delay(10000);
+        delay(MASTER_DELAY);
         self.master_send(self.target_addr, &mut iter).unwrap();
         Ok(())
     }
