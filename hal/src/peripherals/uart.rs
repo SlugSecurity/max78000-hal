@@ -24,7 +24,7 @@
 //!     IpoFrequency::_100MHz,
 //!     IpoDivider::_1,
 //! )
-//! .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+//! .configure_timer_0(Oscillator::ISO, Prescaler::_4096)
 //! .build();
 //! // we need timers for the timeout receive methods
 //! let clk0 = manager.timer_0().unwrap();
