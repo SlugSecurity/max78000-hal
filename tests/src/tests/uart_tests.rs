@@ -223,5 +223,6 @@ pub fn run_uart_test(
     writeln!(stdout, "Finished UART tests...\n").unwrap();
 
     // reset clock to initial config
+    drop(timer);
     clk0.reconfigure(TIMER_0_OSC, TIMER_0_PRESCALER).unwrap();
 }
