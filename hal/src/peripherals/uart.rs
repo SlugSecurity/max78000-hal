@@ -210,10 +210,6 @@ impl<T: UartInstance> Uart<'_, T> {
                 }
             }
 
-            if self.regs.int_fl().read().rx_ov().bit() {
-                panic!("rx fifo overrun");
-            }
-
             dest[index] = self.regs.fifo().read().data().bits();
             index += 1;
             if USE_DELIMITER && line_ending.matches_end(&dest[0..index]) {
