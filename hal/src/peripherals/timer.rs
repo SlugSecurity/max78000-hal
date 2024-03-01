@@ -12,7 +12,6 @@ use max78000::{TMR, TMR1, TMR2, TMR3};
 
 use crate::communication::Timeout;
 
-// TODO: use peripheral API when done
 /// Auxiliary trait that only the TMR, TMR1, TMR2, and TMR3 registers can implement;
 /// Allows peripheral toggle and reset functionality to said peripherals if GCR regs
 /// are provided.
@@ -72,7 +71,8 @@ gen_impl_tpgcr!(TMR3, tmr3);
 /// // will stall for 5 seconds
 /// while !timer.poll() {};
 /// ```
-pub struct Clock<T: TimerPeripheralGCR> {
+pub struct Clock<'a, T: TimerPeripheralGCR> {
+    gcr: &'a GCR,
     tmr_registers: T,
     ticks_per_ms: f64,
 }
@@ -89,16 +89,16 @@ pub enum Oscillator {
 
 /// Instance of a timer. Internally keeps clock start and end values, and a reference to the clock
 /// that created it.
-pub struct Timer<'a, T: TimerPeripheralGCR> {
+pub struct Timer<'clock, 'gcr, T: TimerPeripheralGCR> {
     /// Start timestamp
     pub start: u32,
     /// End timestamp
     pub end: u32,
-    clock: &'a Clock<T>,
+    clock: &'clock Clock<'gcr, T>,
     finished: bool,
 }
 
-impl<'a, T: TimerPeripheralGCR> Timeout for Timer<'a, T> {
+impl<'clock, 'gcr, T: TimerPeripheralGCR> Timeout for Timer<'clock, 'gcr, T> {
     fn poll(&mut self) -> bool {
         self.poll()
     }
@@ -112,8 +112,8 @@ impl<'a, T: TimerPeripheralGCR> Timeout for Timer<'a, T> {
     }
 }
 
-impl<'a, T: TimerPeripheralGCR> Timer<'a, T> {
-    fn new(start: u32, end: u32, clock: &'a Clock<T>) -> Self {
+impl<'clock, 'gcr, T: TimerPeripheralGCR> Timer<'clock, 'gcr, T> {
+    fn new(start: u32, end: u32, clock: &'clock Clock<'gcr, T>) -> Self {
         Self {
             start,
             end,
@@ -200,34 +200,40 @@ pub enum Prescaler {
     _4096,
 }
 
-impl<T: TimerPeripheralGCR> Clock<T> {
+impl<'gcr, T: TimerPeripheralGCR> Clock<'gcr, T> {
     /// Creates a new `Clock`, taking ownership of the timer peripheral register block,
-    /// a temporary reference to the GCR registers for initial configuration, as
+    /// a reference to the GCR registers for initial configuration, as
     /// well as config values for the oscillator source and the prescaler value, which will divide
     /// the oscillator source to only increment count once per `prescaler` ticks.
     pub(crate) fn new(
         tmr_registers: T,
-        gcr_registers: &GCR,
+        gcr_registers: &'gcr GCR,
         oscillator: Oscillator,
         prescaler: Prescaler,
     ) -> Self {
-        let mut this = Clock {
+        let mut clock = Clock {
+            gcr: gcr_registers,
             tmr_registers,
             ticks_per_ms: 0f64,
         };
 
+        clock.configure(gcr_registers, prescaler, oscillator);
+        clock
+    }
+
+    fn configure(&mut self, gcr_registers: &GCR, prescaler: Prescaler, oscillator: Oscillator) {
         // Disable timer
-        this.tmr_registers
+        self.tmr_registers
             .ctrl0()
             .modify(|_, w| w.en_a().variant(false));
-        this.tmr_registers
+        self.tmr_registers
             .ctrl0()
             .modify(|_, w| w.en_b().variant(false));
-        while this.tmr_registers.ctrl1().read().clken_a().bit() {}
-        while this.tmr_registers.ctrl1().read().clken_b().bit() {}
+        while self.tmr_registers.ctrl1().read().clken_a().bit() {}
+        while self.tmr_registers.ctrl1().read().clken_b().bit() {}
 
         // Configure for continuous mode
-        this.tmr_registers.ctrl0().modify(|_, w| {
+        self.tmr_registers.ctrl0().modify(|_, w| {
             w.mode_a()
                 .variant(MODE_A_A::CONTINUOUS)
                 .clkdiv_a()
@@ -248,7 +254,7 @@ impl<T: TimerPeripheralGCR> Clock<T> {
                 })
         });
         // Configure oscillator and set the timer to be cascading 32 bit
-        this.tmr_registers.ctrl1().modify(|_, w| {
+        self.tmr_registers.ctrl1().modify(|_, w| {
             w.clksel_a()
                 .variant(match oscillator {
                     //Oscillator::PCLK => 0,
@@ -298,25 +304,23 @@ impl<T: TimerPeripheralGCR> Clock<T> {
             Oscillator::ERTCO => 32.768, // 32.768 Khz
         };
 
-        this.ticks_per_ms = clks_per_ms / clkdiv;
+        self.ticks_per_ms = clks_per_ms / clkdiv;
 
         // Set time to repeat every 2^32 ticks (basically highest period possible)
-        this.tmr_registers
+        self.tmr_registers
             .cmp()
             .write(|w| w.compare().variant(0xffffffff));
-        this.tmr_registers.cnt().write(|w| w.count().variant(1));
+        self.tmr_registers.cnt().write(|w| w.count().variant(1));
 
         // enable the timer clock
-        this.tmr_registers
+        self.tmr_registers
             .ctrl0()
             .modify(|_, w| w.clken_a().variant(true));
-        while !this.tmr_registers.ctrl1().read().clkrdy_a().bit() {}
-        this.tmr_registers
+        while !self.tmr_registers.ctrl1().read().clkrdy_a().bit() {}
+        self.tmr_registers
             .ctrl0()
             .modify(|_, w| w.en_a().variant(true));
-        while !this.tmr_registers.ctrl0().read().clken_a().bit() {}
-
-        this
+        while !self.tmr_registers.ctrl0().read().clken_a().bit() {}
     }
 
     /// Consume `Clock`, returning the underlying timer registers

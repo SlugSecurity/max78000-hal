@@ -467,10 +467,10 @@ pub struct PeripheralManager<'a> {
     gpio0: Gpio0,
     gpio1: Gpio1,
     gpio2: Gpio2,
-    timer_0: RefCell<Clock<TMR>>,
-    timer_1: RefCell<Clock<TMR1>>,
-    timer_2: RefCell<Clock<TMR2>>,
-    timer_3: RefCell<Clock<TMR3>>,
+    timer_0: RefCell<Clock<'a, TMR>>,
+    timer_1: RefCell<Clock<'a, TMR1>>,
+    timer_2: RefCell<Clock<'a, TMR2>>,
+    timer_3: RefCell<Clock<'a, TMR3>>,
     trng: RefCell<Trng>,
 }
 
