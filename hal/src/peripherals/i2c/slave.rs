@@ -180,6 +180,10 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
                     return Err(ErrorKind::Bus);
                 }
                 // important: we must only pull out of the iterator if we know the master needs it
+                if num_written >= 256 {
+                    done = true;
+                    break;
+                }
                 if let Some(byte) = buffer.next() {
                     self.i2c_regs.fifo().write(|w| w.data().variant(byte));
                     num_written += 1;
