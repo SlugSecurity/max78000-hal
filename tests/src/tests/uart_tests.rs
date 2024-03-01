@@ -2,7 +2,9 @@
 
 use core::fmt::Write;
 use cortex_m_semihosting::hio;
-use max78000_hal::communication::{CommunicationError, RxChannel, TxChannel};
+use max78000_hal::communication::{
+    CommunicationError, LineDelimitedRxChannel, LineEnding, RxChannel, TxChannel,
+};
 use max78000_hal::max78000::TMR2;
 use max78000_hal::peripherals::timer::Time::Milliseconds;
 use max78000_hal::peripherals::{
@@ -133,4 +135,41 @@ pub fn run_uart_test(
     assert_eq!(uart.send(&mut big_buf[0..EGO.len()]), Ok(()));
 
     writeln!(stdout, "Finished UART tests...\n").unwrap();
+
+    // recv_line test
+    let mut line_buf = [0u8; 30];
+    timer = clk0.new_timer(Milliseconds(500));
+    assert_eq!(
+        uart.recv_line_with_data_timeout(&mut line_buf, &mut timer, LineEnding::LF),
+        Ok(11)
+    );
+    assert_eq!(&line_buf[0..11], b"short line\n");
+
+    line_buf = [0u8; 30];
+    assert_eq!(
+        uart.recv_line_with_data_timeout(&mut line_buf, &mut timer, LineEnding::CR),
+        Ok(19)
+    );
+    assert_eq!(&line_buf[0..19], b"another short line\r");
+
+    line_buf = [0u8; 30];
+    assert_eq!(
+        uart.recv_line_with_data_timeout(&mut line_buf, &mut timer, LineEnding::CRLF),
+        Ok(11)
+    );
+    assert_eq!(&line_buf[0..11], b"CRLF line\r\n");
+
+    line_buf = [0u8; 30];
+    assert_eq!(
+        uart.recv_line_with_data_timeout(&mut line_buf, &mut timer, LineEnding::LF),
+        Err(CommunicationError::RecvError(30))
+    );
+    assert_eq!(line_buf, *b"a line that fills up the buffe");
+
+    line_buf = [0u8; 30];
+    assert_eq!(
+        uart.recv_line_with_data_timeout(&mut line_buf, &mut timer, LineEnding::LF),
+        Ok(19)
+    );
+    assert_eq!(&line_buf[0..19], b"r before a newline\n");
 }

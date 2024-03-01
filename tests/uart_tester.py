@@ -80,6 +80,13 @@ class UartTest(unittest.TestCase):
 		sent = self.port.read(len(ego))
 		self.assertEqual(sent, ego)
 
+	def test_6_recv_line(self):
+		self.port.write(b'short line\n'
+				  + b'another short line\r'
+				  + b'CRLF line\r\n'
+				  + b'a line that fills up the buffer before a newline\n')
+		self.port.flush()
+
 	def tearDown(self):
 		self.port.close()
 
