@@ -73,12 +73,17 @@ class UartTest(unittest.TestCase):
 			self.port.flush()
 
 	def test_4_long_recv(self):
-		self.port.write(interjection)
-		self.port.flush()
+		# 2 oscillators * 13 prescalers
+		for i in range(2 * 13):
+			time.sleep(0.1)
+			self.port.write(interjection)
+			self.port.flush()
 
 	def test_5_long_transmit(self):
-		sent = self.port.read(len(ego))
-		self.assertEqual(sent, ego)
+		for i in range(2 * 13):
+			time.sleep(0.1)
+			sent = self.port.read(len(ego))
+			self.assertEqual(sent, ego)
 
 	def test_6_recv_line(self):
 		self.port.write(b'short line\n'
