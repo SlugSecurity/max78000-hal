@@ -68,16 +68,20 @@ pub fn run_timer_tests(
         while !timer.poll() {}
     }
 
-    reconfigure_tests(&clk0);
+    reconfigure_tests(stdout, &clk0);
 
     writeln!(stdout, "Timer tests complete!").unwrap();
 }
 
-fn reconfigure_tests(clk: &Clock<TMR>) {
+fn reconfigure_tests(stdout: &mut hio::HostStream, clk: &Clock<TMR>) {
     {
-        let _timer = clk.new_timer(Time::Milliseconds(5000));
+        let mut timer = clk.new_timer(Time::Milliseconds(5000));
         clk.reconfigure(Oscillator::ISO, Prescaler::_1024)
             .expect_err("Reconfigured timer when active timer taken out.");
+
+        writeln!(stdout, "Polling for reconfigured timer for ~5 seconds...").unwrap();
+
+        while !timer.poll() {}
     }
 
     clk.reconfigure(TIMER_0_OSC, TIMER_0_PRESCALER)
