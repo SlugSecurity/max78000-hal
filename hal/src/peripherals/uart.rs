@@ -55,7 +55,8 @@ use super::gpio::{
 };
 use super::{PeripheralHandle, PeripheralManager};
 use crate::communication::{
-    CommunicationError, Result as CommunicationResult, RxChannel, Timeout, TxChannel,
+    CommunicationError, LineDelimitedRxChannel, LineEnding, Result as CommunicationResult,
+    RxChannel, Timeout, TxChannel,
 };
 
 /// A trait for all instances of UART peripherals, ie: UART0, UART1, UART2, UART3.
@@ -194,10 +195,11 @@ pub struct Uart<'a, T: UartInstance> {
 
 impl<T: UartInstance> Uart<'_, T> {
     #[inline(always)]
-    fn internal_recv<const RESET_EVERY_BYTE: bool>(
+    fn internal_recv<const RESET_EVERY_BYTE: bool, const USE_DELIMITER: bool>(
         &mut self,
         dest: &mut [u8],
         tmr: &mut impl Timeout,
+        line_ending: LineEnding,
     ) -> CommunicationResult<usize> {
         let mut index: usize = 0;
         while index < dest.len() {
@@ -209,12 +211,20 @@ impl<T: UartInstance> Uart<'_, T> {
             }
             dest[index] = self.regs.fifo().read().data().bits();
             index += 1;
+            if USE_DELIMITER && line_ending.matches_end(&dest[0..index]) {
+                return Ok(index);
+            }
 
             if RESET_EVERY_BYTE {
                 tmr.reset();
             }
         }
-        Ok(index)
+
+        if USE_DELIMITER && !line_ending.matches_end(dest) {
+            Err(CommunicationError::RecvError(index))
+        } else {
+            Ok(index)
+        }
     }
 }
 
@@ -224,7 +234,8 @@ impl<T: UartInstance> RxChannel for Uart<'_, T> {
         dest: &mut [u8],
         tmr: &mut U,
     ) -> CommunicationResult<usize> {
-        self.internal_recv::<true>(dest, tmr)
+        // the line ending here is arbitrary since USE_DELIMITER is false
+        self.internal_recv::<true, false>(dest, tmr, LineEnding::CR)
     }
 
     fn recv_with_timeout<U: Timeout>(
@@ -232,7 +243,33 @@ impl<T: UartInstance> RxChannel for Uart<'_, T> {
         dest: &mut [u8],
         tmr: &mut U,
     ) -> CommunicationResult<usize> {
-        self.internal_recv::<false>(dest, tmr)
+        self.internal_recv::<false, false>(dest, tmr, LineEnding::CR)
+    }
+}
+
+impl<T: UartInstance> LineDelimitedRxChannel for Uart<'_, T> {
+    fn recv_line_with_data_timeout<U: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut U,
+        line_ending: LineEnding,
+    ) -> CommunicationResult<usize>
+    where
+        U: Timeout,
+    {
+        self.internal_recv::<true, true>(dest, tmr, line_ending)
+    }
+
+    fn recv_line_with_timeout<U: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut U,
+        line_ending: LineEnding,
+    ) -> CommunicationResult<usize>
+    where
+        U: Timeout,
+    {
+        self.internal_recv::<false, true>(dest, tmr, line_ending)
     }
 }
 
