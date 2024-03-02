@@ -16,14 +16,18 @@ use max78000_hal::{
         PeripheralManagerBuilder, SplittablePeripheral,
     },
 };
-use tests::{bit_band_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests};
+use tests::{
+    bit_band_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests, uart_tests,
+};
 
 extern crate panic_semihosting;
 
 pub mod tests;
 
-const TIMER_0_OSC: Oscillator = Oscillator::ERTCO;
-const TIMER_0_PRESCALER: Prescaler = Prescaler::_1;
+/// Oscillator to use for TMR0 during tests
+pub const TIMER_0_OSC: Oscillator = Oscillator::ERTCO;
+/// Prescaler to use for TMR0 during tests
+pub const TIMER_0_PRESCALER: Prescaler = Prescaler::_1;
 
 /// Entry point for tests.
 #[entry]
@@ -73,6 +77,12 @@ fn main() -> ! {
         manager.gpio1(),
         manager.gpio2(),
         &mut stdout,
+    );
+
+    uart_tests::run_uart_test(
+        &mut stdout,
+        manager.build_uart().unwrap(),
+        manager.timer_0().unwrap(),
     );
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();

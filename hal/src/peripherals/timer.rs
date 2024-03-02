@@ -80,6 +80,7 @@ pub struct Clock<'a, T: TimerPeripheralGCR> {
 }
 
 /// Oscillator options for the Clock struct
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Oscillator {
     /// IBRO - 7.3728MHz Internal Baud Rate Oscillator
     IBRO,
@@ -179,6 +180,7 @@ impl<'clock, 'gcr, T: TimerPeripheralGCR> Timer<'clock, 'gcr, T> {
 pub struct TimerInUseError;
 
 /// Represents a time value for starting a timer
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Time {
     /// Raw clock ticks, i.e, number of oscillations / prescaler
     Ticks(u32),
@@ -187,6 +189,7 @@ pub enum Time {
 }
 
 /// Prescaler values to divide oscillator by. Available in powers of two from `0` to `12`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Prescaler {
     /// Divide by 1
     _1,
