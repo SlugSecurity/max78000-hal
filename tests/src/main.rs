@@ -18,11 +18,17 @@ use max78000_hal::{
 };
 use tests::{
     bit_band_tests, csprng_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests,
+    uart_tests,
 };
 
 extern crate panic_semihosting;
 
 pub mod tests;
+
+/// Oscillator to use for TMR0 during tests
+pub const TIMER_0_OSC: Oscillator = Oscillator::ERTCO;
+/// Prescaler to use for TMR0 during tests
+pub const TIMER_0_PRESCALER: Prescaler = Prescaler::_1;
 
 /// Entry point for tests.
 #[entry]
@@ -47,7 +53,7 @@ fn main() -> ! {
         // WARNING: This is for testing purposes only. Do NOT copy this into production code. Production code MUST have a secure static secret.
         |buf| buf.copy_from_slice(&static_secret),
     )
-    .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
+    .configure_timer_0(TIMER_0_OSC, TIMER_0_PRESCALER)
     .configure_timer_1(Oscillator::IBRO, Prescaler::_512)
     .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
     .build();
@@ -83,6 +89,12 @@ fn main() -> ! {
         manager.gpio1(),
         manager.gpio2(),
         &mut stdout,
+    );
+
+    uart_tests::run_uart_test(
+        &mut stdout,
+        manager.build_uart().unwrap(),
+        manager.timer_0().unwrap(),
     );
 
     writeln!(stdout, "Finished MAX78000 HAL tests!\n").unwrap();

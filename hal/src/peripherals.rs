@@ -53,6 +53,7 @@ use self::power::{PowerControl, ToggleableModule};
 use self::random::{CsprngInitArgs, EntropyGatherer};
 use self::timer::{Clock, Prescaler};
 use self::trng::Trng;
+use self::uart::{Uart0, UartBuilder, UartBuilderError};
 
 pub use rand_chacha;
 
@@ -61,6 +62,7 @@ pub mod adc;
 pub mod delay;
 pub mod gpio;
 pub mod serial;
+pub mod uart;
 pub mod watchdog;
 
 // Non embedded HAL peripherals.
@@ -139,8 +141,6 @@ pub struct RemainingPeripherals {
     pub tmr4: TMR4,
     /// TMR5
     pub tmr5: TMR5,
-    /// UART
-    pub uart: UART,
     /// UART1
     pub uart1: UART1,
     /// UART2
@@ -180,6 +180,7 @@ pub struct PeripheralsToConsume {
     tmr1: TMR1,
     tmr2: TMR2,
     tmr3: TMR3,
+    uart: UART,
 }
 
 /// Extension trait for splitting peripherals for the [`PeripheralManager`].
@@ -215,6 +216,7 @@ impl SplittablePeripheral for Peripherals {
             tmr1: self.TMR1,
             tmr2: self.TMR2,
             tmr3: self.TMR3,
+            uart: self.UART,
         };
 
         let to_borrow = PeripheralsToBorrow {
@@ -255,7 +257,6 @@ impl SplittablePeripheral for Peripherals {
             spi1: self.SPI1,
             tmr4: self.TMR4,
             tmr5: self.TMR5,
-            uart: self.UART,
             uart1: self.UART1,
             uart2: self.UART2,
             uart3: self.UART3,
@@ -282,12 +283,14 @@ impl<'a, T> PeripheralHandle<'a, T> {
 impl<'a, T> Deref for PeripheralHandle<'a, T> {
     type Target = T;
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -422,7 +425,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
         let trng = Trng::new(self.consumed_periphs.trng);
         let csprng_timer_config = (timer::Oscillator::IBRO, Prescaler::_4096);
 
-        let csprng_timer = Clock::new(
+        let timer_0 = Clock::new(
             self.consumed_periphs.tmr0,
             &self.borrowed_periphs.gcr,
             csprng_timer_config.0,
@@ -431,11 +434,11 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
 
         let initialized_csprng = EntropyGatherer::init_csprng(CsprngInitArgs {
             trng: &trng,
-            csprng_timer: &csprng_timer,
+            csprng_timer: &timer_0,
             get_rng_static_secret: self.get_rng_static_secret,
         });
 
-        self.consumed_periphs.tmr0 = csprng_timer.consume();
+        timer_0.reconfigure(self.timer_0_cfg.0, self.timer_0_cfg.1);
 
         PeripheralManager {
             power_ctrl,
@@ -457,6 +460,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
             gpio1: new_gpio1(self.consumed_periphs.gpio1),
             gpio2: new_gpio2(self.consumed_periphs.gpio2),
             trng: RefCell::new(trng),
+            uart: RefCell::new(self.consumed_periphs.uart),
             csprng: RefCell::new(initialized_csprng),
         }
     }
@@ -504,11 +508,12 @@ pub struct PeripheralManager<'a> {
     gpio0: Gpio0,
     gpio1: Gpio1,
     gpio2: Gpio2,
-    timer_0: RefCell<Clock<TMR>>,
-    timer_1: RefCell<Clock<TMR1>>,
-    timer_2: RefCell<Clock<TMR2>>,
-    timer_3: RefCell<Clock<TMR3>>,
+    timer_0: RefCell<Clock<'a, TMR>>,
+    timer_1: RefCell<Clock<'a, TMR1>>,
+    timer_2: RefCell<Clock<'a, TMR2>>,
+    timer_3: RefCell<Clock<'a, TMR3>>,
     trng: RefCell<Trng>,
+    uart: RefCell<UART>,
     csprng: RefCell<ChaCha20Rng>,
 }
 
@@ -528,6 +533,13 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
 
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
+
+    enable_rst_periph_fn!(uart, UART, uart, ToggleableModule::UART0);
+
+    /// Create a [`UartBuilder`] for the UART0
+    pub fn build_uart(&'a self) -> Result<UartBuilder<Uart0>, UartBuilderError> {
+        UartBuilder::new(self)
+    }
 
     no_enable_rst_periph_fn!(csprng, ChaCha20Rng, csprng);
 }

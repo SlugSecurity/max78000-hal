@@ -64,7 +64,7 @@ impl<T: RxChannel> XChacha20Poly1305RxChannel<T> {
 
         // Check that the destination buffer has space for at least one byte of ciphertext.
         if dest.len() <= METADATA_SIZE {
-            return Err(CommunicationError::RecvError);
+            return Err(CommunicationError::RecvError(0));
         }
 
         // Read message from inner channel.
@@ -73,7 +73,7 @@ impl<T: RxChannel> XChacha20Poly1305RxChannel<T> {
 
         // Check we have at least one byte of ciphertext.
         if dest.len() <= METADATA_SIZE {
-            return Err(CommunicationError::RecvError);
+            return Err(CommunicationError::RecvError(0));
         }
 
         // Split message from metadata.
@@ -85,7 +85,7 @@ impl<T: RxChannel> XChacha20Poly1305RxChannel<T> {
         // Decrypt in place using the ciphertext, nonce, and tag
         self.decryptor
             .decrypt_in_place_detached(nonce.into(), b"", msg_body, tag.into())
-            .map_err(|_| CommunicationError::RecvError)?;
+            .map_err(|_| CommunicationError::RecvError(0))?;
 
         // Our decrypted buffer is at the beginning of our slice and we return the length of it.
         Ok(msg_body.len())

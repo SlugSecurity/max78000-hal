@@ -7,3 +7,4 @@ pub mod gpio_tests;
 pub mod oscillator_tests;
 pub mod timer_tests;
 pub mod trng_tests;
+pub mod uart_tests;
