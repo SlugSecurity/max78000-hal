@@ -75,7 +75,6 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
     /// Reads up to 256 bytes to read slice, in single i2c transaction
     pub fn recv_raw<TMT: Timeout>(
         &mut self,
-        address: SevenBitAddress,
         read: &mut [u8],
         tmt: &mut TMT,
         rst_on_byte: bool,
@@ -93,7 +92,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         // Write the I2C slave address byte to the I2Cn_FIFO register with the R/W bit set to 1
         self.i2c_regs
             .fifo()
-            .write(|w| w.data().variant((address << 1) | 1));
+            .write(|w| w.data().variant((self.target_addr << 1) | 1));
         // Send a START condition by setting I2Cn_MSTCTRL.start = 1
         self.i2c_regs
             .mstctrl()
@@ -131,11 +130,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
     /// Sends bytes from slice to slave specified by address.
     #[allow(clippy::while_let_on_iterator)]
-    pub fn send_raw<I: Iterator<Item = u8>>(
-        &mut self,
-        address: SevenBitAddress,
-        write: &mut I,
-    ) -> Result<(), ErrorKind> {
+    pub fn send_raw<I: Iterator<Item = u8>>(&mut self, buffer: &mut I) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
         self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
@@ -147,14 +142,14 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         // Write the I2C slave address byte to the I2Cn_FIFO register with the R/W bit set to 0
         self.i2c_regs
             .fifo()
-            .write(|w| w.data().variant(address << 1));
+            .write(|w| w.data().variant(self.target_addr << 1));
 
         // Write the desired data bytes to the I2Cn_FIFO register, up to the size of the transmit FIFO. (e.g., If the transmit
         // FIFO size is 8 bytes, the software may write one address byte and seven data bytes before starting the transaction.)
         // let mut num_written = 0;
 
         while !self.i2c_regs.status().read().tx_full().bit() {
-            if let Some(byte) = write.next() {
+            if let Some(byte) = buffer.next() {
                 self.i2c_regs.fifo().write(|w| w.data().variant(byte));
                 // num_written += 1;
             } else {
@@ -181,7 +176,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
             return Err(ErrorKind::Bus);
         }
 
-        while let Some(byte) = write.next() {
+        while let Some(byte) = buffer.next() {
             while self.i2c_regs.status().read().tx_full().bit() && !self.i2c_regs.bus_error() {}
             if self.i2c_regs.bus_error() {
                 return Err(ErrorKind::Bus);
@@ -212,21 +207,23 @@ impl<'a, T: GCRI2C> ErrorType for I2CMaster<'a, T> {
 impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         let bytes_to_read = read.len();
+        let old_addr = self.get_target_addr();
+        self.set_target_addr(address);
         for i in 0..bytes_to_read / 256 {
-            self.recv_raw(address, &mut read[i * 256..], &mut InfTimeout::new(), false)?;
+            self.recv_raw(&mut read[i * 256..], &mut InfTimeout::new(), false)?;
         }
         let leftover = read.len() - (read.len() % 256);
-        self.recv_raw(
-            address,
-            &mut read[leftover..],
-            &mut InfTimeout::new(),
-            false,
-        )?;
+        self.recv_raw(&mut read[leftover..], &mut InfTimeout::new(), false)?;
+        self.set_target_addr(old_addr);
         Ok(())
     }
 
     fn write(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), Self::Error> {
-        self.send_raw(address, &mut write.iter().copied())
+        let old_addr = self.get_target_addr();
+        self.set_target_addr(address);
+        self.send_raw(&mut write.iter().copied())?;
+        self.set_target_addr(old_addr);
+        Ok(())
     }
 
     fn write_read(

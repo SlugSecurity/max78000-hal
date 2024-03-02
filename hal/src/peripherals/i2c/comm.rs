@@ -107,17 +107,15 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
         // TODO: remove unwraps
         let mut bytes_sent_buf = [0u8; 4];
         delay(MASTER_DELAY);
-        if let Ok(()) = self.recv_raw(self.target_addr, &mut bytes_sent_buf, tmr, true) {
+        if let Ok(()) = self.recv_raw(&mut bytes_sent_buf, tmr, true) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
                 delay(MASTER_DELAY); // TODO: mitigate these delays bc this is... a lot
-                self.recv_raw(self.target_addr, &mut dest[i * 256..], tmr, true)
-                    .unwrap();
+                self.recv_raw(&mut dest[i * 256..], tmr, true).unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
             delay(MASTER_DELAY);
-            self.recv_raw(self.target_addr, &mut dest[leftover..], tmr, true)
-                .unwrap();
+            self.recv_raw(&mut dest[leftover..], tmr, true).unwrap();
             return Ok(bytes_to_read as usize);
         }
         Err(CommunicationError::RecvError(0))
@@ -133,17 +131,15 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
     {
         let mut bytes_sent_buf = [0u8; 4];
         delay(MASTER_DELAY);
-        if let Ok(()) = self.recv_raw(self.target_addr, &mut bytes_sent_buf, tmr, false) {
+        if let Ok(()) = self.recv_raw(&mut bytes_sent_buf, tmr, false) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
                 delay(MASTER_DELAY); // This delay is necessary for the slave to catch up
-                self.recv_raw(self.target_addr, &mut dest[i * 256..], tmr, false)
-                    .unwrap();
+                self.recv_raw(&mut dest[i * 256..], tmr, false).unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
             delay(MASTER_DELAY);
-            self.recv_raw(self.target_addr, &mut dest[leftover..], tmr, false)
-                .unwrap();
+            self.recv_raw(&mut dest[leftover..], tmr, false).unwrap();
             return Ok(bytes_to_read as usize);
         }
         Err(CommunicationError::RecvError(0))
@@ -211,7 +207,7 @@ impl<'b, T: GCRI2C> FramedTxChannel for I2CMaster<'b, T> {
         self.write(self.target_addr, &u32::to_le_bytes(len as u32))
             .unwrap();
         delay(MASTER_DELAY);
-        self.send_raw(self.target_addr, &mut iter).unwrap();
+        self.send_raw(&mut iter).unwrap();
         Ok(())
     }
 }

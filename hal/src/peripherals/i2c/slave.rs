@@ -103,12 +103,12 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
     /// Receive message from master into read buffer
     pub fn recv_raw<TMT: Timeout>(
         &mut self,
-        read_buffer: &mut [u8],
+        buffer: &mut [u8],
         tmt: &mut TMT,
         rst_on_byte: bool,
     ) -> Result<(u32, bool), ErrorKind> {
         let mut num_read = 0;
-        let capacity = read_buffer.len();
+        let capacity = buffer.len();
 
         // read to fill read buffer
         while num_read < capacity {
@@ -120,7 +120,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
                     return Err(ErrorKind::Bus);
                 }
                 if num_read < capacity {
-                    read_buffer[num_read] = self.i2c_regs.fifo().read().data().bits();
+                    buffer[num_read] = self.i2c_regs.fifo().read().data().bits();
                     num_read += 1;
                     if rst_on_byte {
                         tmt.reset()
