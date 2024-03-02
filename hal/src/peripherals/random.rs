@@ -18,9 +18,9 @@ use super::{timer::Clock, trng::Trng};
 pub const SECRET_SIZE: usize = 32;
 
 /// CSPRNG initialization arguments.
-pub(crate) struct CsprngInitArgs<'a, 'b, F: FnMut(&mut [u8])> {
+pub(crate) struct CsprngInitArgs<'a, 'b, 'c, F: FnMut(&mut [u8])> {
     pub trng: &'a Trng,
-    pub csprng_timer: &'b Clock<'b, TMR>,
+    pub csprng_timer: &'b Clock<'c, TMR>,
     pub get_rng_static_secret: F,
 }
 
