@@ -1,9 +1,8 @@
-use crate::communication::Timeout;
+use crate::communication::{InfTimeout, Timeout};
 use crate::peripherals::gpio::GpioError;
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, GCRI2C};
 use crate::peripherals::oscillator::SystemClock;
 use core::cell::{Ref, RefMut};
-use core::time::Duration;
 use embedded_hal::i2c::{ErrorKind, ErrorType, Operation, SevenBitAddress};
 
 impl<'a, T: GCRI2C> I2CMaster<'a, T> {
@@ -11,6 +10,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         bus_speed: BusSpeed,
         system_clock: Ref<SystemClock>,
         i2c_regs: RefMut<'a, T>,
+        target_addr: SevenBitAddress,
     ) -> Result<Self, GpioError> {
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
@@ -58,7 +58,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
         Ok(Self {
             i2c_regs,
-            target_addr: 255,
+            target_addr,
         })
     }
 
@@ -73,7 +73,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
     }
 
     /// Reads up to 256 bytes to read slice, in single i2c transaction
-    pub fn master_recv<TMT: Timeout>(
+    pub fn recv_raw<TMT: Timeout>(
         &mut self,
         address: SevenBitAddress,
         read: &mut [u8],
@@ -131,7 +131,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
     /// Sends bytes from slice to slave specified by address.
     #[allow(clippy::while_let_on_iterator)]
-    pub fn master_send<I: Iterator<Item = u8>>(
+    pub fn send_raw<I: Iterator<Item = u8>>(
         &mut self,
         address: SevenBitAddress,
         write: &mut I,
@@ -209,42 +209,14 @@ impl<'a, T: GCRI2C> ErrorType for I2CMaster<'a, T> {
     type Error = ErrorKind;
 }
 
-/// Dummy infinite timeout struct.
-pub struct InfTimeout {}
-
-impl InfTimeout {
-    /// Create a new instance of an infinite timeout
-    pub fn new() -> Self {
-        InfTimeout {}
-    }
-}
-
-impl Default for InfTimeout {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Timeout for InfTimeout {
-    fn poll(&mut self) -> bool {
-        false
-    }
-
-    fn reset(&mut self) {}
-
-    fn duration(&self) -> Duration {
-        Duration::new(0, 0)
-    }
-}
-
 impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         let bytes_to_read = read.len();
         for i in 0..bytes_to_read / 256 {
-            self.master_recv(address, &mut read[i * 256..], &mut InfTimeout::new(), false)?;
+            self.recv_raw(address, &mut read[i * 256..], &mut InfTimeout::new(), false)?;
         }
         let leftover = read.len() - (read.len() % 256);
-        self.master_recv(
+        self.recv_raw(
             address,
             &mut read[leftover..],
             &mut InfTimeout::new(),
@@ -254,7 +226,7 @@ impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
     }
 
     fn write(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), Self::Error> {
-        self.master_send(address, &mut write.iter().copied())
+        self.send_raw(address, &mut write.iter().copied())
     }
 
     fn write_read(

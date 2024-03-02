@@ -499,7 +499,13 @@ impl<'a> PeripheralManager<'a> {
 
     /// Attempt to instantiate a new I2C master instance. Will fail is there already is an existing
     /// instance of either an I2C master or slave.
-    pub fn i2c_master(&self, bus_speed: BusSpeed) -> Result<I2CMaster<I2C1>, BorrowMutError> {
+    ///
+    /// Requires a `target_addr` to be used as the slave address for communication stack methods
+    pub fn i2c_master(
+        &self,
+        bus_speed: BusSpeed,
+        target_address: SevenBitAddress,
+    ) -> Result<I2CMaster<I2C1>, BorrowMutError> {
         self.power_ctrl.enable_peripheral(ToggleableModule::I2C1);
         self.power_ctrl.reset_toggleable(ToggleableModule::I2C1);
 
@@ -519,6 +525,7 @@ impl<'a> PeripheralManager<'a> {
             bus_speed,
             self.system_clock.try_borrow().unwrap(),
             self.i2c1_reg.try_borrow_mut()?,
+            target_address,
         )
         .unwrap();
 

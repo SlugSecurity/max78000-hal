@@ -101,7 +101,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
     }
 
     /// Receive message from master into read buffer
-    pub fn slave_recv<TMT: Timeout>(
+    pub fn recv_raw<TMT: Timeout>(
         &mut self,
         read_buffer: &mut [u8],
         tmt: &mut TMT,
@@ -156,7 +156,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
 
     /// Respond to master on i2c buf using buffer as the message to send
     /// sends a chain of 0s if bus exceeded but master still wants more
-    pub fn slave_send<I: Iterator<Item = u8>>(&mut self, buffer: &mut I) -> Result<u32, ErrorKind> {
+    pub fn send_raw<I: Iterator<Item = u8>>(&mut self, buffer: &mut I) -> Result<u32, ErrorKind> {
         // With I2Cn_CTRL.en = 0, initialize all relevant registers, including specifically for this mode I2Cn_CTRL. clkstr_dis = 0,
         // I2Cn_TXCTRL0[5:2] = 0x8 and I2Cn_TXCTRL0.preload_mode = 0. Don't forget to program I2Cn_CLKHI.hi and
         // I2Cn_HSCLK.hsclk_hi with appropriate values satisfying tSU;DAT (and HS tSU;DAT).

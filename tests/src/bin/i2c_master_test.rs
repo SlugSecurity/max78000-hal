@@ -10,9 +10,9 @@ use cortex_m::asm::delay;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 
+use max78000_hal::communication::InfTimeout;
 use max78000_hal::communication::{RxChannel, TxChannel};
 use max78000_hal::max78000::Peripherals;
-use max78000_hal::peripherals::i2c::master::InfTimeout;
 use max78000_hal::peripherals::i2c::BusSpeed;
 use max78000_hal::peripherals::oscillator::{Iso, IsoDivider, IsoFrequency};
 use max78000_hal::peripherals::timer::{Oscillator, Prescaler, Time};
@@ -37,7 +37,7 @@ fn main() -> ! {
     .configure_timer_0(Oscillator::ERTCO, Prescaler::_1)
     .build();
 
-    let mut i2c_master = manager.i2c_master(BusSpeed::Standard100kbps).unwrap();
+    let mut i2c_master = manager.i2c_master(BusSpeed::Standard100kbps, 69).unwrap();
 
     let clock = manager.timer_0().unwrap();
 

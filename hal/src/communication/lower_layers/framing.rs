@@ -90,6 +90,7 @@ impl<'a, const FRAME_CT: usize> Frame<'a, FRAME_CT> {
     }
 
     /// Converts the [`Frame`] into an iterator over the individual bytes of the frame
+    // not using impl IntoIterator as that is already implemented
     pub fn into_byte_iter(self) -> FrameIterator<'a, FRAME_CT> {
         FrameIterator {
             frame: self.frame_components,

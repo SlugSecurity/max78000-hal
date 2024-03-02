@@ -8,9 +8,9 @@ use core::fmt::Write;
 
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
+use max78000_hal::communication::InfTimeout;
 use max78000_hal::communication::{RxChannel, TxChannel};
 use max78000_hal::max78000::Peripherals;
-use max78000_hal::peripherals::i2c::master::InfTimeout;
 use max78000_hal::peripherals::i2c::BusSpeed;
 use max78000_hal::peripherals::oscillator::{Iso, IsoDivider, IsoFrequency};
 use max78000_hal::peripherals::timer::{Oscillator, Prescaler, Time};

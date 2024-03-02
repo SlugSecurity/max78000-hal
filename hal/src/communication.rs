@@ -162,9 +162,6 @@ pub enum CommunicationError {
 
     /// An error that can occur if an internal error is encountered that should never happen.
     InternalError,
-
-    /// TODO: remove. custom error
-    CustomError(u32),
 }
 
 /// Specifies what is counted as the end of a line for the RxChannel::recv_line_* methods
@@ -188,5 +185,34 @@ impl LineEnding {
                 buf.len() >= 2 && buf[buf.len() - 2] == b'\r' && buf[buf.len() - 1] == b'\n'
             }
         }
+    }
+}
+
+/// Dummy infinite timeout struct - a timeout
+/// that never expires
+pub struct InfTimeout {}
+
+impl InfTimeout {
+    /// Create a new instance of an infinite timeout
+    pub fn new() -> Self {
+        InfTimeout {}
+    }
+}
+
+impl Default for InfTimeout {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Timeout for InfTimeout {
+    fn poll(&mut self) -> bool {
+        false
+    }
+
+    fn reset(&mut self) {}
+
+    fn duration(&self) -> Duration {
+        Duration::new(0, 0)
     }
 }
