@@ -17,7 +17,7 @@ fi
   -f target/max78000.cfg \
   -c "adapter serial $SERIAL; init; reset init" & # ben's board
 
-(./uart_tester.py || echo 'uart tests on host side failed!') &
+./uart_tester.py &
 
 # Open tests in GDB.
 cargo run -- -x .runner_gdb
