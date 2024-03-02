@@ -20,7 +20,7 @@ pub const SECRET_SIZE: usize = 32;
 /// CSPRNG initialization arguments.
 pub(crate) struct CsprngInitArgs<'a, 'b, F: FnMut(&mut [u8])> {
     pub trng: &'a Trng,
-    pub csprng_timer: &'b Clock<TMR>,
+    pub csprng_timer: &'b Clock<'b, TMR>,
     pub get_rng_static_secret: F,
 }
 
