@@ -6,7 +6,7 @@
 //! # Example usage
 //!
 //! ```rs
-//! use max78000_hal::communication::{RxChannel, TxChannel};
+//! use max78000_hal::communication::{LineDelimitedRxChannel, LineEnding, RxChannel, TxChannel};
 //! use max78000_hal::peripherals::timer::Time::Milliseconds;
 //! use max78000_hal::{
 //!     max78000::Peripherals,
@@ -30,13 +30,15 @@
 //! let clk0 = manager.timer_0().unwrap();
 //! // 115,200 baud
 //! let mut uart = manager.build_uart().unwrap().build(115200);
-//!! let mut timer = clk0.new_timer(Milliseconds(500));
+//! let mut timer = clk0.new_timer(Milliseconds(500));
 //! let mut buf = [0u8; 16];
 //! uart.recv_with_timeout(&mut buf, &mut timer).unwrap();
-//!! buf = *b"0123456789abcdef";
+//! buf = *b"0123456789abcdef";
 //! // send must take a mutable parameter due to the txchannel trait,
 //! // but UART send does not actually mutate the buffer
 //! uart.send(&mut buf).unwrap();
+//! // receive a line of text
+//! let bytes_received = uart.recv_line_with_timeout(&mut buf, &mut timer, LineEnding::LF).unwrap();
 //! ```
 
 use core::cell::BorrowMutError;
@@ -148,6 +150,8 @@ impl<'a> UartBuilder<'a, Uart0> {
     }
 
     /// Set up and return a UART instance for the given baud rate
+    /// TODO: support clock sources other than IBRO and selecting parity, stop bits, and character size.
+    /// See user guide for list of configurations.
     pub fn build(self, baud: u32) -> Uart<'a, Uart0> {
         const IBRO_FREQUENCY: u32 = 7372800;
         self.uart_regs.ctrl().modify(|_r, w| {
