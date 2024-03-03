@@ -49,21 +49,23 @@ use crate::peripherals::gpio::PinOperatingMode;
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, I2CSlave};
 use crate::peripherals::oscillator::SystemClock;
 use max78000::*;
+use rand_chacha::ChaCha20Rng;
 
 use self::gpio::{new_gpio0, new_gpio1, new_gpio2, Gpio0, Gpio1, Gpio2};
 use self::oscillator::{private, Oscillator};
 use self::power::{PowerControl, ToggleableModule};
+use self::random::{CsprngInitArgs, EntropyGatherer};
 use self::timer::{Clock, Prescaler};
 use self::trng::Trng;
 use self::uart::{Uart0, UartBuilder, UartBuilderError};
+
+pub use rand_chacha;
 
 // Embedded HAL peripherals.
 pub mod adc;
 pub mod delay;
 pub mod gpio;
 pub mod serial;
-pub mod timer;
-pub mod trng;
 pub mod uart;
 pub mod watchdog;
 
@@ -77,9 +79,12 @@ pub mod flash_controller;
 pub mod i2c;
 pub mod oscillator;
 pub mod power;
+pub mod random;
 pub mod raw;
 pub mod rtc;
 pub mod synchronization;
+pub mod timer;
+pub mod trng;
 
 /// The peripherals that are completely unused by the [`PeripheralManager`].
 pub struct RemainingPeripherals {
@@ -296,8 +301,9 @@ impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
 }
 
 /// A builder for the [`PeripheralManager`]. This builder can be used to configure
-/// the system clock frequency and divider along with timer oscillators and prescalers.
-pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
+/// the system clock frequency and divider, timer oscillators and prescalers, and
+/// the RNG static secret.
+pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])> {
     borrowed_periphs: &'a PeripheralsToBorrow,
     consumed_periphs: PeripheralsToConsume,
     sysclk_osc_freq: <T as oscillator::Oscillator>::Frequency,
@@ -306,6 +312,7 @@ pub struct PeripheralManagerBuilder<'a, T: Oscillator + private::Oscillator> {
     timer_1_cfg: (timer::Oscillator, Prescaler),
     timer_2_cfg: (timer::Oscillator, Prescaler),
     timer_3_cfg: (timer::Oscillator, Prescaler),
+    get_rng_static_secret: F,
 }
 
 macro_rules! timer_field {
@@ -332,18 +339,23 @@ macro_rules! timer_fn {
     };
 }
 
-impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
+impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
+    PeripheralManagerBuilder<'a, T, F>
+{
     /// Creates a new [`PeripheralManagerBuilder`] with the system clock configured
     /// to the desired oscillator, frequency, and divider. All oscillators used
     /// for timers are configured to [`timer::Oscillator::IBRO`] with a prescaler of
     /// [`Prescaler::_1`]. These timers can be configured individually through the
-    /// appropriate `configure_*` methods.
+    /// appropriate `configure_*` methods. Furthermore, a function pointer is to be
+    /// passed in for retrieving the static secret used by the CSPRNG. Modify the
+    /// argument buffer to contain the static secret.
     pub fn new(
         borrowed_periphs: &'a PeripheralsToBorrow,
         consumed_periphs: PeripheralsToConsume,
         freq: <T as oscillator::Oscillator>::Frequency,
         div: <T as oscillator::Oscillator>::Divider,
-    ) -> PeripheralManagerBuilder<T> {
+        get_rng_static_secret: F,
+    ) -> PeripheralManagerBuilder<T, F> {
         PeripheralManagerBuilder {
             borrowed_periphs,
             consumed_periphs,
@@ -353,6 +365,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
             timer_1_cfg: (timer::Oscillator::IBRO, Prescaler::_1),
             timer_2_cfg: (timer::Oscillator::IBRO, Prescaler::_1),
             timer_3_cfg: (timer::Oscillator::IBRO, Prescaler::_1),
+            get_rng_static_secret,
         }
     }
 
@@ -362,7 +375,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         self,
         sysclk_osc_freq: <O as oscillator::Oscillator>::Frequency,
         sysclk_osc_div: <O as oscillator::Oscillator>::Divider,
-    ) -> PeripheralManagerBuilder<'a, O> {
+    ) -> PeripheralManagerBuilder<'a, O, F> {
         PeripheralManagerBuilder {
             borrowed_periphs: self.borrowed_periphs,
             consumed_periphs: self.consumed_periphs,
@@ -372,6 +385,7 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
             timer_1_cfg: self.timer_1_cfg,
             timer_2_cfg: self.timer_2_cfg,
             timer_3_cfg: self.timer_3_cfg,
+            get_rng_static_secret: self.get_rng_static_secret,
         }
     }
 
@@ -408,6 +422,30 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
         power_ctrl.reset_toggleable(ToggleableModule::GPIO1);
         power_ctrl.reset_toggleable(ToggleableModule::GPIO2);
 
+        // TRNG needs to be eagerly initialized to initialize the CSPRNG.
+        power_ctrl.enable_peripheral(ToggleableModule::TRNG);
+        power_ctrl.reset_toggleable(ToggleableModule::TRNG);
+
+        let trng = Trng::new(self.consumed_periphs.trng);
+        let csprng_timer_config = (timer::Oscillator::IBRO, Prescaler::_4096);
+
+        let timer_0 = Clock::new(
+            self.consumed_periphs.tmr0,
+            &self.borrowed_periphs.gcr,
+            csprng_timer_config.0,
+            csprng_timer_config.1,
+        );
+
+        let initialized_csprng = EntropyGatherer::init_csprng(CsprngInitArgs {
+            trng: &trng,
+            csprng_timer: &timer_0,
+            get_rng_static_secret: self.get_rng_static_secret,
+        });
+
+        timer_0
+            .reconfigure(self.timer_0_cfg.0, self.timer_0_cfg.1)
+            .unwrap();
+
         PeripheralManager {
             power_ctrl,
             flash_controller: RefCell::new(FlashController::new(
@@ -420,16 +458,17 @@ impl<'a, T: Oscillator + private::Oscillator> PeripheralManagerBuilder<'a, T> {
                 self.borrowed_periphs.gcr.clkctrl(),
                 self.borrowed_periphs.trimsir.inro(),
             )),
-            timer_0: timer_field!(self, tmr0, timer_0_cfg),
+            timer_0: RefCell::new(timer_0),
             timer_1: timer_field!(self, tmr1, timer_1_cfg),
             timer_2: timer_field!(self, tmr2, timer_2_cfg),
             timer_3: timer_field!(self, tmr3, timer_3_cfg),
             gpio0: new_gpio0(self.consumed_periphs.gpio0),
             gpio1: new_gpio1(self.consumed_periphs.gpio1),
             gpio2: new_gpio2(self.consumed_periphs.gpio2),
-            trng: RefCell::new(Trng::new(self.consumed_periphs.trng)),
+            trng: RefCell::new(trng),
             i2c1_reg: RefCell::new(self.consumed_periphs.i2c1),
             uart: RefCell::new(self.consumed_periphs.uart),
+            csprng: RefCell::new(initialized_csprng),
         }
     }
 }
@@ -483,6 +522,7 @@ pub struct PeripheralManager<'a> {
     trng: RefCell<Trng>,
     uart: RefCell<UART>,
     i2c1_reg: RefCell<I2C1>,
+    csprng: RefCell<ChaCha20Rng>,
 }
 
 impl<'a> PeripheralManager<'a> {
@@ -576,4 +616,6 @@ impl<'a> PeripheralManager<'a> {
     pub fn build_uart(&'a self) -> Result<UartBuilder<Uart0>, UartBuilderError> {
         UartBuilder::new(self)
     }
+
+    no_enable_rst_periph_fn!(csprng, ChaCha20Rng, csprng);
 }

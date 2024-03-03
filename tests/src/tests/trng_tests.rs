@@ -43,7 +43,7 @@ fn min_entropy(buf: &[u8]) -> f64 {
 }
 
 /// Prints a warning if the min-entropy of a buffer is less than a threshold.
-fn find_and_warn_entropy(
+pub fn find_and_warn_entropy(
     stdout: &mut hio::HostStream,
     buf: &[u8],
     entropy_req: f64,
