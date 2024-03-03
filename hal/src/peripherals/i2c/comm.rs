@@ -4,7 +4,7 @@ use crate::peripherals::i2c::{I2CMaster, I2CSlave, SlavePollResult, GCRI2C};
 use cortex_m::asm::delay;
 use embedded_hal::i2c::I2c;
 
-static MASTER_DELAY: u32 = 10;
+static MASTER_DELAY: u32 = 1000;
 
 impl<'a, T: GCRI2C> RxChannel for I2CSlave<'a, T> {
     fn recv_with_data_timeout<R: Timeout>(
