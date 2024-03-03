@@ -14,6 +14,7 @@ cortex-m-semihosting = "0.5.0"
 libm = "0.2.8"
 max78000-hal = { version = "0.1.0", path = "../hal", features = ["rt"] }
 panic-semihosting = "0.6.0"
+embedded-hal = { version = "1.0"}
 
 [features]
 low_frequency_test = ["max78000-hal/low_frequency"]

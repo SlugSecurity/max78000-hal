@@ -41,8 +41,12 @@
 
 use core::cell::{BorrowMutError, RefCell, RefMut};
 use core::ops::{Deref, DerefMut};
+use embedded_hal::i2c::SevenBitAddress;
 
 use crate::peripherals::flash_controller::FlashController;
+use crate::peripherals::gpio::pin_traits::IoPin;
+use crate::peripherals::gpio::PinOperatingMode;
+use crate::peripherals::i2c::{BusSpeed, I2CMaster, I2CSlave};
 use crate::peripherals::oscillator::SystemClock;
 use max78000::*;
 use rand_chacha::ChaCha20Rng;
@@ -72,6 +76,7 @@ pub mod bootloader;
 pub mod crc;
 pub mod ecc;
 pub mod flash_controller;
+pub mod i2c;
 pub mod oscillator;
 pub mod power;
 pub mod random;
@@ -103,8 +108,6 @@ pub struct RemainingPeripherals {
     pub gcfr: GCFR,
     /// I2C0
     pub i2c0: I2C0,
-    /// I2C1
-    pub i2c1: I2C1,
     /// I2C2
     pub i2c2: I2C2,
     /// I2S
@@ -180,6 +183,7 @@ pub struct PeripheralsToConsume {
     tmr1: TMR1,
     tmr2: TMR2,
     tmr3: TMR3,
+    i2c1: I2C1,
     uart: UART,
 }
 
@@ -216,6 +220,7 @@ impl SplittablePeripheral for Peripherals {
             tmr1: self.TMR1,
             tmr2: self.TMR2,
             tmr3: self.TMR3,
+            i2c1: self.I2C1,
             uart: self.UART,
         };
 
@@ -238,7 +243,6 @@ impl SplittablePeripheral for Peripherals {
             fcr: self.FCR,
             gcfr: self.GCFR,
             i2c0: self.I2C0,
-            i2c1: self.I2C1,
             i2c2: self.I2C2,
             i2s: self.I2S,
             lpcmp: self.LPCMP,
@@ -462,6 +466,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
             gpio1: new_gpio1(self.consumed_periphs.gpio1),
             gpio2: new_gpio2(self.consumed_periphs.gpio2),
             trng: RefCell::new(trng),
+            i2c1_reg: RefCell::new(self.consumed_periphs.i2c1),
             uart: RefCell::new(self.consumed_periphs.uart),
             csprng: RefCell::new(initialized_csprng),
         }
@@ -516,6 +521,7 @@ pub struct PeripheralManager<'a> {
     timer_3: RefCell<Clock<'a, TMR3>>,
     trng: RefCell<Trng>,
     uart: RefCell<UART>,
+    i2c1_reg: RefCell<I2C1>,
     csprng: RefCell<ChaCha20Rng>,
 }
 
@@ -535,6 +541,74 @@ impl<'a> PeripheralManager<'a> {
     no_enable_rst_periph_fn_no_handle!(gpio2, Gpio2, gpio2);
 
     enable_rst_periph_fn!(trng, Trng, trng, ToggleableModule::TRNG);
+
+    /// Attempt to instantiate a new I2C master instance. Will fail is there already is an existing
+    /// instance of either an I2C master or slave.
+    ///
+    /// Requires a `target_addr` to be used as the slave address for communication stack methods
+    pub fn i2c_master(
+        &self,
+        bus_speed: BusSpeed,
+        target_address: SevenBitAddress,
+    ) -> Result<I2CMaster<I2C1>, BorrowMutError> {
+        self.power_ctrl.enable_peripheral(ToggleableModule::I2C1);
+        self.power_ctrl.reset_toggleable(ToggleableModule::I2C1);
+
+        self.gpio0
+            .get_pin_handle(16)
+            .unwrap()
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap();
+        self.gpio0
+            .get_pin_handle(17)
+            .unwrap()
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap();
+
+        // TODO: replace .unwrap()
+        let periph = I2CMaster::new(
+            bus_speed,
+            self.system_clock.try_borrow().unwrap(),
+            self.i2c1_reg.try_borrow_mut()?,
+            target_address,
+        )
+        .unwrap();
+
+        Ok(periph)
+    }
+
+    /// Attempt to instantiate a new I2C slave instance. Will fail is there already is an existing
+    /// instance of either an I2C master or slave.
+    pub fn i2c_slave(
+        &self,
+        bus_speed: BusSpeed,
+        address: SevenBitAddress,
+    ) -> Result<I2CSlave<I2C1>, BorrowMutError> {
+        self.power_ctrl.enable_peripheral(ToggleableModule::I2C1);
+        self.power_ctrl.reset_toggleable(ToggleableModule::I2C1);
+
+        self.gpio0
+            .get_pin_handle(16)
+            .unwrap()
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap();
+        self.gpio0
+            .get_pin_handle(17)
+            .unwrap()
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap();
+
+        // TODO: replace .unwrap()
+        let periph = I2CSlave::new(
+            address,
+            bus_speed,
+            self.system_clock.try_borrow().unwrap(),
+            self.i2c1_reg.try_borrow_mut()?,
+        )
+        .unwrap();
+
+        Ok(periph)
+    }
 
     enable_rst_periph_fn!(uart, UART, uart, ToggleableModule::UART0);
 

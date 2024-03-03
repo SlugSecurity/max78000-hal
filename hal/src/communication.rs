@@ -187,3 +187,32 @@ impl LineEnding {
         }
     }
 }
+
+/// Dummy infinite timeout struct - a timeout
+/// that never expires
+pub struct InfTimeout {}
+
+impl InfTimeout {
+    /// Create a new instance of an infinite timeout
+    pub fn new() -> Self {
+        InfTimeout {}
+    }
+}
+
+impl Default for InfTimeout {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Timeout for InfTimeout {
+    fn poll(&mut self) -> bool {
+        false
+    }
+
+    fn reset(&mut self) {}
+
+    fn duration(&self) -> Duration {
+        Duration::new(0, 0)
+    }
+}
