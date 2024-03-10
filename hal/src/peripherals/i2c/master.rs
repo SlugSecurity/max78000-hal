@@ -3,7 +3,7 @@ use crate::peripherals::gpio::GpioError;
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, GCRI2C};
 use crate::peripherals::oscillator::SystemClock;
 use core::cell::{Ref, RefMut};
-use embedded_hal::i2c::{ErrorKind, ErrorType, Operation, SevenBitAddress};
+use embedded_hal::i2c::{ErrorKind, ErrorType, NoAcknowledgeSource, Operation, SevenBitAddress};
 
 impl<'a, T: GCRI2C> I2CMaster<'a, T> {
     pub(crate) fn new(
@@ -105,6 +105,11 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
             && !tmt.poll()
         {}
 
+        if self.i2c_regs.intfl0().read().addr_nack_err().bit() {
+            self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
+            return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address))
+        }
+
         if self.i2c_regs.bus_error() || tmt.poll() {
             self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
             return Err(ErrorKind::Bus);
@@ -170,6 +175,11 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
         // poll addr_ack
         while !self.i2c_regs.intfl0().read().addr_ack().bit() && !self.i2c_regs.bus_error() {}
+
+        if self.i2c_regs.intfl0().read().addr_nack_err().bit() {
+            self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
+            return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address))
+        }
 
         if self.i2c_regs.bus_error() {
             self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
