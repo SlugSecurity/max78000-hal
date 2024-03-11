@@ -209,6 +209,7 @@ pub fn run_uart_test(
         write!(uart, "%debug: {}%", "this is a debug message"),
         Ok(())
     );
+    assert_eq!(write!(uart, "{}", "This is a uart test, what is uart? uart is a your art. uart is universal art. uart is uncanny art."), Ok(()));
     let day = 1;
     let month = 1;
     let year = 1970;
@@ -216,7 +217,6 @@ pub fn run_uart_test(
         write!(uart, "%info: DATE>{}/{}/{}", day, month, year),
         Ok(())
     );
-    assert_eq!(write!(uart, "{}", "This is a uart test, what is uart? uart is a your art. uart is universal art. uart is uncanny art."), Ok(()));
 
     writeln!(stdout, "Finished UART tests...\n").unwrap();
 
