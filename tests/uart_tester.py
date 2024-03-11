@@ -92,6 +92,24 @@ class UartTest(unittest.TestCase):
 				  + b'a line that fills up the buffer before a newline\n')
 		self.port.flush()
 
+	def test_5_recv_formatted1(self):
+		sent_test_string = b'%debug: this is a debug message%'
+		sent = self.port.read(len(sent_test_string))
+		self.assertEqual(sent, sent_test_string)
+		self.port.flush()
+
+	def test_6_recv_formatted3(self):
+		sent_test_string = b'A'*128
+		sent = self.port.read(len(sent_test_string))
+		self.assertEqual(sent, sent_test_string)
+		self.port.flush()
+
+	def test_7_recv_formatted2(self):
+		sent_test_string = b'%info: DATE>1/1/1970%'
+		sent = self.port.read(len(sent_test_string))
+		self.assertEqual(sent, sent_test_string)
+		self.port.flush()
+
 	def tearDown(self):
 		self.port.close()
 

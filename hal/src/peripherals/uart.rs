@@ -301,8 +301,9 @@ impl<T: UartInstance> fmt::Write for Uart<'_, T> {
         }
 
         if !chunks.remainder().is_empty() {
-            buffer[..chunks.remainder().len()].copy_from_slice(chunks.remainder());
-            self.send(&mut buffer).map_err(|_| fmt::Error)?
+            let buffer_slice = &mut buffer[..chunks.remainder().len()];
+            buffer_slice.copy_from_slice(chunks.remainder());
+            self.send(buffer_slice).map_err(|_| fmt::Error)?
         }
 
         Ok(())
