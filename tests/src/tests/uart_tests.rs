@@ -204,6 +204,20 @@ pub fn run_uart_test(
     );
     assert_eq!(&line_buf[0..19], b"r before a newline\n");
 
+    // formated send test
+    assert_eq!(
+        write!(uart, "%debug: {}%", "this is a debug message"),
+        Ok(())
+    );
+    assert_eq!(write!(uart, "{}", "This is a uart test, what is uart? uart is a your art. uart is universal art. uart is uncanny art."), Ok(()));
+    let day = 1;
+    let month = 1;
+    let year = 1970;
+    assert_eq!(
+        write!(uart, "%info: DATE>{}/{}/{}", day, month, year),
+        Ok(())
+    );
+
     writeln!(stdout, "Finished UART tests...\n").unwrap();
 
     // reset clock to initial config

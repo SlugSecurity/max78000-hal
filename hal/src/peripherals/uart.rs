@@ -41,7 +41,9 @@
 //! let bytes_received = uart.recv_line_with_timeout(&mut buf, &mut timer, LineEnding::LF).unwrap();
 //! ```
 
+use core::borrow::BorrowMut;
 use core::cell::BorrowMutError;
+use core::fmt;
 use core::{marker::PhantomData, ops::Deref, result::Result};
 
 use embedded_hal::digital::PinState;
@@ -283,6 +285,25 @@ impl<T: UartInstance> TxChannel for Uart<'_, T> {
         for &byte in src.iter() {
             while self.regs.status().read().tx_full().bit() {}
             self.regs.fifo().modify(|_r, w| w.data().variant(byte));
+        }
+
+        Ok(())
+    }
+}
+
+impl<T: UartInstance> fmt::Write for Uart<'_, T> {
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        let mut buffer = [0u8; 64];
+        let mut chunks = s.as_bytes().chunks_exact(64);
+        for chunk in chunks.borrow_mut() {
+            buffer.copy_from_slice(chunk);
+            self.send(&mut buffer).map_err(|_| fmt::Error)?
+        }
+
+        if !chunks.remainder().is_empty() {
+            let buffer_slice = &mut buffer[..chunks.remainder().len()];
+            buffer_slice.copy_from_slice(chunks.remainder());
+            self.send(buffer_slice).map_err(|_| fmt::Error)?
         }
 
         Ok(())
