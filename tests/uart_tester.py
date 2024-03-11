@@ -92,19 +92,19 @@ class UartTest(unittest.TestCase):
 				  + b'a line that fills up the buffer before a newline\n')
 		self.port.flush()
 
-	def test_5_recv_formatted1(self):
+	def test_7_recv_formatted1(self):
 		self.port.reset_input_buffer()
 		sent_test_string = b'%debug: this is a debug message%'
 		sent = self.port.read(len(sent_test_string))
 		self.assertEqual(sent, sent_test_string)
 
-	def test_6_recv_formatted3(self):
+	def test_8_recv_formatted3(self):
 		self.port.reset_input_buffer()
 		sent_test_string = b'This is a uart test, what is uart? uart is a your art. uart is universal art. uart is uncanny art.'
 		sent = self.port.read(len(sent_test_string))
 		self.assertEqual(sent, sent_test_string)
 
-	def test_7_recv_formatted2(self):
+	def test_9_recv_formatted2(self):
 		self.port.reset_input_buffer()
 		sent_test_string = b'%info: DATE>1/1/1970%'
 		sent = self.port.read(len(sent_test_string))
@@ -112,7 +112,6 @@ class UartTest(unittest.TestCase):
 
 	def tearDown(self):
 		self.port.close()
-
 
 if __name__ == '__main__':
 	unittest.main()
