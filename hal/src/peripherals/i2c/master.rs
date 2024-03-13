@@ -107,7 +107,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
         if self.i2c_regs.intfl0().read().addr_nack_err().bit() {
             self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
-            return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address))
+            return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address));
         }
 
         if self.i2c_regs.bus_error() || tmt.poll() {
@@ -178,7 +178,7 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
         if self.i2c_regs.intfl0().read().addr_nack_err().bit() {
             self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
-            return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address))
+            return Err(ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address));
         }
 
         if self.i2c_regs.bus_error() {

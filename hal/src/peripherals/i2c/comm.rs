@@ -11,12 +11,17 @@ trait CommStackRx {
         &mut self,
         dest: &mut [u8],
         tmr: &mut TMR,
-        rst_on_data: bool
+        rst_on_data: bool,
     ) -> crate::communication::Result<usize>;
 }
 
 impl<'a, T: GCRI2C> CommStackRx for I2CSlave<'a, T> {
-    fn rx_channel_recv<TMR: Timeout>(&mut self, dest: &mut [u8], tmr: &mut TMR, rst_on_data: bool) -> crate::communication::Result<usize> {
+    fn rx_channel_recv<TMR: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut TMR,
+        rst_on_data: bool,
+    ) -> crate::communication::Result<usize> {
         if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
             tmr.reset();
             let mut bytes_sent_buf = [0u8; 4];
@@ -63,7 +68,12 @@ impl<'a, T: GCRI2C> RxChannel for I2CSlave<'a, T> {
 }
 
 impl<'a, T: GCRI2C> CommStackRx for I2CMaster<'a, T> {
-    fn rx_channel_recv<TMR: Timeout>(&mut self, dest: &mut [u8], tmr: &mut TMR, rst_on_data: bool) -> crate::communication::Result<usize> {
+    fn rx_channel_recv<TMR: Timeout>(
+        &mut self,
+        dest: &mut [u8],
+        tmr: &mut TMR,
+        rst_on_data: bool,
+    ) -> crate::communication::Result<usize> {
         // TODO: remove unwraps
         let mut bytes_sent_buf = [0u8; 4];
         delay(MASTER_DELAY);
@@ -71,11 +81,13 @@ impl<'a, T: GCRI2C> CommStackRx for I2CMaster<'a, T> {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
                 delay(MASTER_DELAY); // TODO: mitigate these delays bc this is... a lot
-                self.recv_raw(&mut dest[i * 256..], tmr, rst_on_data).unwrap();
+                self.recv_raw(&mut dest[i * 256..], tmr, rst_on_data)
+                    .unwrap();
             }
             let leftover = dest.len() - (dest.len() % 256);
             delay(MASTER_DELAY);
-            self.recv_raw(&mut dest[leftover..], tmr, rst_on_data).unwrap();
+            self.recv_raw(&mut dest[leftover..], tmr, rst_on_data)
+                .unwrap();
             return Ok(bytes_to_read as usize);
         }
         Err(CommunicationError::RecvError(0))
