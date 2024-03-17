@@ -1,5 +1,7 @@
 //! I2C Peripheral Drivers
 
+use crate::peripherals::gpio::active::port_num_types::GpioZero;
+use crate::peripherals::gpio::active::ActivePinHandle;
 use core::cell::RefMut;
 use core::ops::Deref;
 use max78000::i2c0;
@@ -37,7 +39,7 @@ pub trait GCRI2C: Deref<Target = i2c0::RegisterBlock> {
 }
 
 macro_rules! gen_impl_gcri2c {
-    ($register:ty, $lowercaseName:ident, $rstReg:ident, $pclkdisReg:ident) => {
+    ($register:ty) => {
         impl GCRI2C for $register {
             fn flush_fifo(&mut self) {
                 self.rxctrl0().modify(|_, w| w.flush().bit(true));
@@ -100,6 +102,8 @@ macro_rules! gen_impl_gcri2c {
                         .bit(true)
                         .rx_thd()
                         .bit(true)
+                        .tx_thd()
+                        .bit(true)
                         .addr_match()
                         .bit(true)
                         .gc_addr_match()
@@ -114,9 +118,9 @@ macro_rules! gen_impl_gcri2c {
     };
 }
 
-gen_impl_gcri2c!(I2C0, i2c0, rst0, pclkdis0);
-gen_impl_gcri2c!(I2C1, i2c1, rst1, pclkdis0);
-gen_impl_gcri2c!(I2C2, i2c2, rst1, pclkdis1);
+gen_impl_gcri2c!(I2C0);
+gen_impl_gcri2c!(I2C1);
+gen_impl_gcri2c!(I2C2);
 
 /// The result of calling slave_poll, Received indicates how many bytes have been read,
 /// and if bytes had to be dropped due to exceeding the buffer size
@@ -143,12 +147,18 @@ pub enum BusSpeed {
 /// An I2C peripheral operating as a master.
 /// Important: Bus arbitration is not supported, so there can only be one
 /// master on the bus
+#[allow(dead_code)]
 pub struct I2CMaster<'a, T: GCRI2C> {
     i2c_regs: RefMut<'a, T>,
     target_addr: u8,
+    scl_pin: ActivePinHandle<'a, GpioZero, 31>,
+    sda_pin: ActivePinHandle<'a, GpioZero, 31>,
 }
 
 /// An I2C peripheral operating as a slave.
+#[allow(dead_code)]
 pub struct I2CSlave<'a, T: GCRI2C> {
     i2c_regs: RefMut<'a, T>,
+    scl_pin: ActivePinHandle<'a, GpioZero, 31>,
+    sda_pin: ActivePinHandle<'a, GpioZero, 31>,
 }

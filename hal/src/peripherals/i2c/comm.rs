@@ -4,6 +4,12 @@ use crate::peripherals::i2c::{I2CMaster, I2CSlave, SlavePollResult, GCRI2C};
 use cortex_m::asm::delay;
 use embedded_hal::i2c::I2c;
 
+// TODO: Eliminate the need for this
+// Explanation: In actual testing the master side ends up being
+// faster than the slave side in terms of re-sending requests
+// before the slave software can wrap up and listen for them again.
+// This delay is necessary to slow down the master enough to give
+// the slave time to catch up.
 static MASTER_DELAY: u32 = 10000;
 
 trait CommStackRx {

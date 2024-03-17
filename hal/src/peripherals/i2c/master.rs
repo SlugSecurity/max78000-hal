@@ -1,5 +1,8 @@
 use crate::communication::{InfTimeout, Timeout};
-use crate::peripherals::gpio::GpioError;
+use crate::peripherals::gpio::active::port_num_types::GpioZero;
+use crate::peripherals::gpio::active::ActivePinHandle;
+use crate::peripherals::gpio::pin_traits::IoPin;
+use crate::peripherals::gpio::{GpioError, PinOperatingMode};
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, GCRI2C};
 use crate::peripherals::oscillator::SystemClock;
 use core::cell::{Ref, RefMut};
@@ -11,7 +14,15 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         system_clock: Ref<SystemClock>,
         i2c_regs: RefMut<'a, T>,
         target_addr: SevenBitAddress,
+        mut scl_pin: ActivePinHandle<'a, GpioZero, 31>,
+        mut sda_pin: ActivePinHandle<'a, GpioZero, 31>,
     ) -> Result<Self, GpioError> {
+        scl_pin
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap();
+        sda_pin
+            .set_operating_mode(PinOperatingMode::AltFunction1)
+            .unwrap();
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         // TODO: configure
@@ -43,22 +54,22 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
             BusSpeed::FastPlus1mbps => 1_000_000,
         };
 
+        // calculations pulled from msdk
         let pclk_speed = system_clock.get_freq() / (system_clock.get_div() as u32) / 2;
 
         let multiplier = pclk_speed / target_speed;
         let val = multiplier / 2 - 1;
 
-        unsafe {
-            i2c_regs.clkhi().modify(|_, w| w.bits(val));
-
-            i2c_regs.clklo().modify(|_, w| w.bits(val));
-        }
+        i2c_regs.clkhi().write(|w| w.hi().variant(val as u16));
+        i2c_regs.clklo().write(|w| w.lo().variant(val as u16));
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         Ok(Self {
             i2c_regs,
             target_addr,
+            scl_pin,
+            sda_pin,
         })
     }
 
@@ -86,6 +97,8 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         let bytes_to_read = if read.len() >= 256 { 256 } else { read.len() };
 
         // Write the number of data bytes to receive to the I2C receive count field (I2Cn_RXCTRL1.cnt).
+        // overflowing bytes to read is safe as 256 will become 0,
+        // and 0 is interpreted by the hardware as 256
         self.i2c_regs
             .rxctrl1()
             .modify(|_, w| w.cnt().variant(bytes_to_read as u8));
@@ -135,6 +148,8 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
 
     /// Sends bytes from slice to slave specified by address.
     #[allow(clippy::while_let_on_iterator)]
+    // while let is needed as this relies on only partially consuming an iterator
+    // for .. in appears to consume the entire iterator
     pub fn send_raw<I: Iterator<Item = u8>>(&mut self, buffer: &mut I) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
         self.i2c_regs.clear_interrupt_flags();
@@ -156,7 +171,6 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         while !self.i2c_regs.status().read().tx_full().bit() {
             if let Some(byte) = buffer.next() {
                 self.i2c_regs.fifo().write(|w| w.data().variant(byte));
-                // num_written += 1;
             } else {
                 break;
             }
@@ -242,11 +256,9 @@ impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
         write: &[u8],
         read: &mut [u8],
     ) -> Result<(), Self::Error> {
-        //free(|_| -> Result<(), Self::Error> {
         self.write(address, write)?;
         self.read(address, read)?;
         Ok(())
-        //})
     }
 
     fn transaction(
