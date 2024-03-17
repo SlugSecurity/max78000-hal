@@ -28,6 +28,7 @@ fn test_critical_if(
     csprng: &mut ChaChaRng,
     stdout: &mut hio::HostStream,
 ) {
+    #[allow(clippy::eq_op)]
     fip.critical_if(
         || (true == true).into(),
         || writeln!(stdout, "Success: True path").unwrap(),
