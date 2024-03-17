@@ -1,3 +1,5 @@
+//! Tests for the Fault Injection Prevention crate.
+
 use core::fmt::Write;
 use core::{borrow::BorrowMut, ptr::write_volatile};
 use cortex_m_semihosting::hio;
@@ -7,6 +9,7 @@ use max78000_hal::communication::lower_layers::crypto::RandomSource;
 use max78000_hal::peripherals::{rand_chacha::ChaChaRng, PeripheralHandle};
 use subtle::ConstantTimeEq;
 
+/// Runs all  FIP tests.
 pub fn run_fip_tests(mut csprng: PeripheralHandle<'_, ChaChaRng>, stdout: &mut hio::HostStream) {
     writeln!(stdout, "Starting fip peripheral tests...").unwrap();
 
@@ -17,7 +20,9 @@ pub fn run_fip_tests(mut csprng: PeripheralHandle<'_, ChaChaRng>, stdout: &mut h
     writeln!(stdout, "FIP tests complete!\n").unwrap();
 }
 
-/// Tests the [`ChaCha20Rng::fill_bytes()`] function for the initialized CSPRNG.
+/// Tests [`fault_injection_protection_arm::critical_if`],
+/// [`fault_injection_protection_arm::critical_write`],
+/// [`fault_injection_protection_arm::critical_read`] functions
 fn test_critical_if(
     fip: &FaultInjectionPrevention,
     csprng: &mut ChaChaRng,
