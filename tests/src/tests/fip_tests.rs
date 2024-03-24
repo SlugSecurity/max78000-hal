@@ -6,6 +6,7 @@ use cortex_m_semihosting::hio;
 use fault_injection_protection_arm as fip;
 use fip::{FaultInjectionPrevention, SecureBool};
 use max78000_hal::communication::lower_layers::crypto::RandomSource;
+use max78000_hal::peripherals::rand_chacha::rand_core::RngCore;
 use max78000_hal::peripherals::{rand_chacha::ChaChaRng, PeripheralHandle};
 use subtle::ConstantTimeEq;
 
@@ -85,4 +86,19 @@ fn test_critical_if(
     } else {
         writeln!(stdout, "Error: critical-read fails").unwrap();
     }
+
+    writeln!(stdout, "Testing using rng in critical-if failure closure").unwrap();
+    fip.critical_if(
+        || (true == false).into(),
+        || panic!("Error: True path"),
+        |rng: &mut ChaChaRng| writeln!(stdout, "Success: False path {}", rng.next_u64()).unwrap(),
+        csprng,
+    );
+
+    fip.critical_if(
+        |rng: &mut ChaChaRng| (rng.next_u64() == rng.next_u64()).into(),
+        |rng: &mut ChaChaRng| panic!("Error: True path {}", rng.next_u64()),
+        |rng: &mut ChaChaRng| writeln!(stdout, "Success: False path {}", rng.next_u64()).unwrap(),
+        csprng,
+    );
 }
