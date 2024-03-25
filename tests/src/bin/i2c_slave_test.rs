@@ -61,6 +61,8 @@ fn main() -> ! {
         .recv_with_data_timeout(&mut buf, &mut InfTimeout::new())
         .unwrap();
 
+    assert_eq!(buf, [1u8, 2, 3, 4]);
+
     let mut buf2 = [5, 6, 7, 8];
     i2c_slave.send(&mut buf2).unwrap();
 
@@ -88,7 +90,7 @@ fn main() -> ! {
             )
             .unwrap();
         }
-        // assert!(recv_big_funny[i] == big_funny[i]);
+        assert_eq!(recv_big_funny[i], big_funny[i]);
     }
 
     i2c_slave.send(&mut big_funny).unwrap();

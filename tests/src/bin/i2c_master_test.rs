@@ -73,6 +73,7 @@ fn main() -> ! {
         .recv_with_data_timeout(&mut funny, &mut InfTimeout::new())
         .unwrap();
 
+    assert_eq!(funny, [5u8, 6, 7, 8]);
     delay(100000);
 
     writeln!(stdout, "time for big funny").unwrap();

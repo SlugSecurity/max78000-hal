@@ -10,7 +10,7 @@ use embedded_hal::i2c::I2c;
 // before the slave software can wrap up and listen for them again.
 // This delay is necessary to slow down the master enough to give
 // the slave time to catch up.
-static MASTER_DELAY: u32 = 10000;
+static MASTER_DELAY: u32 = 1000;
 
 trait CommStackRx {
     fn rx_channel_recv<TMR: Timeout>(
@@ -35,16 +35,13 @@ impl<'a, T: GCRI2C> CommStackRx for I2CSlave<'a, T> {
                 if n != 4 {
                     return Err(CommunicationError::RecvError(0));
                 }
-                let mut num_read = 0;
                 return if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
-                    if let Ok((n, _)) = self.recv_raw(dest, tmr, rst_on_data) {
-                        num_read += n;
-                        Ok(num_read as usize)
-                    } else {
-                        Err(CommunicationError::RecvError(num_read as usize))
-                    }
+                    let (n, _) = self
+                        .recv_raw(dest, tmr, true)
+                        .map_err(|_| CommunicationError::RecvError(0))?;
+                    Ok(n as usize)
                 } else {
-                    Err(CommunicationError::RecvError(num_read as usize))
+                    Err(CommunicationError::RecvError(0))
                 };
             }
         }
@@ -80,20 +77,22 @@ impl<'a, T: GCRI2C> CommStackRx for I2CMaster<'a, T> {
         tmr: &mut TMR,
         rst_on_data: bool,
     ) -> crate::communication::Result<usize> {
-        // TODO: remove unwraps
         let mut bytes_sent_buf = [0u8; 4];
         delay(MASTER_DELAY);
-        if let Ok(()) = self.recv_raw(&mut bytes_sent_buf, tmr, rst_on_data) {
+        if let Ok(()) = self.recv_raw(&mut bytes_sent_buf, tmr, rst_on_data, 4) {
             let bytes_to_read = u32::from_le_bytes(bytes_sent_buf);
             for i in 0..(bytes_to_read / 256) as usize {
                 delay(MASTER_DELAY); // TODO: mitigate these delays bc this is... a lot
-                self.recv_raw(&mut dest[i * 256..], tmr, rst_on_data)
-                    .unwrap();
+                let Ok(_) = self.recv_raw(&mut dest[i * 256..], tmr, rst_on_data, 256) else {
+                    return Err(CommunicationError::RecvError(i * 256));
+                };
             }
-            let leftover = dest.len() - (dest.len() % 256);
             delay(MASTER_DELAY);
-            self.recv_raw(&mut dest[leftover..], tmr, rst_on_data)
-                .unwrap();
+            let leftover = dest.len() - (dest.len() % 256);
+            let leftover_len = dest.len() % 256;
+            let Ok(_) = self.recv_raw(&mut dest[leftover..], tmr, rst_on_data, leftover_len) else {
+                return Err(CommunicationError::RecvError(leftover));
+            };
             return Ok(bytes_to_read as usize);
         }
         Err(CommunicationError::RecvError(0))
@@ -130,12 +129,17 @@ impl<'b, T: GCRI2C> FramedTxChannel for I2CSlave<'b, T> {
         let mut iter = frame.into_byte_iter();
         let len = iter.length();
         if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new()) {
-            self.send_raw(&mut u32::to_le_bytes(len as u32).into_iter())
-                .unwrap();
-            for _ in 0..((len - 1) / 256) + 1 {
+            let Ok(_) = self.send_raw(&mut u32::to_le_bytes(len as u32).into_iter()) else {
+                return Err(CommunicationError::SendError);
+            };
+            for _ in 0..len.div_ceil(256) {
                 if let Ok(SlavePollResult::TransmitNeeded) = self.slave_poll(&mut InfTimeout::new())
                 {
-                    self.send_raw(&mut iter).unwrap();
+                    let Ok(_) = self.send_raw(&mut iter) else {
+                        return Err(CommunicationError::SendError);
+                    };
+                } else {
+                    return Err(CommunicationError::SendError);
                 }
             }
             return Ok(());
@@ -152,10 +156,13 @@ impl<'b, T: GCRI2C> FramedTxChannel for I2CMaster<'b, T> {
         let frame = frame()?;
         let mut iter = frame.into_byte_iter();
         let len = iter.length();
-        self.write(self.target_addr, &u32::to_le_bytes(len as u32))
-            .unwrap();
+        let Ok(_) = self.write(self.target_addr, &u32::to_le_bytes(len as u32)) else {
+            return Err(CommunicationError::SendError);
+        };
         delay(MASTER_DELAY);
-        self.send_raw(&mut iter).unwrap();
+        let Ok(_) = self.send_raw(&mut iter) else {
+            return Err(CommunicationError::SendError);
+        };
         Ok(())
     }
 }

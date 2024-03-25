@@ -18,12 +18,8 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         mut scl_pin: ActivePinHandle<'a, GpioZero, 31>,
         mut sda_pin: ActivePinHandle<'a, GpioZero, 31>,
     ) -> Result<Self, GpioError> {
-        scl_pin
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
-        sda_pin
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
+        scl_pin.set_operating_mode(PinOperatingMode::AltFunction1)?;
+        sda_pin.set_operating_mode(PinOperatingMode::AltFunction1)?;
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         i2c_regs.ctrl().modify(|_, w| {
@@ -55,10 +51,6 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
                 .preload_mode()
                 .bit(false)
         });
-
-        /*i2c_regs
-        .timeout()
-        .modify(|_, w| w.scl_to_val().variant(0xffff));*/
 
         // Configure clock speed values
         let target_speed = match bus_speed {
@@ -106,9 +98,6 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         }
 
         if !self.i2c_regs.ctrl().read().read().bit() {
-            self.i2c_regs
-                .intfl0()
-                .modify(|_, w| w.addr_match().bit(true));
             return Ok(SlavePollResult::IncomingTransmission);
         }
 
@@ -124,6 +113,10 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
     ) -> Result<(u32, bool), ErrorKind> {
         let mut num_read = 0;
         let capacity = buffer.len();
+
+        self.i2c_regs
+            .intfl0()
+            .modify(|_, w| w.addr_match().bit(true));
 
         // read to fill read buffer
         while num_read < capacity {
@@ -165,6 +158,9 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
                 }
             }
         }
+
+        self.i2c_regs.intfl0().modify(|_, w| w.done().bit(true));
+        self.i2c_regs.ctrl().modify(|_, w| w.en().bit(false));
 
         Ok((num_read as u32, was_it_truncated))
     }
@@ -225,6 +221,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         // clean up!
         self.i2c_regs.intfl0().modify(|_, w| w.done().bit(true));
         self.i2c_regs.inten0().modify(|_, w| w.tx_thd().bit(true));
+        self.i2c_regs.ctrl().modify(|_, w| w.en().bit(false));
 
         Ok(num_written as u32)
     }

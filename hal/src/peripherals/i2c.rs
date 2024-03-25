@@ -4,6 +4,7 @@ use crate::peripherals::gpio::active::port_num_types::GpioZero;
 use crate::peripherals::gpio::active::ActivePinHandle;
 use core::cell::RefMut;
 use core::ops::Deref;
+use embedded_hal::i2c::SevenBitAddress;
 use max78000::i2c0;
 use max78000::{I2C0, I2C1, I2C2};
 
@@ -150,7 +151,7 @@ pub enum BusSpeed {
 #[allow(dead_code)]
 pub struct I2CMaster<'a, T: GCRI2C> {
     i2c_regs: RefMut<'a, T>,
-    target_addr: u8,
+    target_addr: SevenBitAddress,
     scl_pin: ActivePinHandle<'a, GpioZero, 31>,
     sda_pin: ActivePinHandle<'a, GpioZero, 31>,
 }

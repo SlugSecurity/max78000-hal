@@ -17,15 +17,10 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         mut scl_pin: ActivePinHandle<'a, GpioZero, 31>,
         mut sda_pin: ActivePinHandle<'a, GpioZero, 31>,
     ) -> Result<Self, GpioError> {
-        scl_pin
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
-        sda_pin
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
+        scl_pin.set_operating_mode(PinOperatingMode::AltFunction1)?;
+        sda_pin.set_operating_mode(PinOperatingMode::AltFunction1)?;
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
-        // TODO: configure
         i2c_regs.ctrl().modify(|_, w| {
             w.mst_mode()
                 .bit(true)
@@ -42,11 +37,6 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
                 .bb_mode()
                 .bit(false)
         });
-
-        /*i2c_regs
-        .timeout()
-        .modify(|_, w| w.scl_to_val().variant(0xffff));*/
-        // i2c_regs.ctrl().modify(|_, w| w.scl_out().bit(false));
 
         let target_speed = match bus_speed {
             BusSpeed::Standard100kbps => 100_000,
@@ -89,12 +79,14 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         read: &mut [u8],
         tmt: &mut TMT,
         rst_on_byte: bool,
+        num_to_read: usize,
     ) -> Result<(), ErrorKind> {
         // Let's flush the FIFO buffers
         self.i2c_regs.clear_interrupt_flags();
         self.i2c_regs.flush_fifo();
 
-        let bytes_to_read = if read.len() >= 256 { 256 } else { read.len() };
+        let bytes_to_read = if num_to_read >= 256 { 256 } else { num_to_read };
+        let mut num_read = 0;
 
         // Write the number of data bytes to receive to the I2C receive count field (I2Cn_RXCTRL1.cnt).
         // overflowing bytes to read is safe as 256 will become 0,
@@ -136,6 +128,21 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
                 return Err(ErrorKind::Bus);
             }
             *cell = self.i2c_regs.fifo().read().data().bits();
+            num_read += 1;
+            if rst_on_byte {
+                tmt.reset()
+            }
+        }
+
+        // void excess bytes
+        while num_read < bytes_to_read {
+            while self.i2c_regs.is_rx_fifo_empty() && !self.i2c_regs.bus_error() && !tmt.poll() {}
+            if self.i2c_regs.bus_error() || tmt.poll() {
+                self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
+                return Err(ErrorKind::Bus);
+            }
+            self.i2c_regs.fifo().read();
+            num_read += 1;
             if rst_on_byte {
                 tmt.reset()
             }
@@ -203,10 +210,10 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         while let Some(byte) = buffer.next() {
             while self.i2c_regs.status().read().tx_full().bit() && !self.i2c_regs.bus_error() {}
             if self.i2c_regs.bus_error() {
+                self.i2c_regs.mstctrl().modify(|_, w| w.stop().bit(true));
                 return Err(ErrorKind::Bus);
             }
             self.i2c_regs.fifo().write(|w| w.data().variant(byte));
-            // num_written += 1;
         }
 
         // Once the software writes all the desired bytes to the I2Cn_FIFO register; the software should set either
@@ -218,7 +225,11 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
         // I2Cn_INTFL0.done and proceeds to send out either a RESTART condition if I2Cn_MSTCTRL.restart was set, or a
         // STOP condition if I2Cn_MSTCTRL.stop was set.
 
-        while !self.i2c_regs.intfl0().read().done().bit() {}
+        while !self.i2c_regs.intfl0().read().done().bit() && !self.i2c_regs.bus_error() {}
+
+        if self.i2c_regs.bus_error() {
+            return Err(ErrorKind::Bus);
+        }
 
         Ok(())
     }
@@ -234,10 +245,16 @@ impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
         let old_addr = self.get_target_addr();
         self.set_target_addr(address);
         for i in 0..bytes_to_read / 256 {
-            self.recv_raw(&mut read[i * 256..], &mut InfTimeout::new(), false)?;
+            self.recv_raw(&mut read[i * 256..], &mut InfTimeout::new(), false, 256)?;
         }
         let leftover = read.len() - (read.len() % 256);
-        self.recv_raw(&mut read[leftover..], &mut InfTimeout::new(), false)?;
+        let leftover_len = read.len() % 256;
+        self.recv_raw(
+            &mut read[leftover..],
+            &mut InfTimeout::new(),
+            false,
+            leftover_len,
+        )?;
         self.set_target_addr(old_addr);
         Ok(())
     }
