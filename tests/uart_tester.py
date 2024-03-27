@@ -37,8 +37,6 @@ I don't usually make comments like this, but I had to get it out there cause he'
 for i in range(256):
 	ego += bytes([i])
 
-print(len(interjection))
-
 class UartTest(unittest.TestCase):
 	def setUp(self):
 		serial_id = os.environ['SERIAL']
