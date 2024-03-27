@@ -167,6 +167,8 @@ impl<'a> UartBuilder<'a, Uart0> {
                 .bit(false) // 1 stop bit
                 .bclksrc()
                 .clk2() // use IBRO
+                .ucagm()
+                .bit(true)
         });
 
         // Set oversampling to 16x (this is when fdm is 0 so needs to be changed if it's not)
