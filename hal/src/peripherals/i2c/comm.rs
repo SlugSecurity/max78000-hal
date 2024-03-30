@@ -41,7 +41,7 @@ impl<'a, T: GCRI2C> CommStackRx for I2CSlave<'a, T> {
                         .recv_raw(dest, tmr, true)
                         .map_err(|_| CommunicationError::RecvError(0))?;
                     if n != expected_to_recv {
-                        return Err(CommunicationError::RecvError(n as usize))
+                        return Err(CommunicationError::RecvError(n as usize));
                     }
                     Ok(n as usize)
                 } else {
