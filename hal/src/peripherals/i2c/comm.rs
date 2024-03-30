@@ -35,10 +35,14 @@ impl<'a, T: GCRI2C> CommStackRx for I2CSlave<'a, T> {
                 if n != 4 {
                     return Err(CommunicationError::RecvError(0));
                 }
+                let expected_to_recv = u32::from_le_bytes(bytes_sent_buf);
                 return if let Ok(SlavePollResult::IncomingTransmission) = self.slave_poll(tmr) {
                     let (n, _) = self
                         .recv_raw(dest, tmr, true)
                         .map_err(|_| CommunicationError::RecvError(0))?;
+                    if n != expected_to_recv {
+                        return Err(CommunicationError::RecvError(n as usize))
+                    }
                     Ok(n as usize)
                 } else {
                     Err(CommunicationError::RecvError(0))
