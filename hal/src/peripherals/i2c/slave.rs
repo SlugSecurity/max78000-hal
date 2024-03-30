@@ -1,5 +1,8 @@
 use crate::communication::Timeout;
-use crate::peripherals::gpio::GpioError;
+use crate::peripherals::gpio::active::port_num_types::GpioZero;
+use crate::peripherals::gpio::active::ActivePinHandle;
+use crate::peripherals::gpio::pin_traits::IoPin;
+use crate::peripherals::gpio::{GpioError, PinOperatingMode};
 use crate::peripherals::i2c::{BusSpeed, I2CSlave, SlavePollResult, GCRI2C};
 use crate::peripherals::oscillator::SystemClock;
 use core::cell::{Ref, RefMut};
@@ -12,7 +15,11 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         bus_speed: BusSpeed,
         system_clock: Ref<SystemClock>,
         i2c_regs: RefMut<'a, T>,
+        mut scl_pin: ActivePinHandle<'a, GpioZero, 31>,
+        mut sda_pin: ActivePinHandle<'a, GpioZero, 31>,
     ) -> Result<Self, GpioError> {
+        scl_pin.set_operating_mode(PinOperatingMode::AltFunction1)?;
+        sda_pin.set_operating_mode(PinOperatingMode::AltFunction1)?;
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
         i2c_regs.ctrl().modify(|_, w| {
@@ -45,10 +52,6 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
                 .bit(false)
         });
 
-        /*i2c_regs
-        .timeout()
-        .modify(|_, w| w.scl_to_val().variant(0xffff));*/
-
         // Configure clock speed values
         let target_speed = match bus_speed {
             BusSpeed::Standard100kbps => 100_000,
@@ -56,23 +59,27 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
             BusSpeed::FastPlus1mbps => 1_000_000,
         };
 
+        // Calculations copied from the msdk
+
         let pclk_speed = system_clock.get_freq() / (system_clock.get_div() as u32) / 2;
 
         let multiplier = pclk_speed / target_speed;
         let val = multiplier / 2 - 1;
 
-        unsafe {
-            i2c_regs.clkhi().modify(|_, w| w.bits(val));
-            i2c_regs.clklo().modify(|_, w| w.bits(val));
-        }
+        i2c_regs.clkhi().write(|w| w.hi().variant(val as u16));
+        i2c_regs.clklo().write(|w| w.lo().variant(val as u16));
 
-        unsafe {
-            i2c_regs.slave0().write(|w| w.bits(address as u32));
-        }
+        i2c_regs
+            .slave_multi(0)
+            .write(|w| w.addr().variant(address as u16));
 
         i2c_regs.ctrl().modify(|_, w| w.en().bit(true));
 
-        Ok(Self { i2c_regs })
+        Ok(Self {
+            i2c_regs,
+            scl_pin,
+            sda_pin,
+        })
     }
 
     /// Poll for either a master read or write operation. Optional timeout
@@ -91,9 +98,6 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         }
 
         if !self.i2c_regs.ctrl().read().read().bit() {
-            self.i2c_regs
-                .intfl0()
-                .modify(|_, w| w.addr_match().bit(false));
             return Ok(SlavePollResult::IncomingTransmission);
         }
 
@@ -109,6 +113,10 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
     ) -> Result<(u32, bool), ErrorKind> {
         let mut num_read = 0;
         let capacity = buffer.len();
+
+        self.i2c_regs
+            .intfl0()
+            .modify(|_, w| w.addr_match().bit(true));
 
         // read to fill read buffer
         while num_read < capacity {
@@ -151,6 +159,9 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
             }
         }
 
+        self.i2c_regs.intfl0().modify(|_, w| w.done().bit(true));
+        self.i2c_regs.ctrl().modify(|_, w| w.en().bit(false));
+
         Ok((num_read as u32, was_it_truncated))
     }
 
@@ -163,7 +174,7 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
 
         self.i2c_regs
             .intfl0()
-            .modify(|_, w| w.addr_match().bit(false));
+            .modify(|_, w| w.addr_match().bit(true));
 
         self.i2c_regs
             .intfl0()
@@ -208,8 +219,9 @@ impl<'a, T: GCRI2C> I2CSlave<'a, T> {
         }
 
         // clean up!
-        self.i2c_regs.intfl0().modify(|_, w| w.done().bit(false));
-        self.i2c_regs.inten0().modify(|_, w| w.tx_thd().bit(false));
+        self.i2c_regs.intfl0().modify(|_, w| w.done().bit(true));
+        self.i2c_regs.inten0().modify(|_, w| w.tx_thd().bit(true));
+        self.i2c_regs.ctrl().modify(|_, w| w.en().bit(false));
 
         Ok(num_written as u32)
     }

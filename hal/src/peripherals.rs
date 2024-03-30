@@ -44,8 +44,6 @@ use core::ops::{Deref, DerefMut};
 use embedded_hal::i2c::SevenBitAddress;
 
 use crate::peripherals::flash_controller::FlashController;
-use crate::peripherals::gpio::pin_traits::IoPin;
-use crate::peripherals::gpio::PinOperatingMode;
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, I2CSlave};
 use crate::peripherals::oscillator::SystemClock;
 use max78000::*;
@@ -554,16 +552,8 @@ impl<'a> PeripheralManager<'a> {
         self.power_ctrl.enable_peripheral(ToggleableModule::I2C1);
         self.power_ctrl.reset_toggleable(ToggleableModule::I2C1);
 
-        self.gpio0
-            .get_pin_handle(16)
-            .unwrap()
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
-        self.gpio0
-            .get_pin_handle(17)
-            .unwrap()
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
+        let scl_handle = self.gpio0.get_pin_handle(16).unwrap();
+        let sda_handle = self.gpio0.get_pin_handle(17).unwrap();
 
         // TODO: replace .unwrap()
         let periph = I2CMaster::new(
@@ -571,6 +561,8 @@ impl<'a> PeripheralManager<'a> {
             self.system_clock.try_borrow().unwrap(),
             self.i2c1_reg.try_borrow_mut()?,
             target_address,
+            scl_handle,
+            sda_handle,
         )
         .unwrap();
 
@@ -587,16 +579,8 @@ impl<'a> PeripheralManager<'a> {
         self.power_ctrl.enable_peripheral(ToggleableModule::I2C1);
         self.power_ctrl.reset_toggleable(ToggleableModule::I2C1);
 
-        self.gpio0
-            .get_pin_handle(16)
-            .unwrap()
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
-        self.gpio0
-            .get_pin_handle(17)
-            .unwrap()
-            .set_operating_mode(PinOperatingMode::AltFunction1)
-            .unwrap();
+        let scl_handle = self.gpio0.get_pin_handle(16).unwrap();
+        let sda_handle = self.gpio0.get_pin_handle(17).unwrap();
 
         // TODO: replace .unwrap()
         let periph = I2CSlave::new(
@@ -604,6 +588,8 @@ impl<'a> PeripheralManager<'a> {
             bus_speed,
             self.system_clock.try_borrow().unwrap(),
             self.i2c1_reg.try_borrow_mut()?,
+            scl_handle,
+            sda_handle,
         )
         .unwrap();
 
