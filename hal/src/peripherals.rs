@@ -282,7 +282,7 @@ impl<'a, T> PeripheralHandle<'a, T> {
     }
 }
 
-impl<'a, T> Deref for PeripheralHandle<'a, T> {
+impl<T> Deref for PeripheralHandle<'_, T> {
     type Target = T;
 
     #[inline(always)]
@@ -291,7 +291,7 @@ impl<'a, T> Deref for PeripheralHandle<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for PeripheralHandle<'a, T> {
+impl<T> DerefMut for PeripheralHandle<'_, T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0

@@ -107,14 +107,14 @@ pub struct FrameIterator<'a, const FRAME_SLICES: usize> {
     current_byte_index: usize,
 }
 
-impl<'a, const FRAME_SLICES: usize> FrameIterator<'a, FRAME_SLICES> {
+impl<const FRAME_SLICES: usize> FrameIterator<'_, FRAME_SLICES> {
     /// Computes the frame length, in bytes
     pub fn length(&self) -> usize {
         self.frame.iter().fold(0, |sum, el| sum + el.len())
     }
 }
 
-impl<'a, const FRAME_SLICES: usize> Iterator for FrameIterator<'a, FRAME_SLICES> {
+impl<const FRAME_SLICES: usize> Iterator for FrameIterator<'_, FRAME_SLICES> {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(slice) = self.frame.get(self.current_slice_index) {
