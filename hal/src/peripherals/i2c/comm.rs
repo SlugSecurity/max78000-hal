@@ -21,7 +21,7 @@ trait CommStackRx {
     ) -> crate::communication::Result<usize>;
 }
 
-impl<'a, T: GCRI2C> CommStackRx for I2CSlave<'a, T> {
+impl<T: GCRI2C> CommStackRx for I2CSlave<'_, T> {
     fn rx_channel_recv<TMR: Timeout>(
         &mut self,
         dest: &mut [u8],
@@ -53,7 +53,7 @@ impl<'a, T: GCRI2C> CommStackRx for I2CSlave<'a, T> {
     }
 }
 
-impl<'a, T: GCRI2C> RxChannel for I2CSlave<'a, T> {
+impl<T: GCRI2C> RxChannel for I2CSlave<'_, T> {
     fn recv_with_data_timeout<R: Timeout>(
         &mut self,
         dest: &mut [u8],
@@ -66,15 +66,12 @@ impl<'a, T: GCRI2C> RxChannel for I2CSlave<'a, T> {
         &mut self,
         dest: &mut [u8],
         tmr: &mut R,
-    ) -> crate::communication::Result<usize>
-    where
-        R: Timeout,
-    {
+    ) -> crate::communication::Result<usize> {
         self.rx_channel_recv(dest, tmr, false)
     }
 }
 
-impl<'a, T: GCRI2C> CommStackRx for I2CMaster<'a, T> {
+impl<T: GCRI2C> CommStackRx for I2CMaster<'_, T> {
     fn rx_channel_recv<TMR: Timeout>(
         &mut self,
         dest: &mut [u8],
@@ -103,7 +100,7 @@ impl<'a, T: GCRI2C> CommStackRx for I2CMaster<'a, T> {
     }
 }
 
-impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
+impl<T: GCRI2C> RxChannel for I2CMaster<'_, T> {
     fn recv_with_data_timeout<TMT: Timeout>(
         &mut self,
         dest: &mut [u8],
@@ -116,15 +113,12 @@ impl<'a, T: GCRI2C> RxChannel for I2CMaster<'a, T> {
         &mut self,
         dest: &mut [u8],
         tmr: &mut TMT,
-    ) -> crate::communication::Result<usize>
-    where
-        TMT: Timeout,
-    {
+    ) -> crate::communication::Result<usize> {
         self.rx_channel_recv(dest, tmr, false)
     }
 }
 
-impl<'b, T: GCRI2C> FramedTxChannel for I2CSlave<'b, T> {
+impl<T: GCRI2C> FramedTxChannel for I2CSlave<'_, T> {
     fn frame<'a, const FRAME_CT: usize>(
         &mut self,
         frame: impl FnOnce() -> Result<Frame<'a, FRAME_CT>, CommunicationError>,
@@ -152,7 +146,7 @@ impl<'b, T: GCRI2C> FramedTxChannel for I2CSlave<'b, T> {
     }
 }
 
-impl<'b, T: GCRI2C> FramedTxChannel for I2CMaster<'b, T> {
+impl<T: GCRI2C> FramedTxChannel for I2CMaster<'_, T> {
     fn frame<'a, const FRAME_CT: usize>(
         &mut self,
         frame: impl FnOnce() -> Result<Frame<'a, FRAME_CT>, CommunicationError>,

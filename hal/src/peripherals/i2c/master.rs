@@ -235,11 +235,11 @@ impl<'a, T: GCRI2C> I2CMaster<'a, T> {
     }
 }
 
-impl<'a, T: GCRI2C> ErrorType for I2CMaster<'a, T> {
+impl<T: GCRI2C> ErrorType for I2CMaster<'_, T> {
     type Error = ErrorKind;
 }
 
-impl<'a, T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'a, T> {
+impl<T: GCRI2C> embedded_hal::i2c::I2c for I2CMaster<'_, T> {
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         let bytes_to_read = read.len();
         let old_addr = self.get_target_addr();

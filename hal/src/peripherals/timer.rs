@@ -101,7 +101,7 @@ pub struct Timer<'clock, 'gcr, T: TimerPeripheralGCR> {
     finished: bool,
 }
 
-impl<'clock, 'gcr, T: TimerPeripheralGCR> Drop for Timer<'clock, 'gcr, T> {
+impl<T: TimerPeripheralGCR> Drop for Timer<'_, '_, T> {
     fn drop(&mut self) {
         // Decrease the active timer counter for the reconfigure function.
         self.clock
@@ -110,7 +110,7 @@ impl<'clock, 'gcr, T: TimerPeripheralGCR> Drop for Timer<'clock, 'gcr, T> {
     }
 }
 
-impl<'clock, 'gcr, T: TimerPeripheralGCR> Timeout for Timer<'clock, 'gcr, T> {
+impl<T: TimerPeripheralGCR> Timeout for Timer<'_, '_, T> {
     fn poll(&mut self) -> bool {
         self.poll()
     }

@@ -206,7 +206,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// It is very difficult to define what would cause undefined behavior when
     /// modifying program instructions. This would almost certainly result
     /// in unwanted and likely undefined behavior. Do so at your own risk.
-
     pub unsafe fn write(
         &self,
         address: u32,
