@@ -87,9 +87,7 @@ pub trait RxChannel {
     ///  - [`CommunicationError::InternalError`]
     ///    - This can occur if some internal error happens. This should only occur if something is wrong
     ///      with the implementation.
-    fn recv_with_timeout<T: Timeout>(&mut self, dest: &mut [u8], tmr: &mut T) -> Result<usize>
-    where
-        T: Timeout;
+    fn recv_with_timeout<T: Timeout>(&mut self, dest: &mut [u8], tmr: &mut T) -> Result<usize>;
 }
 
 /// A channel to receive data from which supports reading until a line delimiter.
@@ -108,9 +106,7 @@ pub trait LineDelimitedRxChannel: RxChannel {
         dest: &mut [u8],
         tmr: &mut T,
         line_ending: LineEnding,
-    ) -> Result<usize>
-    where
-        T: Timeout;
+    ) -> Result<usize>;
 
     /// Receives one line of data from the channel, reading until the specified
     /// [`line_ending`](LineEnding) or the timeout is reached, putting the data into `dest`,
@@ -125,9 +121,7 @@ pub trait LineDelimitedRxChannel: RxChannel {
         dest: &mut [u8],
         tmr: &mut T,
         line_ending: LineEnding,
-    ) -> Result<usize>
-    where
-        T: Timeout;
+    ) -> Result<usize>;
 }
 
 /// A channel to send data through. See the documentation for [`send`](TxChannel::send) for

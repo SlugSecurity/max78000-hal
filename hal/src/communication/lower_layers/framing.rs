@@ -19,8 +19,8 @@ pub trait FramedTxChannel: TxChannel {
     /// # ERRORS:
     ///
     /// - [`CommunicationError::SendError`] - Occurs when there's no more space
-    /// in the frame for the number of slices provided or some error occurs when
-    /// sending the frame through the [`TxChannel`].
+    ///   in the frame for the number of slices provided or some error occurs when
+    ///   sending the frame through the [`TxChannel`].
     fn frame<'a, const FRAME_CT: usize>(
         &mut self,
         frame: impl FnOnce() -> Result<Frame<'a, FRAME_CT>, CommunicationError>,
@@ -67,7 +67,7 @@ impl<'a, const FRAME_CT: usize> Frame<'a, FRAME_CT> {
     /// # ERRORS:
     ///
     /// - [`CommunicationError::InternalError`] - Occurs when there's no more space
-    /// in the frame for another slice.
+    ///   in the frame for another slice.
     pub fn append(mut self, buff: &'a [u8]) -> Result<Self, CommunicationError> {
         match self.frame_components.push(buff) {
             Ok(_) => {

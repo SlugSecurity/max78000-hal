@@ -66,10 +66,7 @@ impl<T: GCRI2C> RxChannel for I2CSlave<'_, T> {
         &mut self,
         dest: &mut [u8],
         tmr: &mut R,
-    ) -> crate::communication::Result<usize>
-    where
-        R: Timeout,
-    {
+    ) -> crate::communication::Result<usize> {
         self.rx_channel_recv(dest, tmr, false)
     }
 }
@@ -116,10 +113,7 @@ impl<T: GCRI2C> RxChannel for I2CMaster<'_, T> {
         &mut self,
         dest: &mut [u8],
         tmr: &mut TMT,
-    ) -> crate::communication::Result<usize>
-    where
-        TMT: Timeout,
-    {
+    ) -> crate::communication::Result<usize> {
         self.rx_channel_recv(dest, tmr, false)
     }
 }

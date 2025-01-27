@@ -353,7 +353,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
         freq: <T as oscillator::Oscillator>::Frequency,
         div: <T as oscillator::Oscillator>::Divider,
         get_rng_static_secret: F,
-    ) -> PeripheralManagerBuilder<T, F> {
+    ) -> Self {
         PeripheralManagerBuilder {
             borrowed_periphs,
             consumed_periphs,
@@ -475,7 +475,7 @@ macro_rules! no_enable_rst_periph_fn {
     ($fn_name:ident, $p_type:ty, $field_name:ident) => {
         /// Gets the specified peripheral if not already taken elsewhere. Otherwise,
         /// returns [`BorrowMutError`].
-        pub fn $fn_name(&'a self) -> Result<PeripheralHandle<$p_type>, BorrowMutError> {
+        pub fn $fn_name(&'a self) -> Result<PeripheralHandle<'a, $p_type>, BorrowMutError> {
             PeripheralHandle::new(&self.$field_name)
         }
     };
@@ -484,7 +484,7 @@ macro_rules! no_enable_rst_periph_fn {
 macro_rules! no_enable_rst_periph_fn_no_handle {
     ($fn_name:ident, $p_type:ty, $field_name:ident) => {
         /// Gets the specified peripheral, enabling and resetting it.
-        pub fn $fn_name(&'a self) -> &$p_type {
+        pub fn $fn_name(&self) -> &$p_type {
             &self.$field_name
         }
     };
@@ -524,15 +524,15 @@ pub struct PeripheralManager<'a> {
 }
 
 impl<'a> PeripheralManager<'a> {
-    no_enable_rst_periph_fn!(flash_controller, FlashController<'_, '_>, flash_controller);
-    no_enable_rst_periph_fn!(system_clock, SystemClock<'_, '_>, system_clock);
+    no_enable_rst_periph_fn!(flash_controller, FlashController<'a, 'a>, flash_controller);
+    no_enable_rst_periph_fn!(system_clock, SystemClock<'a, 'a>, system_clock);
 
     // Timers CANNOT be enabled and reset again after creation because
     // Clock holds state for it
-    no_enable_rst_periph_fn!(timer_0, Clock<TMR>, timer_0);
-    no_enable_rst_periph_fn!(timer_1, Clock<TMR1>, timer_1);
-    no_enable_rst_periph_fn!(timer_2, Clock<TMR2>, timer_2);
-    no_enable_rst_periph_fn!(timer_3, Clock<TMR3>, timer_3);
+    no_enable_rst_periph_fn!(timer_0, Clock<'a, TMR>, timer_0);
+    no_enable_rst_periph_fn!(timer_1, Clock<'a, TMR1>, timer_1);
+    no_enable_rst_periph_fn!(timer_2, Clock<'a, TMR2>, timer_2);
+    no_enable_rst_periph_fn!(timer_3, Clock<'a, TMR3>, timer_3);
 
     no_enable_rst_periph_fn_no_handle!(gpio0, Gpio0, gpio0);
     no_enable_rst_periph_fn_no_handle!(gpio1, Gpio1, gpio1);
@@ -599,7 +599,7 @@ impl<'a> PeripheralManager<'a> {
     enable_rst_periph_fn!(uart, UART, uart, ToggleableModule::UART0);
 
     /// Create a [`UartBuilder`] for the UART0
-    pub fn build_uart(&'a self) -> Result<UartBuilder<Uart0>, UartBuilderError> {
+    pub fn build_uart(&'a self) -> Result<UartBuilder<'a, Uart0>, UartBuilderError> {
         UartBuilder::new(self)
     }
 
