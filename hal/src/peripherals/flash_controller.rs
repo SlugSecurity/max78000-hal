@@ -116,7 +116,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// This MUST be called after any write/erase flash controller operations.
     fn flush_icc(&self) -> Result<(), FlashErr> {
         self.gcr.sysctrl().modify(|_, w| w.icc0_flush().flush());
-        while !self.gcr.sysctrl().read().icc0_flush().is_flush() {}
+        while !self.gcr.sysctrl().read().icc0_flush().bit_is_clear() {}
 
         // Clear the line fill buffer by reading 2 pages from flash
         let ptr = FLASH_MEM_BASE;
