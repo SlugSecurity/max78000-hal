@@ -42,7 +42,7 @@ jobs:
   rustdoc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run rustdoc
         run: |
           eval $(ssh-agent -s)
@@ -50,8 +50,8 @@ jobs:
           rustup target add thumbv7em-none-eabihf
           RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items
       - name: upload artifacts
-        uses: actions/upload-artifact@v3
-        with: 
+        uses: actions/upload-artifact@v4
+        with:
           name: rustdoc
           path: target/thumbv7em-none-eabihf/doc
           retention-days: 2
