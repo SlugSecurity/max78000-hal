@@ -73,8 +73,8 @@ pub struct ActivePinHandle<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usi
     pin_idx: usize,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> Drop
-    for ActivePinHandle<'a, PortNum, PIN_CT>
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> Drop
+    for ActivePinHandle<'_, PortNum, PIN_CT>
 {
     fn drop(&mut self) {
         // When handle is dropped, allow the pin to be taken again.
@@ -178,7 +178,7 @@ impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ErrorType
     type Error = GpioError;
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'a, PortNum, PIN_CT> {
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'_, PortNum, PIN_CT> {
     fn transition_operating_mode(&mut self) {
         self.port
             .regs
@@ -504,7 +504,7 @@ pub enum PowerSupply {
     Vddioh,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'a, PortNum, PIN_CT> {
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActivePinHandle<'_, PortNum, PIN_CT> {
     /// Sets the pin's associated power supply.
     pub fn set_power_supply(&self, ps: PowerSupply) {
         self.port.regs.vssel().modify(|r, w| match ps {
@@ -539,7 +539,7 @@ pub enum PullMode {
     StrongPulldown,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveInputPin<'a, PortNum, PIN_CT> {
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveInputPin<'_, PortNum, PIN_CT> {
     /// Sets the pin's pull mode.
     pub fn set_pull_mode(&self, mode: PullMode) {
         let (padctrl0, padctrl1, ps) = match mode {
@@ -613,7 +613,7 @@ pub enum DriveStrength {
     S3,
 }
 
-impl<'a, PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveOutputPin<'a, PortNum, PIN_CT> {
+impl<PortNum: GpioPortNum + 'static, const PIN_CT: usize> ActiveOutputPin<'_, PortNum, PIN_CT> {
     /// Sets the pin's drive strength.
     pub fn set_drive_strength(&self, ds: DriveStrength) {
         let (ds0, ds1) = match ds {

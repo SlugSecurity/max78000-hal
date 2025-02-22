@@ -260,10 +260,7 @@ impl<T: UartInstance> LineDelimitedRxChannel for Uart<'_, T> {
         dest: &mut [u8],
         tmr: &mut U,
         line_ending: LineEnding,
-    ) -> CommunicationResult<usize>
-    where
-        U: Timeout,
-    {
+    ) -> CommunicationResult<usize> {
         self.internal_recv::<true, true>(dest, tmr, line_ending)
     }
 
@@ -272,10 +269,7 @@ impl<T: UartInstance> LineDelimitedRxChannel for Uart<'_, T> {
         dest: &mut [u8],
         tmr: &mut U,
         line_ending: LineEnding,
-    ) -> CommunicationResult<usize>
-    where
-        U: Timeout,
-    {
+    ) -> CommunicationResult<usize> {
         self.internal_recv::<false, true>(dest, tmr, line_ending)
     }
 }

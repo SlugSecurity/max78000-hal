@@ -34,9 +34,9 @@ pub const METADATA_SIZE: usize = TAG_SIZE + NONCE_SIZE;
 /// # ERRORS:
 ///
 /// - [`CommunicationError::RecvError`] - The message didn't contain a nonce of the right size,
-/// didn't match the authentication tag provided, didn't contain an authentication tag, couldn't
-/// be read into the buffer because it was too small, or an error occurred while receiving the
-/// message from the wrapped channel.
+///   didn't match the authentication tag provided, didn't contain an authentication tag, couldn't
+///   be read into the buffer because it was too small, or an error occurred while receiving the
+///   message from the wrapped channel.
 ///
 /// See the [`module`](super) documentation for more information on the cipher used.
 pub struct XChacha20Poly1305RxChannel<T: RxChannel> {
