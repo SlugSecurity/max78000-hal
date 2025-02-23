@@ -58,6 +58,26 @@ fn main() -> ! {
     .configure_timer_2(Oscillator::ISO, Prescaler::_4096)
     .build();
 
+    // run FLC tests with semi-hosting
+    flc_tests::run_flc_tests(
+        &mut stdout,
+        manager.flash_controller().unwrap(),
+        manager.system_clock().unwrap(),
+    );
+
+    {
+        let mut uart = manager.build_uart().unwrap().build(115200);
+
+        // run FLC tests with UART
+        flc_tests::run_flc_tests(
+            &mut uart,
+            manager.flash_controller().unwrap(),
+            manager.system_clock().unwrap(),
+        );
+
+        // UART instance is tossed here
+    }
+
     flc_tests::run_flc_tests(
         &mut stdout,
         manager.flash_controller().unwrap(),
