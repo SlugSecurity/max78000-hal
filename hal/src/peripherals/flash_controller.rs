@@ -299,8 +299,19 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         Ok(())
     }
 
-    /// Writes less than 128 bits (16 bytes) of data to flash. Data needs to fit
-    /// within one flash word (16 bytes).
+    /// Writes less than 128 bits (16 bytes) of data to flash.
+    /// Data needs to fit within one flash word (16 bytes).
+    ///
+    /// SAFETY:
+    /// 
+    /// Writes must not corrupt potentially executable instructions of the program.
+    /// Callers must ensure that the following condition is met:
+    /// * If `address` points to a portion of the program's instructions, `data` must
+    ///   contain valid instructions that does not introduce undefined behavior.
+    ///
+    /// It is very difficult to define what would cause undefined behavior when
+    /// modifying program instructions. This would almost certainly result
+    /// in unwanted and likely undefined behavior. Do so at your own risk.
     unsafe fn write_lt_128_unaligned(
         &self,
         address: u32,
@@ -332,6 +343,18 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     }
 
     /// Writes 128 bits (16 bytes) of data to flash.
+    /// Address must be 128-bit aligned.
+    ///
+    /// SAFETY:
+    /// 
+    /// Writes must not corrupt potentially executable instructions of the program.
+    /// Callers must ensure that the following condition is met:
+    /// * If `address` points to a portion of the program's instructions, `data` must
+    ///   contain valid instructions that does not introduce undefined behavior.
+    ///
+    /// It is very difficult to define what would cause undefined behavior when
+    /// modifying program instructions. This would almost certainly result
+    /// in unwanted and likely undefined behavior. Do so at your own risk.
     unsafe fn write128(
         &self,
         address: u32,
