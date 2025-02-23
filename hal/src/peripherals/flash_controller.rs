@@ -112,21 +112,21 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     }
 
     /// Busy loop until FLC is ready.
-    /// 
+    ///
     /// This MUST be called BEFORE any FLC operation EXCEPT clearing interrupts.
     fn wait_until_ready(&self) {
         while !self.flc.ctrl().read().pend().bit_is_clear() {}
     }
 
     /// Clear any stale errors in the FLC Interrupt Register
-    /// 
+    ///
     /// This can be called without waiting for the FLC to be ready.
     fn clear_interrupts(&self) {
         self.flc.intr().modify(|_, w| w.af().clear_bit());
     }
 
     /// Prepares the FLC for a write operation.
-    /// 
+    ///
     /// Procedure:
     ///  - Wait until FLC ready
     ///  - Disable icc0
@@ -138,7 +138,11 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     ///  - Lock write protection
     ///  - Flush ICC
     ///  - Enable icc0
-    fn write_guard<F: Fn() -> ()>(&self, sys_clk: &SystemClock, operation: F) -> Result<(), FlashErr> {
+    fn write_guard<F: Fn()>(
+        &self,
+        sys_clk: &SystemClock,
+        operation: F,
+    ) -> Result<(), FlashErr> {
         // Pre-write
         self.wait_until_ready();
         self.disable_icc0();
@@ -301,7 +305,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 
     /// Writes less than 128 bits (16 bytes) of data to flash. Data needs to fit
     /// within one flash word (16 bytes).
-    unsafe fn write_lt_128_unaligned(&self, address: u32, data: &[u8], sys_clk: &SystemClock) -> Result<(), FlashErr> {
+    unsafe fn write_lt_128_unaligned(
+        &self,
+        address: u32,
+        data: &[u8],
+        sys_clk: &SystemClock,
+    ) -> Result<(), FlashErr> {
         // Get byte idx within 128-bit word
         let byte_idx = (address & 0xF) as usize;
 
@@ -327,7 +336,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     }
 
     /// Writes 128 bits (16 bytes) of data to flash.
-    unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk: &SystemClock) -> Result<(), FlashErr> {
+    unsafe fn write128(
+        &self,
+        address: u32,
+        data: &[u32; 4],
+        sys_clk: &SystemClock,
+    ) -> Result<(), FlashErr> {
         // Check if adddress is 128-bit aligned
         if address & 0xF > 0 {
             return Err(FlashErr::AddressNotAligned128);
