@@ -17,11 +17,11 @@ use max78000_hal::{
     },
 };
 use tests::{
-    bit_band_tests, csprng_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests, trng_tests,
-    uart_tests,
+    bit_band_tests, csprng_tests, fip_tests, flc_tests, gpio_tests, oscillator_tests, timer_tests,
+    trng_tests, uart_tests,
 };
 
-extern crate panic_semihosting;
+extern crate fault_injection_protection_arm;
 
 pub mod tests;
 
@@ -83,6 +83,8 @@ fn main() -> ! {
 
     trng_tests::run_trng_tests(manager.trng().unwrap(), &mut stdout);
     csprng_tests::run_csprng_tests(manager.csprng().unwrap(), &mut stdout);
+
+    fip_tests::run_fip_tests(manager.csprng().unwrap(), &mut stdout);
 
     gpio_tests::run_gpio_tests(
         manager.gpio0(),

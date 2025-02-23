@@ -16,7 +16,7 @@ use max78000_hal::peripherals::oscillator::{Ipo, IpoDivider, IpoFrequency};
 use max78000_hal::peripherals::timer::{Oscillator, Prescaler, Time};
 use max78000_hal::peripherals::{PeripheralManagerBuilder, SplittablePeripheral};
 
-extern crate panic_semihosting;
+extern crate fault_injection_protection_arm;
 
 /// Entry point for tests.
 #[entry]
