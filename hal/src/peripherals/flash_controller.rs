@@ -111,6 +111,52 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         Ok(())
     }
 
+    /// Busy loop until FLC is ready.
+    /// 
+    /// This MUST be called BEFORE any FLC operation EXCEPT clearing interrupts.
+    fn wait_until_ready(&self) {
+        while !self.flc.ctrl().read().pend().bit_is_clear() {}
+    }
+
+    /// Clear any stale errors in the FLC Interrupt Register
+    /// 
+    /// This can be called without waiting for the FLC to be ready.
+    fn clear_interrupts(&self) {
+        self.flc.intr().modify(|_, w| w.af().clear_bit());
+    }
+
+    /// Prepares the FLC for a write operation.
+    /// 
+    /// Procedure:
+    ///  - Wait until FLC ready
+    ///  - Disable icc0
+    ///  - Clear FLC interrupts
+    ///  - Set clock divisor
+    ///  - Unlock write protection
+    ///  - EXECUTE OPERATION (CLOSURE)
+    ///  - Wait until FLC ready
+    ///  - Lock write protection
+    ///  - Flush ICC
+    ///  - Enable icc0
+    fn write_guard<F: Fn() -> ()>(&self, sys_clk: &SystemClock, operation: F) -> Result<(), FlashErr> {
+        // Pre-write
+        self.wait_until_ready();
+        self.disable_icc0();
+        self.clear_interrupts();
+        self.set_clock_divisor(sys_clk)?;
+        self.unlock_write_protection();
+
+        operation();
+
+        // Post-write
+        self.wait_until_ready();
+        self.lock_write_protection();
+        self.flush_icc()?;
+        self.enable_icc0();
+
+        Ok(())
+    }
+
     /// Flushes the flash line buffer and arm instruction cache.
     ///
     /// This MUST be called after any write/erase flash controller operations.
@@ -123,6 +169,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let mut empty_buffer = [0; 4];
         self.read_bytes(ptr, &mut empty_buffer)?;
         self.read_bytes(ptr + FLASH_PAGE_SIZE, &mut empty_buffer)?;
+
         Ok(())
     }
 
@@ -175,7 +222,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         }
 
         for byte in word_chunk.into_remainder() {
-            // SAFETY:
+            // SAFETY:CLOSURE
             // * src is valid for reads. Because read range is checked at the
             // beginning of function.
             //
@@ -214,10 +261,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     ) -> Result<(), FlashErr> {
         self.check_address_bounds(address..(address + data.len() as u32))?;
 
-        self.set_clock_divisor(sys_clk)?;
-
-        self.disable_icc0();
-
         // Check alignment
         let mut physical_addr = address;
         let bytes_unaligned = if (address & 0xF) > 0 {
@@ -229,7 +272,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         // Write unaligned data
         if bytes_unaligned > 0 {
             let unaligned_data = &data[0..core::cmp::min(bytes_unaligned, data.len())];
-            self.write_lt_128_unaligned(physical_addr, unaligned_data)?;
+            self.write_lt_128_unaligned(physical_addr, unaligned_data, sys_clk)?;
             physical_addr += unaligned_data.len() as u32;
         }
 
@@ -244,25 +287,21 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             let mut buffer_128_bits: [u32; 4] = [0; 4];
             word.enumerate()
                 .for_each(|(idx, chunk)| buffer_128_bits[idx] = chunk);
-            self.write128(physical_addr, &buffer_128_bits)?;
+            self.write128(physical_addr, &buffer_128_bits, sys_clk)?;
             physical_addr += 16;
         }
 
         // remainder from chunks
         if !chunk_8.remainder().is_empty() {
-            self.write_lt_128_unaligned(physical_addr, chunk_8.remainder())?;
+            self.write_lt_128_unaligned(physical_addr, chunk_8.remainder(), sys_clk)?;
         }
-
-        self.flush_icc()?;
-
-        self.enable_icc0();
 
         Ok(())
     }
 
     /// Writes less than 128 bits (16 bytes) of data to flash. Data needs to fit
     /// within one flash word (16 bytes).
-    fn write_lt_128_unaligned(&self, address: u32, data: &[u8]) -> Result<(), FlashErr> {
+    unsafe fn write_lt_128_unaligned(&self, address: u32, data: &[u8], sys_clk: &SystemClock) -> Result<(), FlashErr> {
         // Get byte idx within 128-bit word
         let byte_idx = (address & 0xF) as usize;
 
@@ -284,34 +323,28 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
                 new_data[idx] = u32::from_le_bytes(word_chunk.try_into().unwrap())
             });
 
-        self.write128(aligned_addr, &new_data)
+        self.write128(aligned_addr, &new_data, sys_clk)
     }
 
     /// Writes 128 bits (16 bytes) of data to flash.
-    // make sure to disable ICC with ICC_Disable(); before Running this function
-    fn write128(&self, address: u32, data: &[u32; 4]) -> Result<(), FlashErr> {
+    unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk: &SystemClock) -> Result<(), FlashErr> {
         // Check if adddress is 128-bit aligned
         if address & 0xF > 0 {
             return Err(FlashErr::AddressNotAligned128);
         }
 
-        self.unlock_write_protection();
+        self.write_guard(sys_clk, || {
+            self.flc.addr().modify(|_, w| w.addr().variant(address));
+            self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
+            self.flc.data(1).modify(|_, w| w.data().variant(data[1]));
+            self.flc.data(2).modify(|_, w| w.data().variant(data[2]));
+            self.flc.data(3).modify(|_, w| w.data().variant(data[3]));
 
-        // Clear stale errors
-        self.flc.intr().modify(|_, w| w.af().clear_bit());
+            self.flc.ctrl().modify(|_, w| w.wr().set_bit());
 
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.flc.addr().modify(|_, w| w.addr().variant(address));
-        self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
-        self.flc.data(1).modify(|_, w| w.data().variant(data[1]));
-        self.flc.data(2).modify(|_, w| w.data().variant(data[2]));
-        self.flc.data(3).modify(|_, w| w.data().variant(data[3]));
-
-        self.flc.ctrl().modify(|_, w| w.wr().set_bit());
-        while !self.flc.ctrl().read().wr().is_complete() {}
-
-        self.lock_write_protection();
+            // Wait until write completes
+            while !self.flc.ctrl().read().wr().is_complete() {}
+        })?;
 
         Ok(())
     }
@@ -327,27 +360,12 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     pub unsafe fn page_erase(&self, address: u32, sys_clk: &SystemClock) -> Result<(), FlashErr> {
         self.check_address_bounds(address..address)?;
 
-        if self.set_clock_divisor(sys_clk).is_err() {
-            return Err(FlashErr::FlcClkErr);
-        }
+        self.write_guard(sys_clk, || {
+            self.flc.addr().modify(|_, w| w.addr().variant(address));
 
-        self.unlock_write_protection();
-
-        // Clear stale errors
-        self.flc.intr().modify(|_, w| w.af().clear_bit());
-
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.flc.addr().modify(|_, w| w.addr().variant(address));
-
-        self.flc.ctrl().modify(|_, w| w.erase_code().erase_page());
-        self.flc.ctrl().modify(|_, w| w.pge().set_bit());
-
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.lock_write_protection();
-
-        self.flush_icc()?;
+            self.flc.ctrl().modify(|_, w| w.erase_code().erase_page());
+            self.flc.ctrl().modify(|_, w| w.pge().set_bit());
+        })?;
 
         Ok(())
     }
