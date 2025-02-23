@@ -242,7 +242,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         Ok(())
     }
 
-    /// SAFETY:
+    /// # Safety
     ///
     /// Writes must not corrupt potentially executable instructions of the program.
     /// Callers must ensure that the following condition is met:
@@ -301,7 +301,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Writes less than 128 bits (16 bytes) of data to flash.
     /// Data needs to fit within one flash word (16 bytes).
     ///
-    /// SAFETY:
+    /// # Safety
     ///
     /// Writes must not corrupt potentially executable instructions of the program.
     /// Callers must ensure that the following condition is met:
@@ -344,7 +344,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Writes 128 bits (16 bytes) of data to flash.
     /// Address must be 128-bit aligned.
     ///
-    /// SAFETY:
+    /// # Safety
     ///
     /// Writes must not corrupt potentially executable instructions of the program.
     /// Callers must ensure that the following condition is met:
