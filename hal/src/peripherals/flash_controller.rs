@@ -138,11 +138,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     ///  - Lock write protection
     ///  - Flush ICC
     ///  - Enable icc0
-    fn write_guard<F: Fn()>(
-        &self,
-        sys_clk: &SystemClock,
-        operation: F,
-    ) -> Result<(), FlashErr> {
+    fn write_guard<F: Fn()>(&self, sys_clk: &SystemClock, operation: F) -> Result<(), FlashErr> {
         // Pre-write
         self.wait_until_ready();
         self.disable_icc0();
