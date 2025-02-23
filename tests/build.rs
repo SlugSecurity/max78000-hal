@@ -13,6 +13,8 @@ fn main() {
         .write_all(include_bytes!("memory.x"))
         .unwrap();
 
+    println!("cargo:rustc-link-arg=--nmagic");
+
     // Only re-run the build script when this file, memory.x, or link.x is changed.
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=memory.x");

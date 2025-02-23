@@ -5,9 +5,5 @@ MEMORY
     RAM        (rw)  :  ORIGIN = ORIGIN(STACK) + LENGTH(STACK),          LENGTH = 128K - LENGTH(STACK)
 }
 
-/*
-Add a block of memory for the stack before the RAM block, so that a stack overflow leaks into
-reserved space and flash memory, instead of .data and .bss.
-*/
-
 _stack_start = ORIGIN(STACK) + LENGTH(STACK);
+_stack_end = ORIGIN(STACK);
