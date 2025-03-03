@@ -51,12 +51,14 @@ macro_rules! never_exit {
     };
 }
 
-/// A panic handler that never exits, even in cases of fault-injection attacks.
-// In debug mode, don't inline in order to allow setting breakpoints.
-#[cfg_attr(debug_assertions, inline(never))]
 #[panic_handler]
+fn panic_handler(_: &PanicInfo) -> ! {
+    never_exit!()
+}
+
+/// A "panic" function that is guaranteed to be in RAM
 #[link_section = ".analogsucks"]
-fn panic_handler(_info: &PanicInfo) -> ! {
+fn panic() -> ! {
     never_exit!()
 }
 
@@ -75,19 +77,19 @@ struct FlashController<'gcr, 'icc> {
     icc: &'icc ICC0,
 }
 
-/// Checks whether the given address range (exclusive) is within flash space.
-///
-/// # Panics
-/// - Panics if the given address range is not contained within flash range.
+/// Checks whether the given address range (exclusive) is within flash space, returning `false` if there
+/// is an error.
 #[inline(always)]
-const fn check_address_bounds(address_range: core::ops::Range<u32>) {
+#[must_use]
+const fn check_address_bounds(address_range: core::ops::Range<u32>) -> bool {
     if !(FLASH_MEM_BASE <= address_range.start
         && address_range.start < FLASH_MEM_BASE + FLASH_MEM_SIZE
         && FLASH_MEM_BASE < address_range.end
         && address_range.end <= FLASH_MEM_BASE + FLASH_MEM_SIZE)
     {
-        panic!();
+        return false;
     }
+    return true;
 }
 
 impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
@@ -209,9 +211,9 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         const PAGE2: u32 = FLASH_MEM_BASE + FLASH_PAGE_SIZE;
         // SAFETY: `FLASH_MEM_BASE` points to a valid, aligned word within flash space.
         const {
-            check_address_bounds(PAGE1..PAGE1 + 4);
+            assert!(check_address_bounds(PAGE1..PAGE1 + 4));
             assert!(PAGE1 % 4 == 0);
-            check_address_bounds(PAGE2..PAGE2 + 4);
+            assert!(check_address_bounds(PAGE2..PAGE2 + 4));
             assert!(PAGE2 % 4 == 0);
         }
         unsafe { core::hint::black_box(read32(PAGE1 as *const u32)) };
@@ -268,9 +270,11 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// - `address` must be aligned to 128 bits
     #[inline(always)]
     unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk_freq: u32) {
-        check_address_bounds(address..address + 16);
+        if !check_address_bounds(address..address + 16) {
+            panic()
+        }
         if address % size_of::<[u32; 4]>() as u32 != 0 {
-            panic!();
+            panic();
         }
 
         // SAFETY: the caller must guarantee that `sys_clk_freq` is valid per this function's
@@ -305,8 +309,11 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// - If `sys_clk_freq` is not a multiple of 1 MHz, this function panics.
     /// - This function also panics when the `address` does not point inside of a page
     ///   contained in flash space.
+    #[inline(always)]
     unsafe fn page_erase(&self, address: u32, sys_clk_freq: u32) {
-        check_address_bounds(address..address + 1);
+        if !check_address_bounds(address..address + 1) {
+            panic()
+        }
         // SAFETY: the caller must guarantee that `sys_clk_freq` is valid per this function's
         // safety comment.
         unsafe {
@@ -329,9 +336,11 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 #[link_section = ".analogsucks"]
 pub unsafe extern "C" fn read32(address: *const u32) -> u32 {
     if !address.is_aligned() {
-        panic!();
+        panic();
     }
-    check_address_bounds(address as u32..(address as u32 + 4));
+    if !check_address_bounds(address as u32..(address as u32 + 4)) {
+        panic();
+    }
     // SAFETY: the caller must guarantee that `address` is aligned and is within
     // flash memory.
     unsafe { read_volatile(address) }

@@ -13,6 +13,11 @@ fn main() {
         .write_all(include_bytes!("memory.x"))
         .unwrap();
 
+    File::create(out.join("link.x"))
+        .unwrap()
+        .write_all(include_bytes!("link.x"))
+        .unwrap();
+
     println!("cargo:rustc-link-arg=--nmagic");
 
     // Only re-run the build script when this file, memory.x, or link.x is changed.

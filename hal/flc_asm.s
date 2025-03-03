@@ -1,4 +1,3 @@
-@ Please see the `flc-asm` crate at the git root for information on how this file is generated.
 	.text
 	.syntax unified
 	.eabi_attribute	67, "2.09"
@@ -40,19 +39,65 @@ flc_read32_primitive:
 	mov	r7, sp
 	.cfi_def_cfa_register r7
 	lsls	r1, r0, #30
-	ittt	eq
-	moveq	r1, r0
-	bfceq	r1, #0, #19
-	cmpeq.w	r1, #268435456
-	bne	.LBB0_2
+	bne	.LBB0_4
+	mov	r1, r0
+	bfc	r1, #0, #19
+	cmp.w	r1, #268435456
+	bne	.LBB0_3
 	ldr	r1, .LCPI0_0
 	add	r1, r0
 	cmp.w	r1, #524288
 	itt	lo
 	ldrlo	r0, [r0]
 	poplo	{r7, pc}
-.LBB0_2:
-	bl	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E
+.LBB0_3:
+	@APP
+.Ltmp0:
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	b	.Ltmp0
+	@NO_APP
+	.inst.n	0xdefe
+.LBB0_4:
+	@APP
+.Ltmp1:
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	b	.Ltmp1
+	@NO_APP
+	.inst.n	0xdefe
 	.p2align	2
 .LCPI0_0:
 	.long	4026531843
@@ -90,13 +135,13 @@ flc_write128_primitive:
 	mov	r3, r0
 	bfc	r3, #0, #19
 	cmp.w	r3, #268435456
-	bne	.LBB1_16
+	bne	.LBB1_17
 	ldr	r3, .LCPI1_0
 	add	r3, r0
 	cmp.w	r3, #524288
-	bhs	.LBB1_16
+	bhs	.LBB1_17
 	lsls	r3, r0, #28
-	bne	.LBB1_16
+	bne.w	.LBB1_18
 	ldr	r4, .LCPI1_1
 .LBB1_4:
 	ldr	r3, [r4, #8]
@@ -193,6 +238,54 @@ flc_write128_primitive:
 	pop	{r4, r5, r6, r7, pc}
 .LBB1_16:
 	bl	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E
+.LBB1_17:
+	@APP
+.Ltmp2:
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	b	.Ltmp2
+	@NO_APP
+	.inst.n	0xdefe
+.LBB1_18:
+	@APP
+.Ltmp3:
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	b	.Ltmp3
+	@NO_APP
+	.inst.n	0xdefe
 	.p2align	2
 .LCPI1_0:
 	.long	4026531855
@@ -235,7 +328,7 @@ flc_page_erase_primitive:
 	mov	r2, r0
 	bfc	r2, #0, #19
 	cmp.w	r2, #268435456
-	bne	.LBB2_13
+	bne	.LBB2_14
 	ldr	r3, .LCPI2_0
 .LBB2_2:
 	ldr	r2, [r3, #8]
@@ -318,6 +411,30 @@ flc_page_erase_primitive:
 	pop	{r2, r3, r4, r5, r7, pc}
 .LBB2_13:
 	bl	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E
+.LBB2_14:
+	@APP
+.Ltmp4:
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	@NO_APP
+	.inst.n	0xdefe
 	.p2align	2
 .LCPI2_0:
 	.long	1073909760
@@ -378,32 +495,32 @@ _ZN4core9panicking9panic_fmt17haebed1323d60a452E:
 	.setfp	r7, sp
 	mov	r7, sp
 	.cfi_def_cfa_register r7
-.Ltmp0:
+.Ltmp5:
 	.loc	1 75 14 prologue_end
 	@APP
-.Ltmp1:
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
-	b	.Ltmp1
+.Ltmp6:
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
+	b	.Ltmp6
 	@NO_APP
 	.inst.n	0xdefe
-.Ltmp2:
+.Ltmp7:
 .Lfunc_end4:
 	.size	_ZN4core9panicking9panic_fmt17haebed1323d60a452E, .Lfunc_end4-_ZN4core9panicking9panic_fmt17haebed1323d60a452E
 	.cfi_endproc
@@ -428,16 +545,128 @@ _ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE:
 	.setfp	r7, sp
 	mov	r7, sp
 	.cfi_def_cfa_register r7
-.Ltmp3:
+.Ltmp8:
 	.loc	1 261 5 prologue_end
 	bl	_ZN4core9panicking9panic_fmt17haebed1323d60a452E
-.Ltmp4:
+.Ltmp9:
 .Lfunc_end5:
 	.size	_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE, .Lfunc_end5-_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE
 	.cfi_endproc
 	.cantunwind
 	.fnend
 
+	.section	.debug_abbrev,"",%progbits
+	.byte	1
+	.byte	17
+	.byte	1
+	.byte	37
+	.byte	14
+	.byte	19
+	.byte	5
+	.byte	3
+	.byte	14
+	.byte	16
+	.byte	23
+	.byte	27
+	.byte	14
+	.byte	17
+	.byte	1
+	.byte	85
+	.byte	23
+	.byte	0
+	.byte	0
+	.byte	2
+	.byte	57
+	.byte	1
+	.byte	3
+	.byte	14
+	.byte	0
+	.byte	0
+	.byte	3
+	.byte	46
+	.byte	0
+	.byte	17
+	.byte	1
+	.byte	18
+	.byte	6
+	.byte	64
+	.byte	24
+	.byte	110
+	.byte	14
+	.byte	3
+	.byte	14
+	.byte	58
+	.byte	11
+	.byte	59
+	.byte	11
+	.byte	54
+	.byte	11
+	.byte	63
+	.byte	25
+	.ascii	"\207\001"
+	.byte	25
+	.byte	0
+	.byte	0
+	.byte	4
+	.byte	46
+	.byte	0
+	.byte	110
+	.byte	14
+	.byte	3
+	.byte	14
+	.byte	58
+	.byte	11
+	.byte	59
+	.byte	5
+	.ascii	"\207\001"
+	.byte	25
+	.byte	32
+	.byte	11
+	.byte	0
+	.byte	0
+	.byte	5
+	.byte	46
+	.byte	1
+	.byte	17
+	.byte	1
+	.byte	18
+	.byte	6
+	.byte	64
+	.byte	24
+	.byte	110
+	.byte	14
+	.byte	3
+	.byte	14
+	.byte	58
+	.byte	11
+	.byte	59
+	.byte	11
+	.byte	54
+	.byte	11
+	.byte	63
+	.byte	25
+	.ascii	"\207\001"
+	.byte	25
+	.byte	0
+	.byte	0
+	.byte	6
+	.byte	29
+	.byte	0
+	.byte	49
+	.byte	19
+	.byte	17
+	.byte	1
+	.byte	18
+	.byte	6
+	.byte	88
+	.byte	11
+	.byte	89
+	.byte	11
+	.byte	87
+	.byte	11
+	.byte	0
+	.byte	0
+	.byte	0
 	.section	.debug_info,"",%progbits
 .Lcu_begin0:
 	.long	.Ldebug_info_end0-.Ldebug_info_start0
@@ -466,6 +695,7 @@ _ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE:
 	.long	.Linfo_string8
 	.byte	1
 	.byte	55
+	.byte	3
 
 
 	.byte	4
@@ -484,12 +714,13 @@ _ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE:
 	.long	.Linfo_string10
 	.byte	1
 	.byte	233
+	.byte	3
 
 
 	.byte	6
-	.long	69
-	.long	.Ltmp3
-	.long	.Ltmp4-.Ltmp3
+	.long	70
+	.long	.Ltmp8
+	.long	.Ltmp9-.Ltmp8
 	.byte	1
 	.byte	234
 	.byte	5
