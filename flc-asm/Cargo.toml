@@ -7,4 +7,5 @@ edition = "2021"
 crate-type = ["staticlib"]
 
 [dependencies]
+likely_stable = "0.1.3"
 max78000 = { git = "https://github.com/slugsecurity/max78000" }

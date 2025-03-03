@@ -18,7 +18,7 @@
 	.eabi_attribute	28, 1
 	.eabi_attribute	38, 1
 	.eabi_attribute	14, 0
-	.file	"flc_asm.c1ff00fd3aa9b52e-cgu.0"
+	.file	"flc_asm.167cc79d25ff71c0-cgu.0"
 	.section	.analogsucks,"ax",%progbits
 	.globl	flc_read32_primitive
 	.p2align	2
@@ -45,11 +45,12 @@ flc_read32_primitive:
 	cmp.w	r1, #268435456
 	bne	.LBB0_3
 	ldr	r1, .LCPI0_0
+	ldr	r2, .LCPI0_1
 	add	r1, r0
-	cmp.w	r1, #524288
-	itt	lo
-	ldrlo	r0, [r0]
-	poplo	{r7, pc}
+	cmp	r1, r2
+	itt	hs
+	ldrhs	r0, [r0]
+	pophs	{r7, pc}
 .LBB0_3:
 	@APP
 .Ltmp0:
@@ -100,7 +101,9 @@ flc_read32_primitive:
 	.inst.n	0xdefe
 	.p2align	2
 .LCPI0_0:
-	.long	4026531843
+	.long	4026007555
+.LCPI0_1:
+	.long	4294443008
 .Lfunc_end0:
 	.size	flc_read32_primitive, .Lfunc_end0-flc_read32_primitive
 	.cfi_endproc
@@ -137,25 +140,26 @@ flc_write128_primitive:
 	cmp.w	r3, #268435456
 	bne	.LBB1_16
 	ldr	r3, .LCPI1_0
+	ldr	r4, .LCPI1_1
 	add	r3, r0
-	cmp.w	r3, #524288
-	bhs	.LBB1_16
+	cmp	r3, r4
+	blo	.LBB1_16
 	lsls	r3, r0, #28
 	bne.w	.LBB1_17
-	ldr	r4, .LCPI1_1
+	ldr	r4, .LCPI1_2
 .LBB1_4:
 	ldr	r3, [r4, #8]
 	lsls	r3, r3, #7
 	bmi	.LBB1_4
-	ldr	r3, .LCPI1_2
-	ldr	r6, .LCPI1_4
+	ldr	r3, .LCPI1_3
+	ldr	r6, .LCPI1_5
 	ldr	r5, [r3]
 	bic	r5, r5, #1
 	str	r5, [r3]
 	ldr	r5, [r4, #36]
 	bic	r5, r5, #2
 	str	r5, [r4, #36]
-	ldr	r5, .LCPI1_3
+	ldr	r5, .LCPI1_4
 	udiv	r5, r2, r5
 	muls	r6, r5, r6
 	cmn	r6, r2
@@ -210,7 +214,7 @@ flc_write128_primitive:
 	mov	r0, sp
 	@APP
 	@NO_APP
-	ldr	r0, .LCPI1_5
+	ldr	r0, .LCPI1_6
 	ldr	r0, [r0]
 	str	r0, [sp, #4]
 	add	r0, sp, #4
@@ -310,16 +314,18 @@ flc_write128_primitive:
 	.inst.n	0xdefe
 	.p2align	2
 .LCPI1_0:
-	.long	4026531855
+	.long	4026007567
 .LCPI1_1:
-	.long	1073909760
+	.long	4294443008
 .LCPI1_2:
-	.long	1073914112
+	.long	1073909760
 .LCPI1_3:
-	.long	1000000
+	.long	1073914112
 .LCPI1_4:
-	.long	4293967296
+	.long	1000000
 .LCPI1_5:
+	.long	4293967296
+.LCPI1_6:
 	.long	268443648
 .Lfunc_end1:
 	.size	flc_write128_primitive, .Lfunc_end1-flc_write128_primitive
@@ -496,17 +502,18 @@ flc_page_erase_primitive:
 	.cantunwind
 	.fnend
 
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
-	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
+	.ident	"rustc version 1.84.1 (e71f9a9a9 2025-01-27)"
 	.section	".note.GNU-stack","",%progbits
 	.eabi_attribute	30, 4

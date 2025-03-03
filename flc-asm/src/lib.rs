@@ -17,6 +17,7 @@
 
 use core::{arch::asm, panic::PanicInfo, ptr::read_volatile};
 
+use likely_stable::likely;
 use max78000::{FLC, GCR, ICC0};
 
 /// A macro for ensuring that code never exits, even in cases of fault-injection attacks.
@@ -131,7 +132,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// - The FLC must be in its ready state after [`Self::wait_until_ready`]
     #[inline(always)]
     unsafe fn set_clock_divisor(&self, sys_clk_freq: u32) {
-        if sys_clk_freq % 1_000_000 != 0 {
+        if likely(sys_clk_freq % 1_000_000 != 0) {
             panic()
         }
 
@@ -270,10 +271,10 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// - `address` must be aligned to 128 bits
     #[inline(always)]
     unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk_freq: u32) {
-        if !check_address_bounds(address..address + 16) {
+        if likely(!check_address_bounds(address..address + 16)) {
             panic();
         }
-        if address % size_of::<[u32; 4]>() as u32 != 0 {
+        if likely(address % size_of::<[u32; 4]>() as u32 != 0) {
             panic();
         }
 
@@ -311,7 +312,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     ///   contained in flash space.
     #[inline(always)]
     unsafe fn page_erase(&self, address: u32, sys_clk_freq: u32) {
-        if !check_address_bounds(address..address + 1) {
+        if likely(!check_address_bounds(address..address + 1)) {
             panic()
         }
         // SAFETY: the caller must guarantee that `sys_clk_freq` is valid per this function's
@@ -335,10 +336,10 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 #[export_name = "flc_read32_primitive"]
 #[link_section = ".analogsucks"]
 pub unsafe extern "C" fn read32(address: *const u32) -> u32 {
-    if !address.is_aligned() {
+    if likely(!address.is_aligned()) {
         panic();
     }
-    if !check_address_bounds(address as u32..(address as u32 + 4)) {
+    if likely(!check_address_bounds(address as u32..(address as u32 + 4))) {
         panic();
     }
     // SAFETY: the caller must guarantee that `address` is aligned and is within
