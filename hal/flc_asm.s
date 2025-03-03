@@ -1,3 +1,4 @@
+@ Please see the `flc-asm` crate at the git root for information on how this file is generated.
 	.text
 	.syntax unified
 	.eabi_attribute	67, "2.09"
