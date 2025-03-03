@@ -135,13 +135,13 @@ flc_write128_primitive:
 	mov	r3, r0
 	bfc	r3, #0, #19
 	cmp.w	r3, #268435456
-	bne	.LBB1_17
+	bne	.LBB1_16
 	ldr	r3, .LCPI1_0
 	add	r3, r0
 	cmp.w	r3, #524288
-	bhs	.LBB1_17
+	bhs	.LBB1_16
 	lsls	r3, r0, #28
-	bne.w	.LBB1_18
+	bne.w	.LBB1_17
 	ldr	r4, .LCPI1_1
 .LBB1_4:
 	ldr	r3, [r4, #8]
@@ -159,7 +159,7 @@ flc_write128_primitive:
 	udiv	r5, r2, r5
 	muls	r6, r5, r6
 	cmn	r6, r2
-	bne	.LBB1_16
+	bne.w	.LBB1_18
 	ldr	r2, [r4, #4]
 	bfi	r2, r5, #0, #8
 	str	r2, [r4, #4]
@@ -237,8 +237,6 @@ flc_write128_primitive:
 	ldr	r11, [sp], #4
 	pop	{r4, r5, r6, r7, pc}
 .LBB1_16:
-	bl	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E
-.LBB1_17:
 	@APP
 .Ltmp2:
 	b	.Ltmp2
@@ -262,7 +260,7 @@ flc_write128_primitive:
 	b	.Ltmp2
 	@NO_APP
 	.inst.n	0xdefe
-.LBB1_18:
+.LBB1_17:
 	@APP
 .Ltmp3:
 	b	.Ltmp3
@@ -284,6 +282,30 @@ flc_write128_primitive:
 	b	.Ltmp3
 	b	.Ltmp3
 	b	.Ltmp3
+	@NO_APP
+	.inst.n	0xdefe
+.LBB1_18:
+	@APP
+.Ltmp4:
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
+	b	.Ltmp4
 	@NO_APP
 	.inst.n	0xdefe
 	.p2align	2
@@ -328,7 +350,7 @@ flc_page_erase_primitive:
 	mov	r2, r0
 	bfc	r2, #0, #19
 	cmp.w	r2, #268435456
-	bne	.LBB2_14
+	bne	.LBB2_13
 	ldr	r3, .LCPI2_0
 .LBB2_2:
 	ldr	r2, [r3, #8]
@@ -346,7 +368,7 @@ flc_page_erase_primitive:
 	udiv	r4, r1, r4
 	muls	r5, r4, r5
 	cmn	r5, r1
-	bne	.LBB2_13
+	bne	.LBB2_14
 	ldr	r1, [r3, #4]
 	bfi	r1, r4, #0, #8
 	str	r1, [r3, #4]
@@ -410,93 +432,30 @@ flc_page_erase_primitive:
 	bpl	.LBB2_11
 	pop	{r2, r3, r4, r5, r7, pc}
 .LBB2_13:
-	bl	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E
-.LBB2_14:
 	@APP
-.Ltmp4:
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
-	b	.Ltmp4
+.Ltmp5:
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
+	b	.Ltmp5
 	@NO_APP
 	.inst.n	0xdefe
-	.p2align	2
-.LCPI2_0:
-	.long	1073909760
-.LCPI2_1:
-	.long	1073914112
-.LCPI2_2:
-	.long	1000000
-.LCPI2_3:
-	.long	4293967296
-.LCPI2_4:
-	.long	268443648
-.Lfunc_end2:
-	.size	flc_page_erase_primitive, .Lfunc_end2-flc_page_erase_primitive
-	.cfi_endproc
-	.cantunwind
-	.fnend
-
-	.section	.text.unlikely._ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E,"ax",%progbits
-	.p2align	1
-	.type	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E,%function
-	.code	16
-	.thumb_func
-_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E:
-.Lfunc_begin3:
-	.fnstart
-	.cfi_startproc
-	.save	{r7, lr}
-	push	{r7, lr}
-	.cfi_def_cfa_offset 8
-	.cfi_offset lr, -4
-	.cfi_offset r7, -8
-	.setfp	r7, sp
-	mov	r7, sp
-	.cfi_def_cfa_register r7
-	bl	_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE
-.Lfunc_end3:
-	.size	_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E, .Lfunc_end3-_ZN7flc_asm15FlashController17set_clock_divisor19panic_cold_explicit17hf124d6e3d1e3a7c6E
-	.cfi_endproc
-	.cantunwind
-	.fnend
-
-	.section	.text.unlikely._ZN4core9panicking9panic_fmt17haebed1323d60a452E,"ax",%progbits
-	.p2align	1
-	.type	_ZN4core9panicking9panic_fmt17haebed1323d60a452E,%function
-	.code	16
-	.thumb_func
-_ZN4core9panicking9panic_fmt17haebed1323d60a452E:
-.Lfunc_begin4:
-	.file	1 "/rustc/bef3c3b01f690de16738b1c9f36470fbfc6ac623" "library/core/src/panicking.rs"
-	.loc	1 55 0
-	.fnstart
-	.cfi_startproc
-	.save	{r7, lr}
-	push	{r7, lr}
-	.cfi_def_cfa_offset 8
-	.cfi_offset lr, -4
-	.cfi_offset r7, -8
-	.setfp	r7, sp
-	mov	r7, sp
-	.cfi_def_cfa_register r7
-.Ltmp5:
-	.loc	1 75 14 prologue_end
+.LBB2_14:
 	@APP
 .Ltmp6:
 	b	.Ltmp6
@@ -520,263 +479,23 @@ _ZN4core9panicking9panic_fmt17haebed1323d60a452E:
 	b	.Ltmp6
 	@NO_APP
 	.inst.n	0xdefe
-.Ltmp7:
-.Lfunc_end4:
-	.size	_ZN4core9panicking9panic_fmt17haebed1323d60a452E, .Lfunc_end4-_ZN4core9panicking9panic_fmt17haebed1323d60a452E
+	.p2align	2
+.LCPI2_0:
+	.long	1073909760
+.LCPI2_1:
+	.long	1073914112
+.LCPI2_2:
+	.long	1000000
+.LCPI2_3:
+	.long	4293967296
+.LCPI2_4:
+	.long	268443648
+.Lfunc_end2:
+	.size	flc_page_erase_primitive, .Lfunc_end2-flc_page_erase_primitive
 	.cfi_endproc
 	.cantunwind
 	.fnend
 
-	.section	.text.unlikely._ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE,"ax",%progbits
-	.p2align	1
-	.type	_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE,%function
-	.code	16
-	.thumb_func
-_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE:
-.Lfunc_begin5:
-	.loc	1 233 0
-	.fnstart
-	.cfi_startproc
-	.save	{r7, lr}
-	push	{r7, lr}
-	.cfi_def_cfa_offset 8
-	.cfi_offset lr, -4
-	.cfi_offset r7, -8
-	.setfp	r7, sp
-	mov	r7, sp
-	.cfi_def_cfa_register r7
-.Ltmp8:
-	.loc	1 261 5 prologue_end
-	bl	_ZN4core9panicking9panic_fmt17haebed1323d60a452E
-.Ltmp9:
-.Lfunc_end5:
-	.size	_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE, .Lfunc_end5-_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE
-	.cfi_endproc
-	.cantunwind
-	.fnend
-
-	.section	.debug_abbrev,"",%progbits
-	.byte	1
-	.byte	17
-	.byte	1
-	.byte	37
-	.byte	14
-	.byte	19
-	.byte	5
-	.byte	3
-	.byte	14
-	.byte	16
-	.byte	23
-	.byte	27
-	.byte	14
-	.byte	17
-	.byte	1
-	.byte	85
-	.byte	23
-	.byte	0
-	.byte	0
-	.byte	2
-	.byte	57
-	.byte	1
-	.byte	3
-	.byte	14
-	.byte	0
-	.byte	0
-	.byte	3
-	.byte	46
-	.byte	0
-	.byte	17
-	.byte	1
-	.byte	18
-	.byte	6
-	.byte	64
-	.byte	24
-	.byte	110
-	.byte	14
-	.byte	3
-	.byte	14
-	.byte	58
-	.byte	11
-	.byte	59
-	.byte	11
-	.byte	54
-	.byte	11
-	.byte	63
-	.byte	25
-	.ascii	"\207\001"
-	.byte	25
-	.byte	0
-	.byte	0
-	.byte	4
-	.byte	46
-	.byte	0
-	.byte	110
-	.byte	14
-	.byte	3
-	.byte	14
-	.byte	58
-	.byte	11
-	.byte	59
-	.byte	5
-	.ascii	"\207\001"
-	.byte	25
-	.byte	32
-	.byte	11
-	.byte	0
-	.byte	0
-	.byte	5
-	.byte	46
-	.byte	1
-	.byte	17
-	.byte	1
-	.byte	18
-	.byte	6
-	.byte	64
-	.byte	24
-	.byte	110
-	.byte	14
-	.byte	3
-	.byte	14
-	.byte	58
-	.byte	11
-	.byte	59
-	.byte	11
-	.byte	54
-	.byte	11
-	.byte	63
-	.byte	25
-	.ascii	"\207\001"
-	.byte	25
-	.byte	0
-	.byte	0
-	.byte	6
-	.byte	29
-	.byte	0
-	.byte	49
-	.byte	19
-	.byte	17
-	.byte	1
-	.byte	18
-	.byte	6
-	.byte	88
-	.byte	11
-	.byte	89
-	.byte	11
-	.byte	87
-	.byte	11
-	.byte	0
-	.byte	0
-	.byte	0
-	.section	.debug_info,"",%progbits
-.Lcu_begin0:
-	.long	.Ldebug_info_end0-.Ldebug_info_start0
-.Ldebug_info_start0:
-	.short	4
-	.long	.debug_abbrev
-	.byte	4
-	.byte	1
-	.long	.Linfo_string0
-	.short	28
-	.long	.Linfo_string1
-	.long	.Lline_table_start0
-	.long	.Linfo_string2
-	.long	0
-	.long	.Ldebug_ranges0
-	.byte	2
-	.long	.Linfo_string3
-	.byte	2
-	.long	.Linfo_string4
-	.byte	3
-	.long	.Lfunc_begin4
-	.long	.Lfunc_end4-.Lfunc_begin4
-	.byte	1
-	.byte	87
-	.long	.Linfo_string7
-	.long	.Linfo_string8
-	.byte	1
-	.byte	55
-	.byte	3
-
-
-	.byte	4
-	.long	.Linfo_string5
-	.long	.Linfo_string6
-	.byte	1
-	.short	260
-
-	.byte	1
-	.byte	5
-	.long	.Lfunc_begin5
-	.long	.Lfunc_end5-.Lfunc_begin5
-	.byte	1
-	.byte	87
-	.long	.Linfo_string9
-	.long	.Linfo_string10
-	.byte	1
-	.byte	233
-	.byte	3
-
-
-	.byte	6
-	.long	70
-	.long	.Ltmp8
-	.long	.Ltmp9-.Ltmp8
-	.byte	1
-	.byte	234
-	.byte	5
-	.byte	0
-	.byte	0
-	.byte	0
-	.byte	0
-.Ldebug_info_end0:
-	.section	.text.unlikely._ZN4core9panicking9panic_fmt17haebed1323d60a452E,"ax",%progbits
-.Lsec_end0:
-	.section	.text.unlikely._ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE,"ax",%progbits
-.Lsec_end1:
-	.section	.debug_aranges,"",%progbits
-	.long	36
-	.short	2
-	.long	.Lcu_begin0
-	.byte	4
-	.byte	0
-	.zero	4,255
-	.long	.Lfunc_begin4
-	.long	.Lsec_end0-.Lfunc_begin4
-	.long	.Lfunc_begin5
-	.long	.Lsec_end1-.Lfunc_begin5
-	.long	0
-	.long	0
-	.section	.debug_ranges,"",%progbits
-.Ldebug_ranges0:
-	.long	.Lfunc_begin4
-	.long	.Lfunc_end4
-	.long	.Lfunc_begin5
-	.long	.Lfunc_end5
-	.long	0
-	.long	0
-	.section	.debug_str,"MS",%progbits,1
-.Linfo_string0:
-	.asciz	"clang LLVM (rustc version 1.86.0-nightly (bef3c3b01 2025-02-04))"
-.Linfo_string1:
-	.asciz	"library/core/src/lib.rs/@/core.42399d673965ec88-cgu.0"
-.Linfo_string2:
-	.asciz	"/rustc/bef3c3b01f690de16738b1c9f36470fbfc6ac623"
-.Linfo_string3:
-	.asciz	"core"
-.Linfo_string4:
-	.asciz	"panicking"
-.Linfo_string5:
-	.asciz	"_ZN4core9panicking13panic_display17hb27badd535428c70E"
-.Linfo_string6:
-	.asciz	"panic_display<&str>"
-.Linfo_string7:
-	.asciz	"_ZN4core9panicking9panic_fmt17haebed1323d60a452E"
-.Linfo_string8:
-	.asciz	"panic_fmt"
-.Linfo_string9:
-	.asciz	"_ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE"
-.Linfo_string10:
-	.asciz	"panic_explicit"
 	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
 	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
 	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
@@ -790,5 +509,4 @@ _ZN4core9panicking14panic_explicit17hb6ee90eefcf59f2cE:
 	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
 	.ident	"rustc version 1.86.0-nightly (bef3c3b01 2025-02-04)"
 	.section	".note.GNU-stack","",%progbits
-	.section	.debug_line,"",%progbits
-.Lline_table_start0:
+	.eabi_attribute	30, 4

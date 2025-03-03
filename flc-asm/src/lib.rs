@@ -132,7 +132,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     #[inline(always)]
     unsafe fn set_clock_divisor(&self, sys_clk_freq: u32) {
         if sys_clk_freq % 1_000_000 != 0 {
-            panic!()
+            panic()
         }
 
         let flc_clkdiv = sys_clk_freq / 1_000_000;
@@ -271,7 +271,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     #[inline(always)]
     unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk_freq: u32) {
         if !check_address_bounds(address..address + 16) {
-            panic()
+            panic();
         }
         if address % size_of::<[u32; 4]>() as u32 != 0 {
             panic();
