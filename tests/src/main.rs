@@ -6,7 +6,7 @@
 
 use core::fmt::Write;
 
-use cortex_m_rt::{entry, pre_init};
+use cortex_m_rt::entry;
 use cortex_m_semihosting::hio;
 use max78000_hal::{
     max78000::Peripherals,
@@ -29,23 +29,6 @@ pub mod tests;
 pub const TIMER_0_OSC: Oscillator = Oscillator::ERTCO;
 /// Prescaler to use for TMR0 during tests
 pub const TIMER_0_PRESCALER: Prescaler = Prescaler::_1;
-
-#[pre_init]
-unsafe fn pre_init() {
-    // load the .analogsucks section into memory
-    core::arch::asm! {
-        "ldr r0, =__sanalogsucks
-        ldr r1, =__eanalogsucks
-        ldr r2, =__sianalogsucks
-        0:
-        cmp r1, r0
-        beq 1f
-        ldm r2!, {{r3}}
-        stm r0!, {{r3}}
-        b 0b
-        1:"
-    }
-}
 
 /// Entry point for tests.
 #[entry]

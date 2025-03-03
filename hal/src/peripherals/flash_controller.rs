@@ -55,8 +55,20 @@ pub enum FlashErr {
 
 /// Flash Controller peripheral.
 pub struct FlashController<'gcr, 'icc> {
+    #[expect(
+        unused,
+        reason = "the unsafe functions we call require us to hold references to these registers"
+    )]
     flc: FLC,
+    #[expect(
+        unused,
+        reason = "the unsafe functions we call require us to hold references to these registers"
+    )]
     icc: &'icc ICC0,
+    #[expect(
+        unused,
+        reason = "the unsafe functions we call require us to hold references to these registers"
+    )]
     gcr: &'gcr GCR,
 }
 
