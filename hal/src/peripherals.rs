@@ -43,6 +43,7 @@ use core::cell::{BorrowMutError, RefCell, RefMut};
 use core::ops::{Deref, DerefMut};
 use embedded_hal::i2c::SevenBitAddress;
 
+#[cfg(feature = "flc-ram")]
 use crate::peripherals::flash_controller::FlashController;
 use crate::peripherals::i2c::{BusSpeed, I2CMaster, I2CSlave};
 use crate::peripherals::oscillator::SystemClock;
@@ -446,6 +447,7 @@ impl<'a, T: Oscillator + private::Oscillator, F: FnMut(&mut [u8])>
 
         PeripheralManager {
             power_ctrl,
+            #[cfg(feature = "flc-ram")]
             flash_controller: RefCell::new(FlashController::new(
                 self.consumed_periphs.flc,
                 &self.borrowed_periphs.icc0,
@@ -508,6 +510,7 @@ macro_rules! enable_rst_periph_fn {
 /// The methods inside here can be used to interact with the board peripherals.
 pub struct PeripheralManager<'a> {
     power_ctrl: PowerControl<'a, 'a>,
+    #[cfg(feature = "flc-ram")]
     flash_controller: RefCell<FlashController<'a, 'a>>,
     system_clock: RefCell<SystemClock<'a, 'a>>,
     gpio0: Gpio0,
@@ -524,6 +527,7 @@ pub struct PeripheralManager<'a> {
 }
 
 impl<'a> PeripheralManager<'a> {
+    #[cfg(feature = "flc-ram")]
     no_enable_rst_periph_fn!(flash_controller, FlashController<'a, 'a>, flash_controller);
     no_enable_rst_periph_fn!(system_clock, SystemClock<'a, 'a>, system_clock);
 

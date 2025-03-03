@@ -90,9 +90,7 @@ fn flash_write(flash_controller: &FlashController, sys_clk: &SystemClock) {
         flash_controller
             .write(test_addr, &u32::to_le_bytes(test_val), sys_clk)
             .unwrap();
-        flash_controller
-            .read_bytes(test_addr, &mut data_read)
-            .unwrap();
+        FlashController::read_bytes(test_addr, &mut data_read).unwrap();
     }
 
     assert!(u32::from_le_bytes(data_read) == test_val);
@@ -108,9 +106,7 @@ fn flash_write_large(flash_controller: &FlashController, sys_clk: &SystemClock) 
         flash_controller
             .write(test_addr, &test_data, sys_clk)
             .unwrap();
-        flash_controller
-            .read_bytes(test_addr, &mut read_data)
-            .unwrap();
+        FlashController::read_bytes(test_addr, &mut read_data).unwrap();
     }
 
     assert!(test_data == read_data);
@@ -126,9 +122,7 @@ fn flash_write_extra_large(flash_controller: &FlashController, sys_clk: &SystemC
         flash_controller
             .write(test_addr, &test_data, sys_clk)
             .unwrap();
-        flash_controller
-            .read_bytes(test_addr, &mut read_data)
-            .unwrap();
+        FlashController::read_bytes(test_addr, &mut read_data).unwrap();
     }
 
     assert!(test_data == read_data);
@@ -144,9 +138,7 @@ fn flash_write_unaligned(flash_controller: &FlashController, sys_clk: &SystemClo
         flash_controller
             .write(test_addr, &test_data, sys_clk)
             .unwrap();
-        flash_controller
-            .read_bytes(test_addr, &mut read_data)
-            .unwrap();
+        FlashController::read_bytes(test_addr, &mut read_data).unwrap();
     }
 
     assert!(test_data == read_data);
@@ -177,9 +169,7 @@ fn flash_write_after_sys_osc_switch(flash_controller: &FlashController, sys_clk:
         flash_controller
             .write(test_addr, test_data, sys_clk)
             .unwrap();
-        flash_controller
-            .read_bytes(test_addr, &mut read_data)
-            .unwrap();
+        FlashController::read_bytes(test_addr, &mut read_data).unwrap();
     }
 
     assert!(test_data == read_data);
@@ -199,9 +189,7 @@ fn flash_write_after_sys_clk_div_changes(
         flash_controller
             .write(test_addr, test_data, sys_clk)
             .unwrap();
-        flash_controller
-            .read_bytes(test_addr, &mut read_data)
-            .unwrap();
+        FlashController::read_bytes(test_addr, &mut read_data).unwrap();
     }
 
     assert!(test_data == read_data);

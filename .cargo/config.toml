@@ -5,7 +5,7 @@ target = "thumbv7em-none-eabihf"
 git-fetch-with-cli = true
 
 [target.thumbv7em-none-eabihf]
-runner = 'arm-none-eabi-gdb'
+runner = 'gdb'
 rustflags = [
     "-C", "link-arg=-Tlink.x",
 ]

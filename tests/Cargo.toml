@@ -12,9 +12,15 @@ cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = { version = "0.7.3", features = ["set-sp", "set-vtor"] }
 cortex-m-semihosting = "0.5.0"
 libm = "0.2.8"
-max78000-hal = { version = "0.1.0", path = "../hal", features = ["rt"] }
+max78000-hal = { version = "0.1.0", path = "../hal", features = [
+    "rt",
+    "flc-ram",
+] }
 panic-semihosting = "0.6.0"
-embedded-hal = { version = "1.0"}
+embedded-hal = { version = "1.0" }
 
 [features]
 low_frequency_test = ["max78000-hal/low_frequency"]
+
+[build-dependencies]
+cc = "1.2.16"
