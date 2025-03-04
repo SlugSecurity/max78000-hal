@@ -32,4 +32,4 @@ low_frequency = []
 flc-ram = ["rt"]
 
 [build-dependencies]
-cc = "1.2.16"
+cc = "1.1"
