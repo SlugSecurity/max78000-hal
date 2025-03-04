@@ -14,6 +14,10 @@
     unsafe_op_in_unsafe_fn,
     clippy::undocumented_unsafe_blocks
 )]
+#![allow(
+    clippy::inline_always,
+    reason = "we need the functions to be inlined in this specific case"
+)]
 
 use core::{arch::asm, panic::PanicInfo, ptr::read_volatile};
 
@@ -200,12 +204,14 @@ impl FlashController<'_, '_> {
     /// This MUST be called after any write/erase flash controller operations.
     #[inline(always)]
     fn flush_icc(&self) {
+        const PAGE1: u32 = FLASH_MEM_BASE;
+        const PAGE2: u32 = FLASH_MEM_BASE + FLASH_PAGE_SIZE;
+
         self.gcr.sysctrl().modify(|_, w| w.icc0_flush().flush());
         while !self.gcr.sysctrl().read().icc0_flush().bit_is_clear() {}
 
         // Clear the line fill buffer by reading 2 pages from flash
-        const PAGE1: u32 = FLASH_MEM_BASE;
-        const PAGE2: u32 = FLASH_MEM_BASE + FLASH_PAGE_SIZE;
+
         // SAFETY: `FLASH_MEM_BASE` points to a valid, aligned word within flash space.
         const {
             assert!(check_address_bounds(PAGE1..PAGE1 + 4));
@@ -272,6 +278,10 @@ impl FlashController<'_, '_> {
         if likely(!check_address_bounds(address..address + 16)) {
             panic();
         }
+        #[allow(
+            clippy::cast_possible_truncation,
+            reason = "the target pointer width is 32, so this will not truncate"
+        )]
         if likely(address % size_of::<[u32; 4]>() as u32 != 0) {
             panic();
         }
@@ -310,6 +320,10 @@ impl FlashController<'_, '_> {
     ///   contained in flash space.
     #[inline(always)]
     unsafe fn page_erase(&self, address: u32, sys_clk_freq: u32) {
+        #[allow(
+            clippy::range_plus_one,
+            reason = "the caller takes a Range struct, not an `impl RangeBounds`"
+        )]
         if likely(!check_address_bounds(address..address + 1)) {
             panic()
         }
@@ -382,7 +396,7 @@ pub unsafe extern "C" fn write128(address: *mut [u32; 4], data: *const u32, sys_
     };
 
     // SAFETY: the caller must ensure that `data` points to a valid array of four `u32`s.
-    let data = unsafe { &*(data as *const [u32; 4]) };
+    let data = unsafe { &*data.cast() };
 
     // SAFETY:
     // - the caller must guarantee that the address is aligned and the word is within flash space
