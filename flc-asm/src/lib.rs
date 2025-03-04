@@ -83,17 +83,13 @@ struct FlashController<'gcr, 'icc> {
 #[inline(always)]
 #[must_use]
 const fn check_address_bounds(address_range: core::ops::Range<u32>) -> bool {
-    if !(FLASH_MEM_BASE <= address_range.start
+    FLASH_MEM_BASE <= address_range.start
         && address_range.start < FLASH_MEM_BASE + FLASH_MEM_SIZE
         && FLASH_MEM_BASE < address_range.end
-        && address_range.end <= FLASH_MEM_BASE + FLASH_MEM_SIZE)
-    {
-        return false;
-    }
-    return true;
+        && address_range.end <= FLASH_MEM_BASE + FLASH_MEM_SIZE
 }
 
-impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
+impl FlashController<'_, '_> {
     /// Unlocks memory protection to allow flash operations.
     ///
     /// This MUST be called before any non-read flash controller operation.
@@ -217,6 +213,8 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             assert!(check_address_bounds(PAGE2..PAGE2 + 4));
             assert!(PAGE2 % 4 == 0);
         }
+
+        // SAFETY: `FLASH_MEM_BASE` points to a valid, aligned word within flash space as asserted above.
         unsafe { core::hint::black_box(read32(PAGE1 as *const u32)) };
         // SAFETY: `FLASH_MEM_BASE + FLASH_PAGE_SIZE` points to a valid, aligned word within flash space.
         unsafe { core::hint::black_box(read32(PAGE2 as *const u32)) };
@@ -253,9 +251,9 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// - The argument `sys_clk_freq` must be equal to the current system clock's
     ///   frequency divided by its divider.
     /// - Writes must not corrupt potentially executable instructions of the program.
-    /// Callers must ensure that the following condition is met:
-    ///   * If `address` points to a portion of the program's instructions, `data` must
-    ///   contain valid instructions that does not introduce undefined behavior.
+    /// - Callers must ensure that the following condition is met:
+    ///     * If `address` points to a portion of the program's instructions, `data` must
+    ///       contain valid instructions that does not introduce undefined behavior.
     ///
     /// It is very difficult to define what would cause undefined behavior when
     /// modifying program instructions. This would almost certainly result
@@ -333,6 +331,11 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
 /// Panics if any of the following preconditions are not true:
 /// - `address` must be 32-bit aligned.
 /// - `address` must point to a valid location in flash memory (`0x1000_0000..=0x1007_ffff`).
+///
+/// # Safety
+///
+/// This is a pointer read to flash space, it is the caller's responsibility to ensure
+/// that the pointer points to the correct value.
 #[export_name = "flc_read32_primitive"]
 #[link_section = ".analogsucks"]
 pub unsafe extern "C" fn read32(address: *const u32) -> u32 {
@@ -349,7 +352,8 @@ pub unsafe extern "C" fn read32(address: *const u32) -> u32 {
 
 /// Writes a little-endian 128-bit flash word into flash memory.
 ///
-/// Safety:
+/// # Safety
+///
 /// - The caller must hold a shared reference to the [`FLC`], [`ICC0`], and [`GCR`] registers.
 /// - The flash word at `address` must be in the *erased* state (with [`page_erase`]).
 /// - `data` must point to an array of four `u32`s.
@@ -357,6 +361,8 @@ pub unsafe extern "C" fn read32(address: *const u32) -> u32 {
 ///   the current system clock, and `div` is the divider of the system clock.
 /// - If `address` writes to an address in the currently-running program's instruction space,
 ///   it must be valid instructions.
+///
+/// # Panics
 ///
 /// Panics if any of the following preconditions are not true:
 /// - `address` must be 128-bit aligned.
@@ -391,7 +397,8 @@ pub unsafe extern "C" fn write128(address: *mut [u32; 4], data: *const u32, sys_
 
 /// Erases the page at the given address in flash memory.
 ///
-/// Safety:
+/// # Safety
+///
 /// - The caller must hold a shared reference to the [`FLC`], [`ICC0`], and [`GCR`] registers.
 /// - `address` must point to a valid page within flash memory (`0x1000_0000..=0x1007_ffff`).
 /// - `sys_clk_freq` must be equal to `freq / div` where `freq` is the frequency of
@@ -399,6 +406,8 @@ pub unsafe extern "C" fn write128(address: *mut [u32; 4], data: *const u32, sys_
 /// - `sys_clk_freq` must be divisible by one million (`1_000_000`).
 /// - If `address` erases a page in the currently-running program's instruction space,
 ///   it must be rewritten with [`write128`] before the program reaches those instructions.
+///
+/// # Panics
 ///
 /// Panics if any of the following preconditions are not true:
 /// - `address` must point to within a valid page in flash space (`0x1000_000..=0x1007_ffff`)
