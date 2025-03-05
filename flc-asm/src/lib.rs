@@ -21,7 +21,6 @@
 
 use core::{arch::asm, panic::PanicInfo, ptr::read_volatile};
 
-use likely_stable::likely;
 use max78000::{FLC, GCR, ICC0};
 
 /// A macro for ensuring that code never exits, even in cases of fault-injection attacks.
@@ -132,7 +131,7 @@ impl FlashController<'_, '_> {
     /// - The FLC must be in its ready state after [`Self::wait_until_ready`]
     #[inline(always)]
     unsafe fn set_clock_divisor(&self, sys_clk_freq: u32) {
-        if likely(sys_clk_freq % 1_000_000 != 0) {
+        if sys_clk_freq % 1_000_000 != 0 {
             panic()
         }
 
@@ -275,14 +274,14 @@ impl FlashController<'_, '_> {
     /// - `address` must be aligned to 128 bits
     #[inline(always)]
     unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk_freq: u32) {
-        if likely(!check_address_bounds(address..address + 16)) {
+        if !check_address_bounds(address..address + 16) {
             panic();
         }
         #[allow(
             clippy::cast_possible_truncation,
             reason = "the target pointer width is 32, so this will not truncate"
         )]
-        if likely(address % size_of::<[u32; 4]>() as u32 != 0) {
+        if address % size_of::<[u32; 4]>() as u32 != 0 {
             panic();
         }
 
@@ -324,7 +323,7 @@ impl FlashController<'_, '_> {
             clippy::range_plus_one,
             reason = "the caller takes a Range struct, not an `impl RangeBounds`"
         )]
-        if likely(!check_address_bounds(address..address + 1)) {
+        if !check_address_bounds(address..address + 1) {
             panic()
         }
         // SAFETY: the caller must guarantee that `sys_clk_freq` is valid per this function's
@@ -353,10 +352,10 @@ impl FlashController<'_, '_> {
 #[export_name = "flc_read32_primitive"]
 #[link_section = ".analogsucks"]
 pub unsafe extern "C" fn read32(address: *const u32) -> u32 {
-    if likely(!address.is_aligned()) {
+    if !address.is_aligned() {
         panic();
     }
-    if likely(!check_address_bounds(address as u32..(address as u32 + 4))) {
+    if !check_address_bounds(address as u32..(address as u32 + 4)) {
         panic();
     }
     // SAFETY: the caller must guarantee that `address` is aligned and is within
