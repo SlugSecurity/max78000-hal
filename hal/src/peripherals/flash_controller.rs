@@ -89,7 +89,7 @@ unsafe extern "C" {
     ///   the current system clock, and `div` is the divider of the system clock.
     /// - `sys_clk_freq` must be divisible by one million (`1_000_000`).
     /// - If `address` erases a page in the currently-running program's instruction space,
-    ///   it must be rewritten with [`write128`] before the program reaches those instructions.
+    ///   it must be rewritten with `write128` before the program reaches those instructions.
     ///
     /// Panics if any of the following preconditions are not true:
     /// - `address` must point to within a valid page in flash space (`0x1000_000..=0x1007_ffff`)
@@ -100,7 +100,7 @@ unsafe extern "C" {
     ///
     /// Safety:
     /// - The caller must hold a shared reference to the [`FLC`], [`ICC0`], and [`GCR`] registers.
-    /// - The flash word at `address` must be in the *erased* state (with [`page_erase`]).
+    /// - The flash word at `address` must be in the *erased* state (with `page_erase`).
     /// - `data` must point to an array of four `u32`s.
     /// - `sys_clk_freq` must be equal to `freq / div` where `freq` is the frequency of
     ///   the current system clock, and `div` is the divider of the system clock.
