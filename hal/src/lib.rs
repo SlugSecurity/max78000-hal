@@ -30,7 +30,7 @@
 //! where the `ANALOGSUCKS` is a memory section in RAM defined in `memory.x`.
 //!
 //! [`pre_init`]: cortex_m_rt::pre_init
-//! [`FlashController`]: peripherals::FlashController
+//! [`FlashController`]: peripherals::flash_controller::FlashController
 
 #![warn(missing_docs)]
 #![no_std]
