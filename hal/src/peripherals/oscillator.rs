@@ -305,13 +305,11 @@ impl<'a, 'b> SystemClock<'a, 'b> {
     }
 
     /// Returns the clock divider of the SYS_OSC
-    #[inline(always)]
     pub fn get_div(&self) -> u8 {
         self.clock_divider
     }
 
     /// Returns the frequency of the SYS_OSC in hertz
-    #[inline(always)]
     pub fn get_freq(&self) -> u32 {
         self.clock_frequency
     }
