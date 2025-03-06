@@ -14,10 +14,6 @@
     unsafe_op_in_unsafe_fn,
     clippy::undocumented_unsafe_blocks
 )]
-#![allow(
-    clippy::inline_always,
-    reason = "we need the functions to be inlined in this specific case"
-)]
 
 use core::{arch::asm, panic::PanicInfo, ptr::read_volatile};
 
