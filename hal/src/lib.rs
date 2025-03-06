@@ -52,7 +52,7 @@ pub mod peripherals;
 /// # Safety
 ///
 /// - Only assembly is allowed, because RAM has not been initialized, so any Rust
-///   code that touches memory or the stack is undefined behavior.
+///   code that touches memory is undefined behavior.
 ///
 /// [`pre_init`]: cortex_m_rt::pre_init
 #[cfg(feature = "rt")]
@@ -61,15 +61,19 @@ unsafe fn pre_init() {
     // load the .analogsucks section into memory
     #[cfg(feature = "flc-ram")]
     core::arch::asm! {
-        "ldr r0, =__sanalogsucks
-         ldr r1, =__eanalogsucks
-         ldr r2, =__sianalogsucks
+        "ldr {0}, =__sanalogsucks
+         ldr {1}, =__eanalogsucks
+         ldr {2}, =__sianalogsucks
          0:
-         cmp r1, r0
+         cmp {1}, {0}
          beq 1f
-         ldm r2!, {{r3}}
-         stm r0!, {{r3}}
+         ldm {2}!, {{{3}}}
+         stm {0}!, {{{3}}}
          b 0b
-         1:"
+         1:",
+         out(reg) _,
+         out(reg) _,
+         out(reg) _,
+         out(reg) _,
     }
 }
