@@ -211,8 +211,6 @@ impl FlashController<'_, '_> {
         while !self.gcr.sysctrl().read().icc0_flush().bit_is_clear() {}
 
         // Clear the line fill buffer by reading 2 pages from flash
-
-        // SAFETY: `FLASH_MEM_BASE` points to a valid, aligned word within flash space.
         const {
             assert!(check_address_bounds(PAGE1..PAGE1 + 4));
             assert!(PAGE1 % 4 == 0);
