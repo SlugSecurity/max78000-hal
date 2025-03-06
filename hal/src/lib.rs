@@ -46,6 +46,15 @@ pub use cortex_m_rt::{interrupt, pre_init};
 pub mod communication;
 pub mod peripherals;
 
+/// `__pre_init` symbol, ran before initializing memory in [`cortex-m-rt`].  See
+/// [`pre_init`] for more.
+///
+/// # Safety
+///
+/// - Only assembly is allowed, because RAM has not been initialized, so any Rust
+///   code that touches memory or the stack is undefined behavior.
+///
+/// [`pre_init`]: cortex_m_rt::pre_init
 #[cfg(feature = "rt")]
 #[pre_init]
 unsafe fn pre_init() {
