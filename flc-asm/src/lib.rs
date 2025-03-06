@@ -56,6 +56,7 @@ macro_rules! never_exit {
 }
 
 #[panic_handler]
+#[link_section = ".analogsucks"]
 fn panic_handler(_: &PanicInfo) -> ! {
     never_exit!()
 }
@@ -83,8 +84,8 @@ struct FlashController<'gcr, 'icc> {
 
 /// Checks whether the given address range (exclusive) is within flash space, returning `false` if there
 /// is an error.
-#[inline(always)]
 #[must_use]
+#[link_section = ".analogsucks"]
 const fn check_address_bounds(address_range: core::ops::Range<u32>) -> bool {
     FLASH_MEM_BASE <= address_range.start
         && address_range.start < FLASH_MEM_BASE + FLASH_MEM_SIZE
@@ -99,7 +100,7 @@ impl FlashController<'_, '_> {
     ///
     /// # Safety
     /// - The FLC must be in its ready state after [`Self::wait_until_ready`]
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     unsafe fn unlock_write_protection(&self) {
         self.flc.ctrl().modify(|_, w| w.unlock().unlocked());
     }
@@ -110,7 +111,7 @@ impl FlashController<'_, '_> {
     ///
     /// # Safety
     /// - The FLC must be in its ready state after [`Self::wait_until_ready`]
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     unsafe fn lock_write_protection(&self) {
         self.flc.ctrl().modify(|_, w| w.unlock().locked());
     }
@@ -129,7 +130,7 @@ impl FlashController<'_, '_> {
     /// - The passed argument `sys_clk_freq` must be the current system clock's
     ///   frequency divided by its divider.
     /// - The FLC must be in its ready state after [`Self::wait_until_ready`]
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     unsafe fn set_clock_divisor(&self, sys_clk_freq: u32) {
         if sys_clk_freq % 1_000_000 != 0 {
             panic()
@@ -145,7 +146,7 @@ impl FlashController<'_, '_> {
     /// Wait, by busy-looping, until the FLC is ready.
     ///
     /// This MUST be called BEFORE any FLC operation EXCEPT clearing interrupts.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     fn wait_until_ready(&self) {
         while !self.flc.ctrl().read().pend().bit_is_clear() {}
     }
@@ -153,7 +154,7 @@ impl FlashController<'_, '_> {
     /// Clear any stale errors in the FLC interrupt register.
     ///
     /// This can be called without waiting for the FLC to be ready.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     fn clear_interrupts(&self) {
         self.flc.intr().modify(|_, w| w.af().clear_bit());
     }
@@ -167,7 +168,7 @@ impl FlashController<'_, '_> {
     ///
     /// # Panics
     /// - If `sys_clk_freq` is not a multiple of 1 MHz, this function panics.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     unsafe fn write_guard<F: Fn()>(&self, sys_clk_freq: u32, operation: F) {
         // Pre-write
         self.wait_until_ready();
@@ -201,7 +202,7 @@ impl FlashController<'_, '_> {
     /// Flushes the flash line buffer and arm instruction cache.
     ///
     /// This MUST be called after any write/erase flash controller operations.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     fn flush_icc(&self) {
         const PAGE1: u32 = FLASH_MEM_BASE;
         const PAGE2: u32 = FLASH_MEM_BASE + FLASH_PAGE_SIZE;
@@ -228,7 +229,7 @@ impl FlashController<'_, '_> {
     /// Disables instruction cache.
     ///
     /// This MUST be called before any non-read flash controller operations.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     fn disable_icc0(&self) {
         self.icc.ctrl().modify(|_, w| w.en().dis());
     }
@@ -236,7 +237,7 @@ impl FlashController<'_, '_> {
     /// Enables instruction cache.
     ///
     /// This MUST be called after any non-read flash controller operations.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     fn enable_icc0(&self) {
         // ensure the cache is invalidated when enabled
         self.disable_icc0();
@@ -272,7 +273,7 @@ impl FlashController<'_, '_> {
     /// - `sys_clk_freq` must be a multiple of 1 MHz
     /// - `address` must point to a word contained in flash space
     /// - `address` must be aligned to 128 bits
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     unsafe fn write128(&self, address: u32, data: &[u32; 4], sys_clk_freq: u32) {
         if !check_address_bounds(address..address + 16) {
             panic();
@@ -317,7 +318,7 @@ impl FlashController<'_, '_> {
     /// - If `sys_clk_freq` is not a multiple of 1 MHz, this function panics.
     /// - This function also panics when the `address` does not point inside of a page
     ///   contained in flash space.
-    #[inline(always)]
+    #[link_section = ".analogsucks"]
     unsafe fn page_erase(&self, address: u32, sys_clk_freq: u32) {
         #[allow(
             clippy::range_plus_one,
