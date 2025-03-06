@@ -24,7 +24,12 @@ zeroize = { version = "1.7.0", default-features = false }
 bitvec = { version = "1.0.1", default-features = false }
 cortex-m-semihosting = "0.5.0"
 cortex-m = { version = "0.7.7" }
+critical-section = "1.2.0"
 
 [features]
 rt = ["max78000/rt", "cortex-m-rt"]
 low_frequency = []
+flc-ram = ["rt"]
+
+[build-dependencies]
+cc = "1.1"

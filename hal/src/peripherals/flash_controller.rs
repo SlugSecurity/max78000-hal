@@ -1,36 +1,35 @@
+#![cfg(feature = "flc-ram")]
 //! Flash controller peripheral API.
-use core::borrow::BorrowMut;
-
-///    # Examples
-///    ```
-///    let flash_controller = FlashController::new(flc, icc0, gcr);
-///
-///    let test_addr: u32 = 0x10070FF0;
-///    let test_val: u32 = 0xCAFEBABE;
-///    let mut data_read: [u8; 4] = [0; 4];
-///
-///    // # Safety
-///    // Non-read flash operations must not corrupt potentially instructions of the
-///    // program.
-///    // Callers must ensure that the following condition is met:
-///    // * If `address` points to a portion of the program's instructions, `data` must
-///    //   contain valid instructions that does not introduce undefined behavior.
-///    //
-///    // It is very difficult to define what would cause undefined behavior when
-///    // modifying program instructions. This would almost certainly result
-///    // in unwanted and likely undefined behavior. Do so at your own risk.
-///    unsafe {
-///        flash_controller.page_erase(test_addr, &sys_clk).unwrap();
-///        flash_controller
-///            .write(test_addr, &u32::to_le_bytes(test_val), &sys_clk)
-///            .unwrap();
-///    }
-///    flash_controller
-///        .read_bytes(test_addr, &mut data_read)
-///        .unwrap();
-///
-///    assert!(u32::from_le_bytes(data_read) == test_val);
-///    ```
+//!    # Examples
+//!    ```
+//!    let flash_controller = FlashController::new(flc, icc0, gcr);
+//!
+//!    let test_addr: u32 = 0x10070FF0;
+//!    let test_val: u32 = 0xCAFEBABE;
+//!    let mut data_read: [u8; 4] = [0; 4];
+//!
+//!    // # Safety
+//!    // Non-read flash operations must not corrupt potentially instructions of the
+//!    // program.
+//!    // Callers must ensure that the following condition is met:
+//!    // * If `address` points to a portion of the program's instructions, `data` must
+//!    //   contain valid instructions that does not introduce undefined behavior.
+//!    //
+//!    // It is very difficult to define what would cause undefined behavior when
+//!    // modifying program instructions. This would almost certainly result
+//!    // in unwanted and likely undefined behavior. Do so at your own risk.
+//!    unsafe {
+//!        flash_controller.page_erase(test_addr, &sys_clk).unwrap();
+//!        flash_controller
+//!            .write(test_addr, &u32::to_le_bytes(test_val), &sys_clk)
+//!            .unwrap();
+//!    }
+//!    flash_controller
+//!        .read_bytes(test_addr, &mut data_read)
+//!        .unwrap();
+//!
+//!    assert!(u32::from_le_bytes(data_read) == test_val);
+//!    ```
 use crate::peripherals::oscillator::SystemClock;
 use max78000::{FLC, GCR, ICC0};
 
@@ -56,9 +55,82 @@ pub enum FlashErr {
 
 /// Flash Controller peripheral.
 pub struct FlashController<'gcr, 'icc> {
+    #[expect(
+        unused,
+        reason = "the unsafe functions we call require us to hold references to these registers"
+    )]
     flc: FLC,
+    #[expect(
+        unused,
+        reason = "the unsafe functions we call require us to hold references to these registers"
+    )]
     icc: &'icc ICC0,
+    #[expect(
+        unused,
+        reason = "the unsafe functions we call require us to hold references to these registers"
+    )]
     gcr: &'gcr GCR,
+}
+
+unsafe extern "C" {
+    /// Reads a little-endian `u32` from flash memory.
+    ///
+    /// Panics if any of the following preconditions are not true:
+    /// - `address` must be 32-bit aligned.
+    /// - `address` must point to a valid location in flash memory (`0x1000_0000..=0x1007_ffff`).
+    pub unsafe fn flc_read32_primitive(address: *const u32) -> u32;
+
+    /// Erases the page at the given address in flash memory.
+    ///
+    /// Safety:
+    /// - The caller must hold a shared reference to the [`FLC`], [`ICC0`], and [`GCR`] registers.
+    /// - `address` must point to a valid page within flash memory (`0x1000_0000..=0x1007_ffff`).
+    /// - `sys_clk_freq` must be equal to `freq / div` where `freq` is the frequency of
+    ///   the current system clock, and `div` is the divider of the system clock.
+    /// - `sys_clk_freq` must be divisible by one million (`1_000_000`).
+    /// - If `address` erases a page in the currently-running program's instruction space,
+    ///   it must be rewritten with `write128` before the program reaches those instructions.
+    ///
+    /// Panics if any of the following preconditions are not true:
+    /// - `address` must point to within a valid page in flash space (`0x1000_000..=0x1007_ffff`)
+    /// - `sys_clk_freq` must be divisible by one million (`1_000_000`).
+    pub unsafe fn flc_page_erase_primitive(address: *mut u8, sys_clk_freq: u32);
+
+    /// Writes a little-endian 128-bit flash word into flash memory.
+    ///
+    /// Safety:
+    /// - The caller must hold a shared reference to the [`FLC`], [`ICC0`], and [`GCR`] registers.
+    /// - The flash word at `address` must be in the *erased* state (with `page_erase`).
+    /// - `data` must point to an array of four `u32`s.
+    /// - `sys_clk_freq` must be equal to `freq / div` where `freq` is the frequency of
+    ///   the current system clock, and `div` is the divider of the system clock.
+    /// - If `address` writes to an address in the currently-running program's instruction space,
+    ///   it must be valid instructions.
+    ///
+    /// Panics if any of the following preconditions are not true:
+    /// - `address` must be 128-bit aligned.
+    /// - The entire flash word at address (bytes `address..address + 16`) must be within
+    ///   the flash memory (`0x1000_0000..=0x1007_ffff`).
+    /// - `sys_clk_freq` must be divisible by one million (`1_000_000`).
+    pub unsafe fn flc_write128_primitive(
+        address: *mut [u32; 4],
+        data: *const u32,
+        sys_clk_freq: u32,
+    );
+}
+
+/// Checks whether the given address range (exclusive) is within flash space, returning an `Err` if not.
+#[inline(always)]
+const fn check_address_bounds(address_range: core::ops::Range<u32>) -> Result<(), FlashErr> {
+    if !(FLASH_MEM_BASE <= address_range.start
+        && address_range.start < FLASH_MEM_BASE + FLASH_MEM_SIZE
+        && FLASH_MEM_BASE < address_range.end
+        && address_range.end <= FLASH_MEM_BASE + FLASH_MEM_SIZE)
+    {
+        Err(FlashErr::PtrBoundsErr)
+    } else {
+        Ok(())
+    }
 }
 
 impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
@@ -67,96 +139,27 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         Self { flc, icc, gcr }
     }
 
-    /// Checks the address to see if it is a valid flash memory address
-    fn check_address_bounds(&self, address_range: core::ops::Range<u32>) -> Result<(), FlashErr> {
-        if (FLASH_MEM_BASE..(FLASH_MEM_BASE + FLASH_MEM_SIZE)).contains(&address_range.start)
-            && (FLASH_MEM_BASE..(FLASH_MEM_BASE + FLASH_MEM_SIZE)).contains(&address_range.end)
-        {
-            Ok(())
-        } else {
-            Err(FlashErr::PtrBoundsErr)
-        }
-    }
-
-    /// Unlocks memory protection to allow flash operations
-    ///
-    /// This MUST be called before any non-read flash controller operation.
-    fn unlock_write_protection(&self) {
-        self.flc.ctrl().modify(|_, w| w.unlock().unlocked());
-    }
-
-    /// Locks memory protection.
-    ///
-    /// This MUST be called after any non-read flash controller operation.
-    fn lock_write_protection(&self) {
-        self.flc.ctrl().modify(|_, w| w.unlock().locked());
-    }
-
-    /// Checks if the flash controller's clock divisor is correct and if not, sets it. Correct
-    /// clock frequency is 1 MHz.
-    ///
-    /// This MUST be called before any non-read flash controller operations.
-    fn set_clock_divisor(&self, sys_clk: &SystemClock) -> Result<(), FlashErr> {
+    /// Calculates the correct `sys_clk_freq` from the passed [`SystemClock`] for FLC primitives.
+    /// Returns an `Err` if the calculated frequency is not a multiple of `1_000_000`.
+    fn get_clock_divisor(sys_clk: &SystemClock) -> Result<u32, FlashErr> {
         let sys_clk_freq = sys_clk.get_freq() / sys_clk.get_div() as u32;
         if sys_clk_freq % 1_000_000 != 0 {
             return Err(FlashErr::FlcClkErr);
         }
 
-        let flc_clkdiv = sys_clk_freq / 1_000_000;
-
-        self.flc
-            .clkdiv()
-            .modify(|_, w| w.clkdiv().variant(flc_clkdiv as u8));
-
-        Ok(())
-    }
-
-    /// Flushes the flash line buffer and arm instruction cache.
-    ///
-    /// This MUST be called after any write/erase flash controller operations.
-    fn flush_icc(&self) -> Result<(), FlashErr> {
-        self.gcr.sysctrl().modify(|_, w| w.icc0_flush().flush());
-        while !self.gcr.sysctrl().read().icc0_flush().bit_is_clear() {}
-
-        // Clear the line fill buffer by reading 2 pages from flash
-        let ptr = FLASH_MEM_BASE;
-        let mut empty_buffer = [0; 4];
-        self.read_bytes(ptr, &mut empty_buffer)?;
-        self.read_bytes(ptr + FLASH_PAGE_SIZE, &mut empty_buffer)?;
-        Ok(())
-    }
-
-    /// Disables instruction cache.
-    ///
-    /// This MUST be called before any non-read flash controller operations.
-    fn disable_icc0(&self) {
-        self.icc.ctrl().modify(|_, w| w.en().dis());
-    }
-
-    /// Enables instruction cache.
-    ///
-    /// This MUST be called after any non-read flash controller operations.
-    fn enable_icc0(&self) {
-        // ensure the cache is invalidated when enabled
-        self.disable_icc0();
-
-        self.icc.invalidate().modify(|_, w| w.invalid().variant(1));
-        while !self.icc.ctrl().read().rdy().bit_is_set() {}
-
-        self.icc.ctrl().modify(|_, w| w.en().en());
-        while !self.icc.ctrl().read().rdy().bit_is_set() {}
+        Ok(sys_clk_freq)
     }
 
     /// Reads data from flash.
     pub fn read_bytes(&self, address: u32, data: &mut [u8]) -> Result<(), FlashErr> {
         // change to range check
-        self.check_address_bounds(address..(address + data.len() as u32))?;
+        check_address_bounds(address..(address + data.len() as u32))?;
 
         let mut next_read_address = address;
 
         // read from flash in word chunks
         let mut word_chunk = data.chunks_exact_mut(4);
-        for word in word_chunk.borrow_mut() {
+        for word in &mut word_chunk {
             // SAFETY:
             // * src is valid for reads. Because read range is checked at the
             // beginning of function.
@@ -175,7 +178,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         }
 
         for byte in word_chunk.into_remainder() {
-            // SAFETY:
+            // SAFETY:CLOSURE
             // * src is valid for reads. Because read range is checked at the
             // beginning of function.
             //
@@ -195,7 +198,6 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         Ok(())
     }
 
-    ///
     /// # Safety
     ///
     /// Writes must not corrupt potentially executable instructions of the program.
@@ -212,11 +214,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         data: &[u8],
         sys_clk: &SystemClock,
     ) -> Result<(), FlashErr> {
-        self.check_address_bounds(address..(address + data.len() as u32))?;
-
-        self.set_clock_divisor(sys_clk)?;
-
-        self.disable_icc0();
+        check_address_bounds(address..(address + data.len() as u32))?;
 
         // Check alignment
         let mut physical_addr = address;
@@ -229,7 +227,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         // Write unaligned data
         if bytes_unaligned > 0 {
             let unaligned_data = &data[0..core::cmp::min(bytes_unaligned, data.len())];
-            self.write_lt_128_unaligned(physical_addr, unaligned_data)?;
+            self.write_lt_128_unaligned(physical_addr, unaligned_data, sys_clk)?;
             physical_addr += unaligned_data.len() as u32;
         }
 
@@ -244,25 +242,37 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
             let mut buffer_128_bits: [u32; 4] = [0; 4];
             word.enumerate()
                 .for_each(|(idx, chunk)| buffer_128_bits[idx] = chunk);
-            self.write128(physical_addr, &buffer_128_bits)?;
+            self.write128(physical_addr, &buffer_128_bits, sys_clk)?;
             physical_addr += 16;
         }
 
         // remainder from chunks
         if !chunk_8.remainder().is_empty() {
-            self.write_lt_128_unaligned(physical_addr, chunk_8.remainder())?;
+            self.write_lt_128_unaligned(physical_addr, chunk_8.remainder(), sys_clk)?;
         }
-
-        self.flush_icc()?;
-
-        self.enable_icc0();
 
         Ok(())
     }
 
-    /// Writes less than 128 bits (16 bytes) of data to flash. Data needs to fit
-    /// within one flash word (16 bytes).
-    fn write_lt_128_unaligned(&self, address: u32, data: &[u8]) -> Result<(), FlashErr> {
+    /// Writes less than 128 bits (16 bytes) of data to flash.
+    /// Data needs to fit within one flash word (16 bytes).
+    ///
+    /// # Safety
+    ///
+    /// Writes must not corrupt potentially executable instructions of the program.
+    /// Callers must ensure that the following condition is met:
+    /// * If `address` points to a portion of the program's instructions, `data` must
+    ///   contain valid instructions that does not introduce undefined behavior.
+    ///
+    /// It is very difficult to define what would cause undefined behavior when
+    /// modifying program instructions. This would almost certainly result
+    /// in unwanted and likely undefined behavior. Do so at your own risk.
+    unsafe fn write_lt_128_unaligned(
+        &self,
+        address: u32,
+        data: &[u8],
+        sys_clk: &SystemClock,
+    ) -> Result<(), FlashErr> {
         // Get byte idx within 128-bit word
         let byte_idx = (address & 0xF) as usize;
 
@@ -284,34 +294,49 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
                 new_data[idx] = u32::from_le_bytes(word_chunk.try_into().unwrap())
             });
 
-        self.write128(aligned_addr, &new_data)
+        self.write128(aligned_addr, &new_data, sys_clk)
     }
 
     /// Writes 128 bits (16 bytes) of data to flash.
-    // make sure to disable ICC with ICC_Disable(); before Running this function
-    fn write128(&self, address: u32, data: &[u32; 4]) -> Result<(), FlashErr> {
+    /// Address must be 128-bit aligned.
+    ///
+    /// # Safety
+    ///
+    /// The flash word at `address` must be in the *erased* state.  Otherwise, the write will not
+    /// occur.
+    ///
+    /// Writes must not corrupt potentially executable instructions of the program.
+    /// Callers must ensure that the following condition is met:
+    /// * If `address` points to a portion of the program's instructions, `data` must
+    ///   contain valid instructions that does not introduce undefined behavior.
+    ///
+    /// It is very difficult to define what would cause undefined behavior when
+    /// modifying program instructions. This would almost certainly result
+    /// in unwanted and likely undefined behavior. Do so at your own risk.
+    unsafe fn write128(
+        &self,
+        address: u32,
+        data: &[u32; 4],
+        sys_clk: &SystemClock,
+    ) -> Result<(), FlashErr> {
         // Check if adddress is 128-bit aligned
         if address & 0xF > 0 {
             return Err(FlashErr::AddressNotAligned128);
         }
+        check_address_bounds(address..address + 16)?;
 
-        self.unlock_write_protection();
+        let sys_clk_freq = Self::get_clock_divisor(sys_clk)?;
 
-        // Clear stale errors
-        self.flc.intr().modify(|_, w| w.af().clear_bit());
-
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.flc.addr().modify(|_, w| w.addr().variant(address));
-        self.flc.data(0).modify(|_, w| w.data().variant(data[0]));
-        self.flc.data(1).modify(|_, w| w.data().variant(data[1]));
-        self.flc.data(2).modify(|_, w| w.data().variant(data[2]));
-        self.flc.data(3).modify(|_, w| w.data().variant(data[3]));
-
-        self.flc.ctrl().modify(|_, w| w.wr().set_bit());
-        while !self.flc.ctrl().read().wr().is_complete() {}
-
-        self.lock_write_protection();
+        // SAFETY: per the safety contract of [`flc_write128_primitive`]:
+        // - we hold a reference (in `self`) to the FLC, ICC0, and GCR registers
+        // - the caller guarantees that the flash word at `address` in the erased state.
+        // - `data.as_ptr()` points to an array of 4 u32s.
+        // - `sys_clk_freq` is calculated as `freq / div` of the current system clock above
+        // - the caller must guarantee that, if the word at `address` is in instruction memory,
+        //   it contains safe and valid instructions.
+        critical_section::with(|_| unsafe {
+            flc_write128_primitive(address as *mut [u32; 4], data.as_ptr(), sys_clk_freq);
+        });
 
         Ok(())
     }
@@ -325,29 +350,16 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     /// Behavior is undefined if any of the following conditions are violated:
     /// * `address` must be in a valid flash page
     pub unsafe fn page_erase(&self, address: u32, sys_clk: &SystemClock) -> Result<(), FlashErr> {
-        self.check_address_bounds(address..address)?;
+        check_address_bounds(address..address + 1)?;
+        let sys_clk_freq = Self::get_clock_divisor(sys_clk)?;
 
-        if self.set_clock_divisor(sys_clk).is_err() {
-            return Err(FlashErr::FlcClkErr);
-        }
-
-        self.unlock_write_protection();
-
-        // Clear stale errors
-        self.flc.intr().modify(|_, w| w.af().clear_bit());
-
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.flc.addr().modify(|_, w| w.addr().variant(address));
-
-        self.flc.ctrl().modify(|_, w| w.erase_code().erase_page());
-        self.flc.ctrl().modify(|_, w| w.pge().set_bit());
-
-        while !self.flc.ctrl().read().pend().bit_is_clear() {}
-
-        self.lock_write_protection();
-
-        self.flush_icc()?;
+        // SAFETY: per the safety contract of [`flc_page_erase_primitive`]:
+        // - we hold a reference (in `self`) to the FLC, ICC0, and GCR registers.
+        // - `sys_clk_freq` is calculated as `freq / div` of the current system clock above.
+        // - the caller guarantees safety if the erased page is part of instruction memory.
+        critical_section::with(|_| unsafe {
+            flc_page_erase_primitive(address as *mut u8, sys_clk_freq);
+        });
 
         Ok(())
     }

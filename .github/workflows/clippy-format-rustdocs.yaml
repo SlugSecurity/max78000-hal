@@ -14,6 +14,9 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
+          sudo dpkg-reconfigure man-db
+          sudo apt install -y gcc-arm-none-eabi
           rustup target add thumbv7em-none-eabihf
           cargo clippy -- -D warnings
 
@@ -25,6 +28,9 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
+          sudo dpkg-reconfigure man-db
+          sudo apt install -y gcc-arm-none-eabi
           rustup target add thumbv7em-none-eabihf
           cargo clippy -- -W clippy::pedantic
 
@@ -36,6 +42,9 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
+          echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
+          sudo dpkg-reconfigure man-db
+          sudo apt install -y gcc-arm-none-eabi
           rustup target add thumbv7em-none-eabihf
           cargo fmt --check
 
@@ -48,6 +57,9 @@ jobs:
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.PRIVATE_SSH_KEY }}"
           rustup target add thumbv7em-none-eabihf
+          echo 'set man-db/auto-update false' | sudo debconf-communicate >/dev/null
+          sudo dpkg-reconfigure man-db
+          sudo apt install -y gcc-arm-none-eabi
           RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items
       - name: upload artifacts
         uses: actions/upload-artifact@v4

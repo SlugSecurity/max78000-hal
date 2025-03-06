@@ -1,7 +1,6 @@
 //! Flash controller tests
 
 use core::fmt::Write;
-use cortex_m_semihosting::hio;
 use max78000_hal::peripherals::flash_controller::{FlashController, FlashErr};
 use max78000_hal::peripherals::oscillator::{
     Ibro, IbroDivider, IbroFrequency, Iso, IsoDivider, IsoFrequency, Oscillator, SystemClock,
@@ -14,8 +13,8 @@ use max78000_hal::peripherals::PeripheralHandle;
 /// [`flash_write_full_outbounds`],
 /// [`flash_write_partially_outbound_beginning`],
 /// [`flash_write_full_partially_outbound_end`].
-pub fn run_flc_tests(
-    stdout: &mut hio::HostStream,
+pub fn run_flc_tests<T: Write>(
+    stdout: &mut T,
     flash_controller: PeripheralHandle<'_, FlashController<'_, '_>>,
     mut sys_clk: PeripheralHandle<'_, SystemClock<'_, '_>>,
 ) {

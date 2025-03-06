@@ -12,7 +12,7 @@ if [ -z "$SERIAL" ]; then
 fi
 
 # Open GDB server with OpenOCD using the board's config.
-/opt/MaximSDK/Tools/OpenOCD/openocd -s /opt/MaximSDK/Tools/OpenOCD/scripts \
+openocd \
   -f interface/cmsis-dap.cfg \
   -f target/max78000.cfg \
   -c "adapter serial $SERIAL; init; reset init" & # ben's board

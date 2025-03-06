@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "hal",
-    "tests"
+    "flc-asm",
+    "tests",
 ]
 resolver = "2"
 
