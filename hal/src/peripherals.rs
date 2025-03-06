@@ -173,6 +173,7 @@ pub struct PeripheralsToBorrow {
 
 /// The peripherals that are completely consumed and moved by the [`PeripheralManager`].
 pub struct PeripheralsToConsume {
+    #[cfg(feature = "flc-ram")]
     flc: FLC,
     gpio0: GPIO0,
     gpio1: GPIO1,
@@ -210,6 +211,7 @@ impl SplittablePeripheral for Peripherals {
         RemainingPeripherals,
     ) {
         let to_consume = PeripheralsToConsume {
+            #[cfg(feature = "flc-ram")]
             flc: self.FLC,
             gpio0: self.GPIO0,
             gpio1: self.GPIO1,
