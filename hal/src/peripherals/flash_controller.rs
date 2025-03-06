@@ -151,7 +151,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
     }
 
     /// Reads data from flash.
-    pub fn read_bytes(address: u32, data: &mut [u8]) -> Result<(), FlashErr> {
+    pub fn read_bytes(&self, address: u32, data: &mut [u8]) -> Result<(), FlashErr> {
         // change to range check
         check_address_bounds(address..(address + data.len() as u32))?;
 
@@ -280,7 +280,7 @@ impl<'gcr, 'icc> FlashController<'gcr, 'icc> {
         let aligned_addr = address & !0xF;
 
         let mut current_bytes: [u8; 16] = [0; 16];
-        Self::read_bytes(aligned_addr, &mut current_bytes[..])?;
+        self.read_bytes(aligned_addr, &mut current_bytes[..])?;
 
         // construct 128 bits of data to write back to flash
         current_bytes[byte_idx..(byte_idx + data.len())].copy_from_slice(data);
